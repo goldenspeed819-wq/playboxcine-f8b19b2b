@@ -72,7 +72,7 @@ export function Footer() {
             to="/admin-login"
             className="text-muted-foreground/30 hover:text-muted-foreground/50 text-[10px] transition-colors"
           >
-            Acesso Restrito
+            .
           </Link>
         </div>
       </div>
