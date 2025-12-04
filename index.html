@@ -26,5 +26,94 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+(function() {
+
+    function bloquear() {
+        window.location.replace("/bloqueado.html");
+    }
+
+    // -------------------------------
+    // 1. BLOQUEIO DE TECLAS + ATAJOS
+    // -------------------------------
+    document.addEventListener("keydown", function(e) {
+        const k = e.key.toLowerCase();
+
+        if (
+            k === "f12" ||
+            (e.ctrlKey && k === "u") ||                   // Ctrl+U
+            (e.ctrlKey && e.shiftKey && k === "i") ||    // Ctrl+Shift+I
+            (e.ctrlKey && e.shiftKey && k === "c") ||    // Ctrl+Shift+C
+            (e.ctrlKey && e.shiftKey && k === "j") ||    // Ctrl+Shift+J
+            (e.ctrlKey && k === "s")                     // Ctrl+S (salvar página)
+        ) {
+            e.preventDefault();
+            e.stopPropagation();
+            bloquear();
+        }
+    }, true);
+
+    // Segunda camada (keyup)
+    document.addEventListener("keyup", function(e) {
+        if (e.ctrlKey && e.key.toLowerCase() === "u") {
+            e.preventDefault();
+            bloquear();
+        }
+    }, true);
+
+    // -------------------------------
+    // 2. BLOQUEIO DO BOTÃO DIREITO
+    // -------------------------------
+    document.addEventListener("contextmenu", function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+    }, true);
+
+    // -------------------------------
+    // 3. BLOQUEIO DE SELEÇÃO E COPIA
+    // -------------------------------
+    document.addEventListener("selectstart", e => e.preventDefault(), true);
+    document.addEventListener("copy", e => {
+        e.preventDefault();
+        bloquear();
+    }, true);
+
+    // -------------------------------
+    // 4. DETECÇÃO AVANÇADA DE DEVTOOLS
+    // -------------------------------
+    let devtoolsOpen = false;
+
+    function detectDevTools() {
+        const threshold = 170;
+
+        if (
+            window.outerWidth - window.innerWidth > threshold ||
+            window.outerHeight - window.innerHeight > threshold
+        ) {
+            if (!devtoolsOpen) {
+                devtoolsOpen = true;
+                bloquear();
+            }
+        }
+    }
+
+    setInterval(detectDevTools, 300);
+
+    // -------------------------------
+    // 5. MÉTODO PRÓ (anti Chrome DevTools)
+    // -------------------------------
+    (function() {
+        const element = new Image();
+        Object.defineProperty(element, 'id', {
+            get: function() {
+                bloquear();
+            }
+        });
+        console.log(element);
+    })();
+
+})();
+</script>
   </body>
 </html>
