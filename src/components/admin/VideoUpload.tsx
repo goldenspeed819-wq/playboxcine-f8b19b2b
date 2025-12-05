@@ -1,8 +1,7 @@
 import { useState, useRef } from 'react';
-import { Upload, X, Play, FileVideo, CheckCircle } from 'lucide-react';
+import { Upload, X, FileVideo, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
@@ -43,48 +42,56 @@ export function VideoUpload({ onUploadComplete, currentUrl }: VideoUploadProps) 
     if (!file) return;
 
     setIsUploading(true);
-    setProgress(10);
+    setProgress(0);
 
-    try {
-      const fileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-      
-      setProgress(30);
+    const fileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-      const { data, error } = await supabase.storage
-        .from('videos')
-        .upload(fileName, file, {
-          cacheControl: '31536000',
-          upsert: true,
-        });
-
-      if (error) {
-        throw error;
+    const xhr = new XMLHttpRequest();
+    
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) {
+        const percent = Math.round((event.loaded / event.total) * 100);
+        setProgress(percent);
       }
+    };
 
-      setProgress(90);
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        const publicUrl = `${supabaseUrl}/storage/v1/object/public/videos/${fileName}`;
+        setProgress(100);
+        setUploadedUrl(publicUrl);
+        onUploadComplete(publicUrl);
+        toast({
+          title: 'Upload concluído!',
+          description: 'O vídeo foi enviado com sucesso.',
+        });
+      } else {
+        const errorData = JSON.parse(xhr.responseText);
+        toast({
+          title: 'Erro no upload',
+          description: errorData.message || 'Não foi possível enviar o vídeo.',
+          variant: 'destructive',
+        });
+      }
+      setIsUploading(false);
+    };
 
-      const { data: urlData } = supabase.storage
-        .from('videos')
-        .getPublicUrl(data.path);
-
-      setProgress(100);
-      setUploadedUrl(urlData.publicUrl);
-      onUploadComplete(urlData.publicUrl);
-
-      toast({
-        title: 'Upload concluído!',
-        description: 'O vídeo foi enviado com sucesso.',
-      });
-    } catch (error: any) {
-      console.error('Upload error:', error);
+    xhr.onerror = () => {
       toast({
         title: 'Erro no upload',
-        description: error.message || 'Não foi possível enviar o vídeo.',
+        description: 'Falha na conexão. Tente novamente.',
         variant: 'destructive',
       });
-    } finally {
       setIsUploading(false);
-    }
+    };
+
+    xhr.open('POST', `${supabaseUrl}/storage/v1/object/videos/${fileName}`);
+    xhr.setRequestHeader('Authorization', `Bearer ${supabaseKey}`);
+    xhr.setRequestHeader('apikey', supabaseKey);
+    xhr.setRequestHeader('x-upsert', 'true');
+    xhr.send(file);
   };
 
   const handleClear = () => {
