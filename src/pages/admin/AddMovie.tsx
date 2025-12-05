@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/select';
 import { VideoUpload } from '@/components/admin/VideoUpload';
 import { ThumbnailUpload } from '@/components/admin/ThumbnailUpload';
+import { CoverUpload } from '@/components/admin/CoverUpload';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -28,6 +29,7 @@ const AddMovie = () => {
     title: '',
     description: '',
     thumbnail: '',
+    cover: '',
     video_url: '',
     category: '',
     duration: '',
@@ -54,6 +56,7 @@ const AddMovie = () => {
       title: formData.title,
       description: formData.description || null,
       thumbnail: formData.thumbnail || null,
+      cover: formData.cover || null,
       video_url: formData.video_url || null,
       category: formData.category || null,
       duration: formData.duration || null,
@@ -82,7 +85,6 @@ const AddMovie = () => {
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
-      {/* Header */}
       <div>
         <h1 className="font-display text-2xl md:text-3xl font-bold mb-2 flex items-center gap-3">
           <Film className="w-8 h-8 text-primary" />
@@ -95,10 +97,8 @@ const AddMovie = () => {
 
       <form onSubmit={handleSubmit} className="space-y-8">
         <div className="grid md:grid-cols-3 gap-8">
-          {/* Main Form */}
           <div className="md:col-span-2 space-y-6">
             <div className="p-6 bg-card rounded-2xl border border-border space-y-4">
-              {/* Title */}
               <div className="space-y-2">
                 <Label htmlFor="title">Título *</Label>
                 <Input
@@ -110,7 +110,6 @@ const AddMovie = () => {
                 />
               </div>
 
-              {/* Description */}
               <div className="space-y-2">
                 <Label htmlFor="description">Descrição</Label>
                 <Textarea
@@ -122,7 +121,6 @@ const AddMovie = () => {
                 />
               </div>
 
-              {/* Category & Rating */}
               <div className="grid sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Categoria</Label>
@@ -163,7 +161,6 @@ const AddMovie = () => {
                 </div>
               </div>
 
-              {/* Duration & Year */}
               <div className="grid sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="duration">Duração</Label>
@@ -189,7 +186,6 @@ const AddMovie = () => {
                 </div>
               </div>
 
-              {/* Featured */}
               <div className="flex items-center justify-between p-4 bg-secondary/30 rounded-xl">
                 <div>
                   <Label>Destaque</Label>
@@ -204,7 +200,19 @@ const AddMovie = () => {
               </div>
             </div>
 
-            {/* Video Upload */}
+            {/* Cover Upload - for featured */}
+            {formData.is_featured && (
+              <div className="p-6 bg-card rounded-2xl border border-primary/50">
+                <h3 className="font-display font-bold mb-2">Capa de Destaque</h3>
+                <p className="text-xs text-muted-foreground mb-4">
+                  Imagem widescreen (16:9) para o carrossel principal
+                </p>
+                <CoverUpload
+                  onUploadComplete={(url) => setFormData({ ...formData, cover: url })}
+                />
+              </div>
+            )}
+
             <div className="p-6 bg-card rounded-2xl border border-border">
               <h3 className="font-display font-bold mb-4">Vídeo</h3>
               <VideoUpload
@@ -213,7 +221,6 @@ const AddMovie = () => {
             </div>
           </div>
 
-          {/* Sidebar - Thumbnail */}
           <div className="space-y-6">
             <div className="p-6 bg-card rounded-2xl border border-border">
               <h3 className="font-display font-bold mb-4">Thumbnail</h3>
@@ -222,7 +229,6 @@ const AddMovie = () => {
               />
             </div>
 
-            {/* Submit Button */}
             <Button
               type="submit"
               className="w-full gap-2"

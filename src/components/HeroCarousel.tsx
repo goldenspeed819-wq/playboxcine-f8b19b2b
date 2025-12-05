@@ -53,13 +53,18 @@ export function HeroCarousel({ items, type }: HeroCarouselProps) {
   const currentItem = items[currentIndex];
   const detailLink = type === 'movie' ? `/movie/${currentItem.id}` : `/series/${currentItem.id}`;
 
+  // Use cover if available for movies, otherwise fallback to thumbnail
+  const backgroundImage = type === 'movie' && 'cover' in currentItem && (currentItem as Movie).cover 
+    ? (currentItem as Movie).cover 
+    : currentItem.thumbnail;
+
   return (
     <div className="relative h-[70vh] md:h-[85vh] overflow-hidden">
       {/* Background Image */}
       <div className="absolute inset-0">
-        {currentItem.thumbnail ? (
+        {backgroundImage ? (
           <img
-            src={currentItem.thumbnail}
+            src={backgroundImage}
             alt={currentItem.title}
             className={cn(
               'w-full h-full object-cover transition-all duration-700',

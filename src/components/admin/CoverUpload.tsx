@@ -1,17 +1,16 @@
 import { useState, useRef } from 'react';
-import { Upload, X, Image as ImageIcon, CheckCircle } from 'lucide-react';
+import { Upload, X, Image as ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
-interface ThumbnailUploadProps {
+interface CoverUploadProps {
   onUploadComplete: (url: string) => void;
   currentUrl?: string | null;
 }
 
-export function ThumbnailUpload({ onUploadComplete, currentUrl }: ThumbnailUploadProps) {
-  const [file, setFile] = useState<File | null>(null);
+export function CoverUpload({ onUploadComplete, currentUrl }: CoverUploadProps) {
   const [preview, setPreview] = useState<string | null>(currentUrl || null);
   const [isUploading, setIsUploading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -20,7 +19,6 @@ export function ThumbnailUpload({ onUploadComplete, currentUrl }: ThumbnailUploa
     const selectedFile = e.target.files?.[0];
     if (!selectedFile) return;
 
-    // Validate file type
     const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
     if (!validTypes.includes(selectedFile.type)) {
       toast({
@@ -31,13 +29,11 @@ export function ThumbnailUpload({ onUploadComplete, currentUrl }: ThumbnailUploa
       return;
     }
 
-    setFile(selectedFile);
     setPreview(URL.createObjectURL(selectedFile));
-
-    // Auto upload
     setIsUploading(true);
+
     try {
-      const fileName = `${Date.now()}-${selectedFile.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+      const fileName = `covers/${Date.now()}-${selectedFile.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
       
       const { data, error } = await supabase.storage
         .from('thumbnails')
@@ -56,8 +52,8 @@ export function ThumbnailUpload({ onUploadComplete, currentUrl }: ThumbnailUploa
       onUploadComplete(urlData.publicUrl);
 
       toast({
-        title: 'Imagem enviada!',
-        description: 'A thumbnail foi enviada com sucesso.',
+        title: 'Capa enviada!',
+        description: 'A imagem de capa foi enviada com sucesso.',
       });
     } catch (error: any) {
       console.error('Upload error:', error);
@@ -72,7 +68,6 @@ export function ThumbnailUpload({ onUploadComplete, currentUrl }: ThumbnailUploa
   };
 
   const handleClear = () => {
-    setFile(null);
     setPreview(null);
     onUploadComplete('');
     if (inputRef.current) {
@@ -85,7 +80,7 @@ export function ThumbnailUpload({ onUploadComplete, currentUrl }: ThumbnailUploa
       {!preview ? (
         <label
           className={cn(
-            'flex flex-col items-center justify-center w-full h-40 border-2 border-dashed rounded-xl cursor-pointer transition-colors',
+            'flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-xl cursor-pointer transition-colors',
             'border-border hover:border-primary hover:bg-primary/5',
             isUploading && 'pointer-events-none opacity-50'
           )}
@@ -93,10 +88,10 @@ export function ThumbnailUpload({ onUploadComplete, currentUrl }: ThumbnailUploa
           <div className="flex flex-col items-center justify-center py-4">
             <ImageIcon className="w-8 h-8 text-muted-foreground mb-2" />
             <p className="text-sm font-semibold text-foreground mb-1">
-              {isUploading ? 'Enviando...' : 'Selecionar thumbnail'}
+              {isUploading ? 'Enviando...' : 'Selecionar capa'}
             </p>
             <p className="text-xs text-muted-foreground">
-              JPG, PNG ou WEBP
+              Imagem widescreen (16:9)
             </p>
           </div>
           <input
@@ -110,10 +105,10 @@ export function ThumbnailUpload({ onUploadComplete, currentUrl }: ThumbnailUploa
         </label>
       ) : (
         <div className="relative">
-          <div className="aspect-[2/3] rounded-xl overflow-hidden border border-border">
+          <div className="aspect-video rounded-xl overflow-hidden border border-border">
             <img
               src={preview}
-              alt="Thumbnail preview"
+              alt="Cover preview"
               className="w-full h-full object-cover"
             />
           </div>

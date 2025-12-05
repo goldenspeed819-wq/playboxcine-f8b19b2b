@@ -3,6 +3,7 @@ export interface Movie {
   title: string;
   description: string | null;
   thumbnail: string | null;
+  cover: string | null;
   video_url: string | null;
   category: string | null;
   duration: string | null;
