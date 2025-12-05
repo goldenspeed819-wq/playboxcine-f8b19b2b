@@ -201,26 +201,17 @@ export function VideoUpload({ onUploadComplete, currentUrl }: VideoUploadProps) 
 
       {/* Uploaded Success */}
       {uploadedUrl && (
-        <div className="p-4 bg-card rounded-xl border border-border space-y-4">
+        <div className="p-4 bg-card rounded-xl border border-green-500/50 space-y-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center">
               <CheckCircle className="w-5 h-5 text-green-500" />
             </div>
             <div className="flex-1">
               <p className="font-semibold text-sm text-green-500">Upload concluído!</p>
-              <p className="text-xs text-muted-foreground truncate">
-                {uploadedUrl}
+              <p className="text-xs text-muted-foreground">
+                Vídeo pronto para uso
               </p>
             </div>
-          </div>
-
-          {/* Preview */}
-          <div className="aspect-video rounded-lg overflow-hidden bg-black">
-            <video
-              src={uploadedUrl}
-              controls
-              className="w-full h-full object-contain"
-            />
           </div>
 
           {/* Replace Button */}

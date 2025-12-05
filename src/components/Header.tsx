@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Search, Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,7 +9,9 @@ export function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -18,6 +20,25 @@ export function Header() {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/movies?search=${encodeURIComponent(searchQuery.trim())}`);
+      setSearchOpen(false);
+      setSearchQuery('');
+    }
+  };
+
+  const handleSearchClick = () => {
+    if (searchOpen && searchQuery.trim()) {
+      navigate(`/movies?search=${encodeURIComponent(searchQuery.trim())}`);
+      setSearchOpen(false);
+      setSearchQuery('');
+    } else {
+      setSearchOpen(!searchOpen);
+    }
+  };
 
   const navLinks = [
     { href: '/', label: 'Início' },
@@ -76,19 +97,22 @@ export function Header() {
 
           {/* Search & Mobile Menu */}
           <div className="flex items-center gap-2">
-            <div className={cn(
+            <form onSubmit={handleSearch} className={cn(
               'transition-all duration-300 overflow-hidden',
               searchOpen ? 'w-48 md:w-64' : 'w-0'
             )}>
               <Input
-                placeholder="Buscar..."
+                placeholder="Buscar filmes..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className="bg-secondary/50 border-border focus:border-primary h-9"
+                autoFocus={searchOpen}
               />
-            </div>
+            </form>
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => setSearchOpen(!searchOpen)}
+              onClick={handleSearchClick}
               className="text-muted-foreground hover:text-foreground"
             >
               <Search className="w-5 h-5" />
