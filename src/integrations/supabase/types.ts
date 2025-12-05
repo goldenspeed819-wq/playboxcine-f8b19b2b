@@ -127,6 +127,7 @@ export type Database = {
       movies: {
         Row: {
           category: string | null
+          cover: string | null
           created_at: string
           description: string | null
           duration: string | null
@@ -140,6 +141,7 @@ export type Database = {
         }
         Insert: {
           category?: string | null
+          cover?: string | null
           created_at?: string
           description?: string | null
           duration?: string | null
@@ -153,6 +155,7 @@ export type Database = {
         }
         Update: {
           category?: string | null
+          cover?: string | null
           created_at?: string
           description?: string | null
           duration?: string | null

@@ -15,10 +15,10 @@ import {
 } from '@/components/ui/select';
 import { VideoUpload } from '@/components/admin/VideoUpload';
 import { ThumbnailUpload } from '@/components/admin/ThumbnailUpload';
+import { CoverUpload } from '@/components/admin/CoverUpload';
 import { PageLoader } from '@/components/LoadingSpinner';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { Movie } from '@/types/database';
 
 const categories = ['Ação', 'Aventura', 'Comédia', 'Drama', 'Terror', 'Ficção Científica', 'Romance', 'Animação', 'Documentário'];
 const ratings = ['Livre', '10', '12', '14', '16', '18'];
@@ -32,6 +32,7 @@ const EditMovie = () => {
     title: '',
     description: '',
     thumbnail: '',
+    cover: '',
     video_url: '',
     category: '',
     duration: '',
@@ -65,6 +66,7 @@ const EditMovie = () => {
       title: data.title || '',
       description: data.description || '',
       thumbnail: data.thumbnail || '',
+      cover: data.cover || '',
       video_url: data.video_url || '',
       category: data.category || '',
       duration: data.duration || '',
@@ -95,6 +97,7 @@ const EditMovie = () => {
         title: formData.title,
         description: formData.description || null,
         thumbnail: formData.thumbnail || null,
+        cover: formData.cover || null,
         video_url: formData.video_url || null,
         category: formData.category || null,
         duration: formData.duration || null,
@@ -127,7 +130,6 @@ const EditMovie = () => {
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
-      {/* Header */}
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" onClick={() => navigate('/admin/movies')}>
           <ArrowLeft className="w-5 h-5" />
@@ -145,7 +147,6 @@ const EditMovie = () => {
 
       <form onSubmit={handleSubmit} className="space-y-8">
         <div className="grid md:grid-cols-3 gap-8">
-          {/* Main Form */}
           <div className="md:col-span-2 space-y-6">
             <div className="p-6 bg-card rounded-2xl border border-border space-y-4">
               <div className="space-y-2">
@@ -245,6 +246,19 @@ const EditMovie = () => {
               </div>
             </div>
 
+            {formData.is_featured && (
+              <div className="p-6 bg-card rounded-2xl border border-primary/50">
+                <h3 className="font-display font-bold mb-2">Capa de Destaque</h3>
+                <p className="text-xs text-muted-foreground mb-4">
+                  Imagem widescreen (16:9) para o carrossel principal
+                </p>
+                <CoverUpload
+                  onUploadComplete={(url) => setFormData({ ...formData, cover: url })}
+                  currentUrl={formData.cover}
+                />
+              </div>
+            )}
+
             <div className="p-6 bg-card rounded-2xl border border-border">
               <h3 className="font-display font-bold mb-4">Vídeo</h3>
               <VideoUpload
@@ -254,7 +268,6 @@ const EditMovie = () => {
             </div>
           </div>
 
-          {/* Sidebar */}
           <div className="space-y-6">
             <div className="p-6 bg-card rounded-2xl border border-border">
               <h3 className="font-display font-bold mb-4">Thumbnail</h3>
