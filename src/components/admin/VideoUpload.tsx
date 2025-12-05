@@ -43,30 +43,26 @@ export function VideoUpload({ onUploadComplete, currentUrl }: VideoUploadProps) 
     if (!file) return;
 
     setIsUploading(true);
-    setProgress(0);
+    setProgress(10);
 
     try {
       const fileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
       
-      // Simulate progress for large files
-      const progressInterval = setInterval(() => {
-        setProgress((prev) => Math.min(prev + 5, 90));
-      }, 500);
+      setProgress(30);
 
       const { data, error } = await supabase.storage
         .from('videos')
         .upload(fileName, file, {
-          cacheControl: '3600',
-          upsert: false,
+          cacheControl: '31536000',
+          upsert: true,
         });
-
-      clearInterval(progressInterval);
 
       if (error) {
         throw error;
       }
 
-      // Get public URL
+      setProgress(90);
+
       const { data: urlData } = supabase.storage
         .from('videos')
         .getPublicUrl(data.path);
