@@ -1,9 +1,10 @@
 import { useState, useRef } from 'react';
-import { Upload, X, FileVideo, CheckCircle } from 'lucide-react';
+import { Upload, X, FileVideo, CheckCircle, Pause, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import * as tus from 'tus-js-client';
 
 interface VideoUploadProps {
   onUploadComplete: (url: string) => void;
@@ -14,9 +15,13 @@ export function VideoUpload({ onUploadComplete, currentUrl }: VideoUploadProps) 
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const [progress, setProgress] = useState(0);
   const [uploadedUrl, setUploadedUrl] = useState<string | null>(currentUrl || null);
+  const [uploadSpeed, setUploadSpeed] = useState<string>('');
   const inputRef = useRef<HTMLInputElement>(null);
+  const uploadRef = useRef<tus.Upload | null>(null);
+  const lastProgressRef = useRef<{ time: number; bytes: number }>({ time: 0, bytes: 0 });
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -34,7 +39,12 @@ export function VideoUpload({ onUploadComplete, currentUrl }: VideoUploadProps) 
     }
 
     setFile(selectedFile);
-    setPreview(URL.createObjectURL(selectedFile));
+    // Don't create preview for large files to save memory
+    if (selectedFile.size < 100 * 1024 * 1024) {
+      setPreview(URL.createObjectURL(selectedFile));
+    } else {
+      setPreview(null);
+    }
     setUploadedUrl(null);
   };
 
@@ -43,61 +53,107 @@ export function VideoUpload({ onUploadComplete, currentUrl }: VideoUploadProps) 
 
     setIsUploading(true);
     setProgress(0);
+    setUploadSpeed('');
+    lastProgressRef.current = { time: Date.now(), bytes: 0 };
 
     const fileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
     const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-    const xhr = new XMLHttpRequest();
-    
-    xhr.upload.onprogress = (event) => {
-      if (event.lengthComputable) {
-        const percent = Math.round((event.loaded / event.total) * 100);
+    const upload = new tus.Upload(file, {
+      endpoint: `${supabaseUrl}/storage/v1/upload/resumable`,
+      retryDelays: [0, 1000, 3000, 5000, 10000],
+      chunkSize: 6 * 1024 * 1024, // 6MB chunks
+      headers: {
+        authorization: `Bearer ${supabaseKey}`,
+        apikey: supabaseKey,
+        'x-upsert': 'true',
+      },
+      uploadDataDuringCreation: true,
+      removeFingerprintOnSuccess: true,
+      metadata: {
+        bucketName: 'videos',
+        objectName: fileName,
+        contentType: file.type,
+        cacheControl: '31536000',
+      },
+      onError: (error) => {
+        console.error('Upload error:', error);
+        toast({
+          title: 'Erro no upload',
+          description: error.message || 'Não foi possível enviar o vídeo.',
+          variant: 'destructive',
+        });
+        setIsUploading(false);
+        setIsPaused(false);
+      },
+      onProgress: (bytesUploaded, bytesTotal) => {
+        const percent = Math.round((bytesUploaded / bytesTotal) * 100);
         setProgress(percent);
-      }
-    };
 
-    xhr.onload = () => {
-      if (xhr.status >= 200 && xhr.status < 300) {
+        // Calculate upload speed
+        const now = Date.now();
+        const timeDiff = (now - lastProgressRef.current.time) / 1000;
+        if (timeDiff >= 1) {
+          const bytesDiff = bytesUploaded - lastProgressRef.current.bytes;
+          const speed = bytesDiff / timeDiff;
+          setUploadSpeed(formatSpeed(speed));
+          lastProgressRef.current = { time: now, bytes: bytesUploaded };
+        }
+      },
+      onSuccess: () => {
         const publicUrl = `${supabaseUrl}/storage/v1/object/public/videos/${fileName}`;
         setProgress(100);
         setUploadedUrl(publicUrl);
         onUploadComplete(publicUrl);
+        setIsUploading(false);
+        setIsPaused(false);
+        uploadRef.current = null;
         toast({
           title: 'Upload concluído!',
           description: 'O vídeo foi enviado com sucesso.',
         });
-      } else {
-        const errorData = JSON.parse(xhr.responseText);
-        toast({
-          title: 'Erro no upload',
-          description: errorData.message || 'Não foi possível enviar o vídeo.',
-          variant: 'destructive',
-        });
+      },
+    });
+
+    uploadRef.current = upload;
+
+    // Check for previous uploads to resume
+    upload.findPreviousUploads().then((previousUploads) => {
+      if (previousUploads.length) {
+        upload.resumeFromPreviousUpload(previousUploads[0]);
       }
-      setIsUploading(false);
-    };
+      upload.start();
+    });
+  };
 
-    xhr.onerror = () => {
-      toast({
-        title: 'Erro no upload',
-        description: 'Falha na conexão. Tente novamente.',
-        variant: 'destructive',
-      });
-      setIsUploading(false);
-    };
+  const handlePauseResume = () => {
+    if (!uploadRef.current) return;
 
-    xhr.open('POST', `${supabaseUrl}/storage/v1/object/videos/${fileName}`);
-    xhr.setRequestHeader('Authorization', `Bearer ${supabaseKey}`);
-    xhr.setRequestHeader('apikey', supabaseKey);
-    xhr.setRequestHeader('x-upsert', 'true');
-    xhr.send(file);
+    if (isPaused) {
+      uploadRef.current.start();
+      setIsPaused(false);
+    } else {
+      uploadRef.current.abort();
+      setIsPaused(true);
+    }
+  };
+
+  const handleCancel = () => {
+    if (uploadRef.current) {
+      uploadRef.current.abort();
+      uploadRef.current = null;
+    }
+    setIsUploading(false);
+    setIsPaused(false);
+    setProgress(0);
+    setUploadSpeed('');
   };
 
   const handleClear = () => {
+    handleCancel();
     setFile(null);
     setPreview(null);
-    setProgress(0);
     if (inputRef.current) {
       inputRef.current.value = '';
     }
@@ -109,6 +165,14 @@ export function VideoUpload({ onUploadComplete, currentUrl }: VideoUploadProps) 
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  const formatSpeed = (bytesPerSecond: number) => {
+    if (bytesPerSecond === 0) return '';
+    const k = 1024;
+    const sizes = ['B/s', 'KB/s', 'MB/s', 'GB/s'];
+    const i = Math.floor(Math.log(bytesPerSecond) / Math.log(k));
+    return parseFloat((bytesPerSecond / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
   };
 
   return (
@@ -143,7 +207,7 @@ export function VideoUpload({ onUploadComplete, currentUrl }: VideoUploadProps) 
       {/* File Preview */}
       {file && !uploadedUrl && (
         <div className="p-4 bg-card rounded-xl border border-border space-y-4">
-          {/* Preview Video */}
+          {/* Preview Video - only for small files */}
           {preview && (
             <div className="aspect-video rounded-lg overflow-hidden bg-black">
               <video
@@ -151,6 +215,16 @@ export function VideoUpload({ onUploadComplete, currentUrl }: VideoUploadProps) 
                 controls
                 className="w-full h-full object-contain"
               />
+            </div>
+          )}
+
+          {/* Large file indicator */}
+          {!preview && file && (
+            <div className="aspect-video rounded-lg overflow-hidden bg-muted flex items-center justify-center">
+              <div className="text-center">
+                <FileVideo className="w-16 h-16 text-muted-foreground mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground">Arquivo grande - preview desativado</p>
+              </div>
             </div>
           )}
 
@@ -173,7 +247,7 @@ export function VideoUpload({ onUploadComplete, currentUrl }: VideoUploadProps) 
               variant="ghost"
               size="icon"
               onClick={handleClear}
-              disabled={isUploading}
+              disabled={isUploading && !isPaused}
             >
               <X className="w-4 h-4" />
             </Button>
@@ -183,18 +257,47 @@ export function VideoUpload({ onUploadComplete, currentUrl }: VideoUploadProps) 
           {isUploading && (
             <div className="space-y-2">
               <Progress value={progress} className="h-2" />
-              <p className="text-xs text-muted-foreground text-center">
-                Enviando... {progress}%
-              </p>
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>{isPaused ? 'Pausado' : 'Enviando...'} {progress}%</span>
+                {uploadSpeed && <span>{uploadSpeed}</span>}
+              </div>
             </div>
           )}
 
-          {/* Upload Button */}
-          {!isUploading && (
+          {/* Action Buttons */}
+          {!isUploading ? (
             <Button onClick={handleUpload} className="w-full gap-2">
               <Upload className="w-4 h-4" />
               Confirmar Upload
             </Button>
+          ) : (
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={handlePauseResume}
+                className="flex-1 gap-2"
+              >
+                {isPaused ? (
+                  <>
+                    <Play className="w-4 h-4" />
+                    Retomar
+                  </>
+                ) : (
+                  <>
+                    <Pause className="w-4 h-4" />
+                    Pausar
+                  </>
+                )}
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleCancel}
+                className="flex-1 gap-2"
+              >
+                <X className="w-4 h-4" />
+                Cancelar
+              </Button>
+            </div>
           )}
         </div>
       )}
