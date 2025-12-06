@@ -10,6 +10,7 @@ export interface Movie {
   release_year: number | null;
   rating: string | null;
   is_featured: boolean;
+  is_release: boolean;
   created_at: string;
 }
 
@@ -22,6 +23,7 @@ export interface Series {
   release_year: number | null;
   rating: string | null;
   is_featured: boolean;
+  is_release: boolean;
   created_at: string;
 }
 

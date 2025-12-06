@@ -43,10 +43,13 @@ const Index = () => {
   const recentMovies = movies.slice(0, 10);
   const recentSeries = series.slice(0, 10);
   
-  // Sort by created_at for "New Releases"
-  const allContent = [...movies, ...series].sort(
-    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-  );
+  // Filter by is_release for "Lançamentos"
+  const releaseMovies = movies.filter((m) => m.is_release);
+  const releaseSeries = series.filter((s) => s.is_release);
+  const releases = [...releaseMovies, ...releaseSeries];
+  
+  // Fallback for hero carousel
+  const allContent = [...movies, ...series].slice(0, 5);
 
   return (
     <div className="min-h-screen bg-background">
@@ -54,13 +57,15 @@ const Index = () => {
       
       {/* Hero Section */}
       <HeroCarousel
-        items={featured.length > 0 ? featured : allContent.slice(0, 5)}
+        items={featured.length > 0 ? featured : allContent}
         type={featured.length > 0 && featuredMovies.length > 0 ? 'movie' : 'series'}
       />
 
       {/* Content Sections */}
       <main className="relative z-10 -mt-20">
-        <ContentRow title="Lançamentos" items={allContent.slice(0, 10)} type="movie" />
+        {releases.length > 0 && (
+          <ContentRow title="Lançamentos" items={releases} type="movie" />
+        )}
         <ContentRow title="Filmes" items={recentMovies} type="movie" />
         <ContentRow title="Séries" items={recentSeries} type="series" />
       </main>

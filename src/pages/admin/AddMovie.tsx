@@ -36,6 +36,7 @@ const AddMovie = () => {
     release_year: '',
     rating: 'Livre',
     is_featured: false,
+    is_release: false,
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -63,6 +64,7 @@ const AddMovie = () => {
       release_year: formData.release_year ? parseInt(formData.release_year) : null,
       rating: formData.rating || 'Livre',
       is_featured: formData.is_featured,
+      is_release: formData.is_release,
     });
 
     if (error) {
@@ -196,6 +198,19 @@ const AddMovie = () => {
                 <Switch
                   checked={formData.is_featured}
                   onCheckedChange={(checked) => setFormData({ ...formData, is_featured: checked })}
+                />
+              </div>
+
+              <div className="flex items-center justify-between p-4 bg-secondary/30 rounded-xl">
+                <div>
+                  <Label>Lançamento</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Exibir na seção de lançamentos
+                  </p>
+                </div>
+                <Switch
+                  checked={formData.is_release}
+                  onCheckedChange={(checked) => setFormData({ ...formData, is_release: checked })}
                 />
               </div>
             </div>

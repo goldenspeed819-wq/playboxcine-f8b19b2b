@@ -133,6 +133,7 @@ export type Database = {
           duration: string | null
           id: string
           is_featured: boolean | null
+          is_release: boolean | null
           rating: string | null
           release_year: number | null
           thumbnail: string | null
@@ -147,6 +148,7 @@ export type Database = {
           duration?: string | null
           id?: string
           is_featured?: boolean | null
+          is_release?: boolean | null
           rating?: string | null
           release_year?: number | null
           thumbnail?: string | null
@@ -161,6 +163,7 @@ export type Database = {
           duration?: string | null
           id?: string
           is_featured?: boolean | null
+          is_release?: boolean | null
           rating?: string | null
           release_year?: number | null
           thumbnail?: string | null
@@ -176,6 +179,7 @@ export type Database = {
           description: string | null
           id: string
           is_featured: boolean | null
+          is_release: boolean | null
           rating: string | null
           release_year: number | null
           thumbnail: string | null
@@ -187,6 +191,7 @@ export type Database = {
           description?: string | null
           id?: string
           is_featured?: boolean | null
+          is_release?: boolean | null
           rating?: string | null
           release_year?: number | null
           thumbnail?: string | null
@@ -198,6 +203,7 @@ export type Database = {
           description?: string | null
           id?: string
           is_featured?: boolean | null
+          is_release?: boolean | null
           rating?: string | null
           release_year?: number | null
           thumbnail?: string | null
