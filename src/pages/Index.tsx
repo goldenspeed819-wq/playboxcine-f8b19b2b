@@ -61,24 +61,8 @@ const Index = () => {
       {/* Content Sections */}
       <main className="relative z-10 -mt-20">
         <ContentRow title="Lançamentos" items={allContent.slice(0, 10)} type="movie" />
-        <ContentRow title="Filmes Populares" items={recentMovies} type="movie" />
-        <ContentRow title="Séries em Alta" items={recentSeries} type="series" />
-        
-        {movies.filter((m) => m.category === 'Ação').length > 0 && (
-          <ContentRow
-            title="Ação"
-            items={movies.filter((m) => m.category === 'Ação')}
-            type="movie"
-          />
-        )}
-        
-        {movies.filter((m) => m.category === 'Drama').length > 0 && (
-          <ContentRow
-            title="Drama"
-            items={movies.filter((m) => m.category === 'Drama')}
-            type="movie"
-          />
-        )}
+        <ContentRow title="Filmes" items={recentMovies} type="movie" />
+        <ContentRow title="Séries" items={recentSeries} type="series" />
       </main>
 
       <Footer />
