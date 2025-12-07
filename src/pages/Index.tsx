@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { HeroCarousel } from '@/components/HeroCarousel';
@@ -6,15 +7,26 @@ import { ContentRow } from '@/components/ContentRow';
 import { PageLoader } from '@/components/LoadingSpinner';
 import { supabase } from '@/integrations/supabase/client';
 import { Movie, Series } from '@/types/database';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Index = () => {
   const [movies, setMovies] = useState<Movie[]>([]);
   const [series, setSeries] = useState<Series[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { user, isLoading: authLoading } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
-    fetchContent();
-  }, []);
+    if (!authLoading && !user) {
+      navigate('/auth');
+    }
+  }, [user, authLoading, navigate]);
+
+  useEffect(() => {
+    if (user) {
+      fetchContent();
+    }
+  }, [user]);
 
   const fetchContent = async () => {
     try {
@@ -32,7 +44,7 @@ const Index = () => {
     }
   };
 
-  if (isLoading) {
+  if (authLoading || isLoading || !user) {
     return <PageLoader />;
   }
 
