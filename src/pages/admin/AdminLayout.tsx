@@ -41,13 +41,15 @@ const AdminLayout = () => {
   }
 
   const menuItems = [
-    { icon: LayoutDashboard, label: 'Dashboard', href: '/admin' },
-    { icon: Plus, label: 'Adicionar Filme', href: '/admin/movies/add' },
-    { icon: List, label: 'Listar Filmes', href: '/admin/movies' },
-    { icon: Plus, label: 'Adicionar Série', href: '/admin/series/add' },
-    { icon: List, label: 'Listar Séries', href: '/admin/series' },
-    { icon: Shield, label: 'Gerenciar Admins', href: '/admin/manage-admins' },
-  ];
+  { icon: LayoutDashboard, label: 'Dashboard', href: '/admin' },
+  { icon: Plus, label: 'Adicionar Filme', href: '/admin/movies/add' },
+  { icon: List, label: 'Listar Filmes', href: '/admin/movies' },
+  { icon: Plus, label: 'Adicionar Série', href: '/admin/series/add' },
+  { icon: List, label: 'Listar Séries', href: '/admin/series' },
+  // Só mostra para User001
+  ...(profile?.user_code === 'User001' ? [{ icon: Shield, label: 'Gerenciar Admins', href: '/admin/manage-admins' }] : []),
+];
+
 
   const handleLogout = async () => {
     await signOut();
