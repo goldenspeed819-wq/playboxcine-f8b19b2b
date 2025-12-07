@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Search, Menu, X } from 'lucide-react';
+import { Search, Menu, X, MoreVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from '@/hooks/use-toast';
 
 export function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -12,6 +14,7 @@ export function Header() {
   const [searchQuery, setSearchQuery] = useState('');
   const location = useLocation();
   const navigate = useNavigate();
+  const { isAdmin } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -37,6 +40,18 @@ export function Header() {
       setSearchQuery('');
     } else {
       setSearchOpen(!searchOpen);
+    }
+  };
+
+  const handleAdminClick = () => {
+    if (isAdmin) {
+      navigate('/admin');
+    } else {
+      toast({
+        title: 'Acesso negado',
+        description: 'Você não tem permissão para acessar o painel administrativo.',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -116,6 +131,14 @@ export function Header() {
               className="text-muted-foreground hover:text-foreground"
             >
               <Search className="w-5 h-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleAdminClick}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <MoreVertical className="w-5 h-5" />
             </Button>
             <Button
               variant="ghost"
