@@ -9,25 +9,34 @@ import {
   LogOut,
   Menu,
   X,
+  Shield,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useAdmin } from '@/contexts/AdminContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 
 const AdminLayout = () => {
-  const { isAuthenticated, logout } = useAdmin();
+  const { user, isAdmin, isLoading, signOut, profile } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      navigate('/admin-login');
+    if (!isLoading && (!user || !isAdmin)) {
+      navigate('/auth');
     }
-  }, [isAuthenticated, navigate]);
+  }, [user, isAdmin, isLoading, navigate]);
 
-  if (!isAuthenticated) {
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (!user || !isAdmin) {
     return null;
   }
 
@@ -37,11 +46,12 @@ const AdminLayout = () => {
     { icon: List, label: 'Listar Filmes', href: '/admin/movies' },
     { icon: Plus, label: 'Adicionar Série', href: '/admin/series/add' },
     { icon: List, label: 'Listar Séries', href: '/admin/series' },
+    { icon: Shield, label: 'Gerenciar Admins', href: '/admin/manage-admins' },
   ];
 
-  const handleLogout = () => {
-    logout();
-    navigate('/admin-login');
+  const handleLogout = async () => {
+    await signOut();
+    navigate('/');
   };
 
   return (
@@ -83,6 +93,14 @@ const AdminLayout = () => {
             <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Admin Panel</p>
           </div>
         </div>
+
+        {/* User Info */}
+        {profile && (
+          <div className="px-4 py-3 border-b border-border">
+            <p className="text-sm font-semibold text-primary">{profile.user_code}</p>
+            <p className="text-xs text-muted-foreground truncate">{profile.email}</p>
+          </div>
+        )}
 
         {/* Navigation */}
         <nav className="p-4 space-y-1">
