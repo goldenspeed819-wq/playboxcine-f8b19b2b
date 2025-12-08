@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Search, Menu, X, MoreVertical } from 'lucide-react';
+import { Search, Menu, X, MoreVertical, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -14,7 +14,7 @@ export function Header() {
   const [searchQuery, setSearchQuery] = useState('');
   const location = useLocation();
   const navigate = useNavigate();
-  const { isAdmin } = useAuth();
+  const { isAdmin, profile, signOut } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -140,6 +140,22 @@ export function Header() {
             >
               <MoreVertical className="w-5 h-5" />
             </Button>
+            {profile && (
+              <>
+                <span className="text-sm font-medium text-muted-foreground hidden sm:block">
+                  {profile.user_code}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={signOut}
+                  className="text-muted-foreground hover:text-foreground"
+                  title="Sair"
+                >
+                  <LogOut className="w-5 h-5" />
+                </Button>
+              </>
+            )}
             <Button
               variant="ghost"
               size="icon"
