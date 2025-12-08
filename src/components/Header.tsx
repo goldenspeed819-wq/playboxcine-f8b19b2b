@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
+import logo from '@/assets/logo.png';
 
 export function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -73,20 +74,12 @@ export function Header() {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16 md:h-20">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2 group">
-            <div className="relative">
-              <div className="w-10 h-10 md:w-12 md:h-12 bg-primary rounded-lg flex items-center justify-center neon-glow">
-                <span className="font-display font-bold text-lg md:text-xl text-primary-foreground">P</span>
-              </div>
-              <div className="absolute inset-0 bg-primary/50 rounded-lg blur-xl opacity-50 group-hover:opacity-100 transition-opacity" />
-            </div>
-            <div className="hidden sm:block">
-              <h1 className="font-display font-bold text-lg md:text-xl">
-                <span className="text-primary">Play</span>
-                <span className="text-foreground">Box</span>
-              </h1>
-              <p className="text-[10px] text-muted-foreground tracking-widest uppercase -mt-1">Cine</p>
-            </div>
+          <Link to="/" className="flex items-center group">
+            <img 
+              src={logo} 
+              alt="PlayBox Cine" 
+              className="h-10 md:h-12 w-auto object-contain"
+            />
           </Link>
 
           {/* Desktop Navigation */}
