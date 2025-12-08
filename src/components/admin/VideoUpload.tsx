@@ -1,7 +1,9 @@
 import { useState, useRef } from 'react';
-import { Upload, X, FileVideo, CheckCircle, Pause, Play } from 'lucide-react';
+import { Upload, X, FileVideo, CheckCircle, Pause, Play, Link, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
+import { Input } from '@/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import * as tus from 'tus-js-client';
@@ -19,9 +21,22 @@ export function VideoUpload({ onUploadComplete, currentUrl }: VideoUploadProps) 
   const [progress, setProgress] = useState(0);
   const [uploadedUrl, setUploadedUrl] = useState<string | null>(currentUrl || null);
   const [uploadSpeed, setUploadSpeed] = useState<string>('');
+  const [externalUrl, setExternalUrl] = useState<string>('');
   const inputRef = useRef<HTMLInputElement>(null);
   const uploadRef = useRef<tus.Upload | null>(null);
   const lastProgressRef = useRef<{ time: number; bytes: number }>({ time: 0, bytes: 0 });
+
+  // Check if current URL is external
+  const isExternalUrl = (url: string) => {
+    if (!url) return false;
+    return url.includes('youtube.com') || 
+           url.includes('youtu.be') || 
+           url.includes('vimeo.com') || 
+           url.includes('drive.google.com') ||
+           url.includes('dropbox.com') ||
+           url.includes('mega.nz') ||
+           (!url.includes('supabase') && url.startsWith('http'));
+  };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -159,6 +174,36 @@ export function VideoUpload({ onUploadComplete, currentUrl }: VideoUploadProps) 
     }
   };
 
+  const handleExternalUrlSubmit = () => {
+    if (!externalUrl.trim()) {
+      toast({
+        title: 'URL inválida',
+        description: 'Por favor, insira uma URL válida.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Basic URL validation
+    try {
+      new URL(externalUrl);
+    } catch {
+      toast({
+        title: 'URL inválida',
+        description: 'Por favor, insira uma URL válida.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setUploadedUrl(externalUrl);
+    onUploadComplete(externalUrl);
+    toast({
+      title: 'URL salva!',
+      description: 'A URL do vídeo foi salva com sucesso.',
+    });
+  };
+
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
@@ -175,162 +220,219 @@ export function VideoUpload({ onUploadComplete, currentUrl }: VideoUploadProps) 
     return parseFloat((bytesPerSecond / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
   };
 
-  return (
-    <div className="space-y-4">
-      {/* File Input Area */}
-      {!file && !uploadedUrl && (
-        <label
-          className={cn(
-            'flex flex-col items-center justify-center w-full h-48 border-2 border-dashed rounded-xl cursor-pointer transition-colors',
-            'border-border hover:border-primary hover:bg-primary/5'
-          )}
+  // If already has URL, show success state
+  if (uploadedUrl) {
+    return (
+      <div className="p-4 bg-card rounded-xl border border-green-500/50 space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center">
+            {isExternalUrl(uploadedUrl) ? (
+              <ExternalLink className="w-5 h-5 text-green-500" />
+            ) : (
+              <CheckCircle className="w-5 h-5 text-green-500" />
+            )}
+          </div>
+          <div className="flex-1">
+            <p className="font-semibold text-sm text-green-500">
+              {isExternalUrl(uploadedUrl) ? 'URL externa salva!' : 'Upload concluído!'}
+            </p>
+            <p className="text-xs text-muted-foreground truncate max-w-[300px]">
+              {uploadedUrl}
+            </p>
+          </div>
+        </div>
+
+        <Button
+          variant="outline"
+          className="w-full"
+          onClick={() => {
+            setUploadedUrl(null);
+            setFile(null);
+            setPreview(null);
+            setExternalUrl('');
+          }}
         >
-          <div className="flex flex-col items-center justify-center py-6">
-            <Upload className="w-10 h-10 text-muted-foreground mb-3" />
-            <p className="text-sm font-semibold text-foreground mb-1">
-              Clique para selecionar um vídeo
-            </p>
-            <p className="text-xs text-muted-foreground">
-              MP4, WEBM ou MKV (máx. 100GB)
-            </p>
-          </div>
-          <input
-            ref={inputRef}
-            type="file"
-            className="hidden"
-            accept="video/mp4,video/webm,video/x-matroska"
-            onChange={handleFileSelect}
-          />
-        </label>
-      )}
+          Substituir vídeo
+        </Button>
+      </div>
+    );
+  }
 
-      {/* File Preview */}
-      {file && !uploadedUrl && (
-        <div className="p-4 bg-card rounded-xl border border-border space-y-4">
-          {/* Preview Video - only for small files */}
-          {preview && (
-            <div className="aspect-video rounded-lg overflow-hidden bg-black">
-              <video
-                src={preview}
-                controls
-                className="w-full h-full object-contain"
-              />
+  return (
+    <Tabs defaultValue="upload" className="w-full">
+      <TabsList className="grid w-full grid-cols-2">
+        <TabsTrigger value="upload" className="gap-2">
+          <Upload className="w-4 h-4" />
+          Upload
+        </TabsTrigger>
+        <TabsTrigger value="url" className="gap-2">
+          <Link className="w-4 h-4" />
+          URL Externa
+        </TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="upload" className="space-y-4 mt-4">
+        {/* File Input Area */}
+        {!file && (
+          <label
+            className={cn(
+              'flex flex-col items-center justify-center w-full h-48 border-2 border-dashed rounded-xl cursor-pointer transition-colors',
+              'border-border hover:border-primary hover:bg-primary/5'
+            )}
+          >
+            <div className="flex flex-col items-center justify-center py-6">
+              <Upload className="w-10 h-10 text-muted-foreground mb-3" />
+              <p className="text-sm font-semibold text-foreground mb-1">
+                Clique para selecionar um vídeo
+              </p>
+              <p className="text-xs text-muted-foreground">
+                MP4, WEBM ou MKV (máx. 100GB)
+              </p>
             </div>
-          )}
+            <input
+              ref={inputRef}
+              type="file"
+              className="hidden"
+              accept="video/mp4,video/webm,video/x-matroska"
+              onChange={handleFileSelect}
+            />
+          </label>
+        )}
 
-          {/* Large file indicator */}
-          {!preview && file && (
-            <div className="aspect-video rounded-lg overflow-hidden bg-muted flex items-center justify-center">
-              <div className="text-center">
-                <FileVideo className="w-16 h-16 text-muted-foreground mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground">Arquivo grande - preview desativado</p>
+        {/* File Preview */}
+        {file && (
+          <div className="p-4 bg-card rounded-xl border border-border space-y-4">
+            {/* Preview Video - only for small files */}
+            {preview && (
+              <div className="aspect-video rounded-lg overflow-hidden bg-black">
+                <video
+                  src={preview}
+                  controls
+                  className="w-full h-full object-contain"
+                />
               </div>
-            </div>
-          )}
+            )}
 
-          {/* File Info */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                <FileVideo className="w-5 h-5 text-primary" />
+            {/* Large file indicator */}
+            {!preview && file && (
+              <div className="aspect-video rounded-lg overflow-hidden bg-muted flex items-center justify-center">
+                <div className="text-center">
+                  <FileVideo className="w-16 h-16 text-muted-foreground mx-auto mb-2" />
+                  <p className="text-sm text-muted-foreground">Arquivo grande - preview desativado</p>
+                </div>
               </div>
-              <div>
-                <p className="font-semibold text-sm truncate max-w-[200px]">
-                  {file.name}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {formatFileSize(file.size)}
-                </p>
-              </div>
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleClear}
-              disabled={isUploading && !isPaused}
-            >
-              <X className="w-4 h-4" />
-            </Button>
-          </div>
+            )}
 
-          {/* Progress Bar */}
-          {isUploading && (
-            <div className="space-y-2">
-              <Progress value={progress} className="h-2" />
-              <div className="flex justify-between text-xs text-muted-foreground">
-                <span>{isPaused ? 'Pausado' : 'Enviando...'} {progress}%</span>
-                {uploadSpeed && <span>{uploadSpeed}</span>}
+            {/* File Info */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <FileVideo className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <p className="font-semibold text-sm truncate max-w-[200px]">
+                    {file.name}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatFileSize(file.size)}
+                  </p>
+                </div>
               </div>
-            </div>
-          )}
-
-          {/* Action Buttons */}
-          {!isUploading ? (
-            <Button onClick={handleUpload} className="w-full gap-2">
-              <Upload className="w-4 h-4" />
-              Confirmar Upload
-            </Button>
-          ) : (
-            <div className="flex gap-2">
               <Button
-                variant="outline"
-                onClick={handlePauseResume}
-                className="flex-1 gap-2"
-              >
-                {isPaused ? (
-                  <>
-                    <Play className="w-4 h-4" />
-                    Retomar
-                  </>
-                ) : (
-                  <>
-                    <Pause className="w-4 h-4" />
-                    Pausar
-                  </>
-                )}
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={handleCancel}
-                className="flex-1 gap-2"
+                variant="ghost"
+                size="icon"
+                onClick={handleClear}
+                disabled={isUploading && !isPaused}
               >
                 <X className="w-4 h-4" />
-                Cancelar
               </Button>
             </div>
-          )}
-        </div>
-      )}
 
-      {/* Uploaded Success */}
-      {uploadedUrl && (
-        <div className="p-4 bg-card rounded-xl border border-green-500/50 space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center">
-              <CheckCircle className="w-5 h-5 text-green-500" />
+            {/* Progress Bar */}
+            {isUploading && (
+              <div className="space-y-2">
+                <Progress value={progress} className="h-2" />
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>{isPaused ? 'Pausado' : 'Enviando...'} {progress}%</span>
+                  {uploadSpeed && <span>{uploadSpeed}</span>}
+                </div>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            {!isUploading ? (
+              <Button onClick={handleUpload} className="w-full gap-2">
+                <Upload className="w-4 h-4" />
+                Confirmar Upload
+              </Button>
+            ) : (
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={handlePauseResume}
+                  className="flex-1 gap-2"
+                >
+                  {isPaused ? (
+                    <>
+                      <Play className="w-4 h-4" />
+                      Retomar
+                    </>
+                  ) : (
+                    <>
+                      <Pause className="w-4 h-4" />
+                      Pausar
+                    </>
+                  )}
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={handleCancel}
+                  className="flex-1 gap-2"
+                >
+                  <X className="w-4 h-4" />
+                  Cancelar
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+      </TabsContent>
+
+      <TabsContent value="url" className="space-y-4 mt-4">
+        <div className="p-4 bg-card rounded-xl border border-border space-y-4">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+              <ExternalLink className="w-5 h-5 text-primary" />
             </div>
-            <div className="flex-1">
-              <p className="font-semibold text-sm text-green-500">Upload concluído!</p>
+            <div>
+              <p className="font-semibold text-sm">URL Externa</p>
               <p className="text-xs text-muted-foreground">
-                Vídeo pronto para uso
+                YouTube, Vimeo, Google Drive, etc.
               </p>
             </div>
           </div>
 
-          {/* Replace Button */}
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={() => {
-              setUploadedUrl(null);
-              setFile(null);
-              setPreview(null);
-            }}
+          <Input
+            placeholder="https://youtube.com/watch?v=... ou link direto"
+            value={externalUrl}
+            onChange={(e) => setExternalUrl(e.target.value)}
+          />
+
+          <p className="text-xs text-muted-foreground">
+            Cole a URL do vídeo de qualquer serviço de streaming ou hospedagem.
+            Ideal para vídeos muito grandes.
+          </p>
+
+          <Button 
+            onClick={handleExternalUrlSubmit} 
+            className="w-full gap-2"
+            disabled={!externalUrl.trim()}
           >
-            Substituir vídeo
+            <Link className="w-4 h-4" />
+            Salvar URL
           </Button>
         </div>
-      )}
-    </div>
+      </TabsContent>
+    </Tabs>
   );
 }
