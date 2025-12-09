@@ -34,6 +34,7 @@ const EditMovie = () => {
     thumbnail: '',
     cover: '',
     video_url: '',
+    video_url_part2: '',
     category: '',
     duration: '',
     release_year: '',
@@ -69,6 +70,7 @@ const EditMovie = () => {
       thumbnail: data.thumbnail || '',
       cover: data.cover || '',
       video_url: data.video_url || '',
+      video_url_part2: (data as any).video_url_part2 || '',
       category: data.category || '',
       duration: data.duration || '',
       release_year: data.release_year?.toString() || '',
@@ -101,13 +103,14 @@ const EditMovie = () => {
         thumbnail: formData.thumbnail || null,
         cover: formData.cover || null,
         video_url: formData.video_url || null,
+        video_url_part2: formData.video_url_part2 || null,
         category: formData.category || null,
         duration: formData.duration || null,
         release_year: formData.release_year ? parseInt(formData.release_year) : null,
         rating: formData.rating || 'Livre',
         is_featured: formData.is_featured,
         is_release: formData.is_release,
-      })
+      } as any)
       .eq('id', id);
 
     if (error) {
@@ -280,6 +283,17 @@ const EditMovie = () => {
               <VideoUpload
                 onUploadComplete={(url) => setFormData({ ...formData, video_url: url })}
                 currentUrl={formData.video_url}
+              />
+            </div>
+
+            <div className="p-6 bg-card rounded-2xl border border-dashed border-border/50">
+              <h3 className="font-display font-bold mb-2">Parte 2 (Opcional)</h3>
+              <p className="text-xs text-muted-foreground mb-4">
+                Se o filme foi dividido em duas partes por causa do tamanho, adicione a segunda parte aqui.
+              </p>
+              <VideoUpload
+                onUploadComplete={(url) => setFormData({ ...formData, video_url_part2: url })}
+                currentUrl={formData.video_url_part2}
               />
             </div>
           </div>
