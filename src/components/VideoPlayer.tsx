@@ -4,6 +4,7 @@ import {
   Pause,
   Volume2,
   VolumeX,
+  Volume1,
   Maximize,
   Minimize,
   Settings,
@@ -11,6 +12,8 @@ import {
   SkipBack,
   SkipForward,
   ChevronRight,
+  RectangleHorizontal,
+  Square,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
@@ -19,6 +22,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 
@@ -42,9 +46,11 @@ export function VideoPlayer({ src, poster, title, subtitleUrl, nextLabel, onNext
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isBigPicture, setIsBigPicture] = useState(false);
   const [showControls, setShowControls] = useState(true);
   const [subtitlesEnabled, setSubtitlesEnabled] = useState(false);
   const [showNextButton, setShowNextButton] = useState(false);
+  const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const controlsTimeoutRef = useRef<NodeJS.Timeout>();
 
   // Show next button when video is 90% complete or has less than 30 seconds remaining
@@ -77,15 +83,34 @@ export function VideoPlayer({ src, poster, title, subtitleUrl, nextLabel, onNext
       }
     };
 
+    const handlePlay = () => setIsPlaying(true);
+    const handlePause = () => setIsPlaying(false);
+    const handleEnded = () => setIsPlaying(false);
+
     video.addEventListener('timeupdate', handleTimeUpdate);
     video.addEventListener('loadedmetadata', handleLoadedMetadata);
     video.addEventListener('progress', handleProgress);
+    video.addEventListener('play', handlePlay);
+    video.addEventListener('pause', handlePause);
+    video.addEventListener('ended', handleEnded);
 
     return () => {
       video.removeEventListener('timeupdate', handleTimeUpdate);
       video.removeEventListener('loadedmetadata', handleLoadedMetadata);
       video.removeEventListener('progress', handleProgress);
+      video.removeEventListener('play', handlePlay);
+      video.removeEventListener('pause', handlePause);
+      video.removeEventListener('ended', handleEnded);
     };
+  }, []);
+
+  // Handle fullscreen change
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
 
   const handleMouseMove = () => {
@@ -109,7 +134,6 @@ export function VideoPlayer({ src, poster, title, subtitleUrl, nextLabel, onNext
     } else {
       video.play();
     }
-    setIsPlaying(!isPlaying);
   };
 
   const handleSeek = (value: number[]) => {
@@ -148,7 +172,10 @@ export function VideoPlayer({ src, poster, title, subtitleUrl, nextLabel, onNext
     } else {
       document.exitFullscreen?.();
     }
-    setIsFullscreen(!isFullscreen);
+  };
+
+  const toggleBigPicture = () => {
+    setIsBigPicture(!isBigPicture);
   };
 
   const skip = (seconds: number) => {
@@ -157,7 +184,15 @@ export function VideoPlayer({ src, poster, title, subtitleUrl, nextLabel, onNext
     video.currentTime = Math.max(0, Math.min(video.currentTime + seconds, duration));
   };
 
+  const changePlaybackSpeed = (speed: number) => {
+    const video = videoRef.current;
+    if (!video) return;
+    video.playbackRate = speed;
+    setPlaybackSpeed(speed);
+  };
+
   const formatTime = (time: number) => {
+    if (!isFinite(time) || isNaN(time)) return '0:00';
     const hours = Math.floor(time / 3600);
     const minutes = Math.floor((time % 3600) / 60);
     const seconds = Math.floor(time % 60);
@@ -168,9 +203,20 @@ export function VideoPlayer({ src, poster, title, subtitleUrl, nextLabel, onNext
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
+  const getVolumeIcon = () => {
+    if (isMuted || volume === 0) return VolumeX;
+    if (volume < 0.5) return Volume1;
+    return Volume2;
+  };
+
+  const VolumeIcon = getVolumeIcon();
+
   if (!src) {
     return (
-      <div className="video-player-container flex items-center justify-center bg-surface-dark">
+      <div className={cn(
+        "video-player-container flex items-center justify-center bg-surface-dark",
+        isBigPicture && "fixed inset-0 z-50"
+      )}>
         <div className="text-center">
           <Play className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
           <p className="text-muted-foreground">Nenhum vídeo disponível</p>
@@ -182,7 +228,10 @@ export function VideoPlayer({ src, poster, title, subtitleUrl, nextLabel, onNext
   return (
     <div
       ref={containerRef}
-      className="video-player-container group"
+      className={cn(
+        "video-player-container group relative",
+        isBigPicture && "fixed inset-0 z-50 bg-black"
+      )}
       onMouseMove={handleMouseMove}
       onMouseLeave={() => isPlaying && setShowControls(false)}
     >
@@ -214,7 +263,7 @@ export function VideoPlayer({ src, poster, title, subtitleUrl, nextLabel, onNext
 
       {/* Next Episode/Part Button */}
       {showNextButton && nextLabel && onNextClick && (
-        <div className="absolute bottom-24 right-4 animate-fade-in">
+        <div className="absolute bottom-24 right-4 animate-fade-in z-10">
           <Button
             onClick={onNextClick}
             className="gap-2 bg-primary hover:bg-primary/90 shadow-lg"
@@ -226,20 +275,31 @@ export function VideoPlayer({ src, poster, title, subtitleUrl, nextLabel, onNext
         </div>
       )}
 
+      {/* Title - Top */}
+      {title && showControls && (
+        <div className="absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-black/80 to-transparent transition-opacity duration-300">
+          <h3 className="font-display font-bold text-lg text-white drop-shadow-lg">
+            {title}
+          </h3>
+        </div>
+      )}
+
       {/* Controls */}
       <div
         className={cn(
-          'absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-4 transition-opacity duration-300',
-          showControls ? 'opacity-100' : 'opacity-0'
+          'absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent px-4 pb-3 pt-12 transition-opacity duration-300',
+          showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'
         )}
       >
         {/* Progress Bar */}
-        <div className="relative mb-4 group/progress">
-          <div className="h-1 bg-foreground/20 rounded-full overflow-hidden">
+        <div className="relative mb-3 group/progress">
+          <div className="h-1 bg-white/20 rounded-full overflow-hidden relative">
+            {/* Buffered */}
             <div
-              className="h-full bg-foreground/30 absolute"
+              className="h-full bg-white/30 absolute left-0 top-0"
               style={{ width: `${buffered}%` }}
             />
+            {/* Progress */}
             <Slider
               value={[progress]}
               onValueChange={handleSeek}
@@ -251,76 +311,80 @@ export function VideoPlayer({ src, poster, title, subtitleUrl, nextLabel, onNext
         </div>
 
         {/* Controls Row */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between gap-2">
+          {/* Left Controls */}
+          <div className="flex items-center gap-1">
             {/* Play/Pause */}
             <Button
               variant="ghost"
               size="icon"
-              className="text-foreground hover:bg-foreground/10"
+              className="text-white hover:bg-white/10 h-9 w-9"
               onClick={togglePlay}
             >
               {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
             </Button>
 
-            {/* Skip Buttons */}
+            {/* Skip Back */}
             <Button
               variant="ghost"
               size="icon"
-              className="text-foreground hover:bg-foreground/10"
+              className="text-white hover:bg-white/10 h-9 w-9"
               onClick={() => skip(-10)}
+              title="Voltar 10s"
             >
               <SkipBack className="w-5 h-5" />
             </Button>
+
+            {/* Skip Forward */}
             <Button
               variant="ghost"
               size="icon"
-              className="text-foreground hover:bg-foreground/10"
+              className="text-white hover:bg-white/10 h-9 w-9"
               onClick={() => skip(10)}
+              title="Avançar 10s"
             >
               <SkipForward className="w-5 h-5" />
             </Button>
 
             {/* Volume */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 group/volume">
               <Button
                 variant="ghost"
                 size="icon"
-                className="text-foreground hover:bg-foreground/10"
+                className="text-white hover:bg-white/10 h-9 w-9"
                 onClick={toggleMute}
               >
-                {isMuted || volume === 0 ? (
-                  <VolumeX className="w-5 h-5" />
-                ) : (
-                  <Volume2 className="w-5 h-5" />
-                )}
+                <VolumeIcon className="w-5 h-5" />
               </Button>
-              <div className="w-20 hidden sm:block">
+              <div className="w-0 overflow-hidden group-hover/volume:w-20 transition-all duration-200">
                 <Slider
                   value={[isMuted ? 0 : volume * 100]}
                   onValueChange={handleVolumeChange}
                   max={100}
                   step={1}
+                  className="w-20"
                 />
               </div>
             </div>
 
-            {/* Time */}
-            <span className="text-xs text-foreground/80 ml-2">
+            {/* Time Display */}
+            <span className="text-sm text-white/90 ml-2 tabular-nums">
               {formatTime(currentTime)} / {formatTime(duration)}
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
+          {/* Right Controls */}
+          <div className="flex items-center gap-1">
             {/* Subtitles */}
             <Button
               variant="ghost"
               size="icon"
               className={cn(
-                'text-foreground hover:bg-foreground/10',
+                'text-white hover:bg-white/10 h-9 w-9',
                 subtitlesEnabled && 'text-primary'
               )}
               onClick={() => setSubtitlesEnabled(!subtitlesEnabled)}
+              title="Legendas"
             >
               <Subtitles className="w-5 h-5" />
             </Button>
@@ -331,23 +395,59 @@ export function VideoPlayer({ src, poster, title, subtitleUrl, nextLabel, onNext
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="text-foreground hover:bg-foreground/10"
+                  className="text-white hover:bg-white/10 h-9 w-9"
+                  title="Configurações"
                 >
                   <Settings className="w-5 h-5" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-popover border-border">
-                <DropdownMenuItem>Velocidade: 1x</DropdownMenuItem>
-                <DropdownMenuItem>Qualidade: Auto</DropdownMenuItem>
+              <DropdownMenuContent align="end" className="bg-popover/95 backdrop-blur border-border min-w-[150px]">
+                <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+                  Velocidade
+                </div>
+                {[0.5, 0.75, 1, 1.25, 1.5, 2].map((speed) => (
+                  <DropdownMenuItem
+                    key={speed}
+                    onClick={() => changePlaybackSpeed(speed)}
+                    className={cn(playbackSpeed === speed && 'bg-primary/20')}
+                  >
+                    {speed === 1 ? 'Normal' : `${speed}x`}
+                    {playbackSpeed === speed && <span className="ml-auto">✓</span>}
+                  </DropdownMenuItem>
+                ))}
+                <DropdownMenuSeparator />
+                <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+                  Qualidade
+                </div>
+                <DropdownMenuItem>Auto</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+
+            {/* Big Picture Mode */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn(
+                'text-white hover:bg-white/10 h-9 w-9',
+                isBigPicture && 'text-primary'
+              )}
+              onClick={toggleBigPicture}
+              title="Modo Big Picture"
+            >
+              {isBigPicture ? (
+                <Square className="w-5 h-5" />
+              ) : (
+                <RectangleHorizontal className="w-5 h-5" />
+              )}
+            </Button>
 
             {/* Fullscreen */}
             <Button
               variant="ghost"
               size="icon"
-              className="text-foreground hover:bg-foreground/10"
+              className="text-white hover:bg-white/10 h-9 w-9"
               onClick={toggleFullscreen}
+              title={isFullscreen ? 'Sair da tela cheia' : 'Tela cheia'}
             >
               {isFullscreen ? (
                 <Minimize className="w-5 h-5" />
@@ -357,15 +457,6 @@ export function VideoPlayer({ src, poster, title, subtitleUrl, nextLabel, onNext
             </Button>
           </div>
         </div>
-
-        {/* Title */}
-        {title && (
-          <div className="absolute top-4 left-4 right-4">
-            <h3 className="font-display font-bold text-lg text-foreground drop-shadow-lg">
-              {title}
-            </h3>
-          </div>
-        )}
       </div>
     </div>
   );
