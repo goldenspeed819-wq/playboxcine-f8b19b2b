@@ -78,6 +78,23 @@ const SeriesDetail = () => {
   const seasons = [...new Set(episodes.map((e) => e.season))].sort((a, b) => a - b);
   const seasonEpisodes = episodes.filter((e) => e.season === selectedSeason);
 
+  // Get next episode
+  const getNextEpisode = () => {
+    if (!selectedEpisode) return null;
+    const currentIndex = episodes.findIndex((e) => e.id === selectedEpisode.id);
+    if (currentIndex === -1 || currentIndex === episodes.length - 1) return null;
+    return episodes[currentIndex + 1];
+  };
+
+  const nextEpisode = getNextEpisode();
+
+  const handleNextEpisode = () => {
+    if (nextEpisode) {
+      setSelectedEpisode(nextEpisode);
+      setSelectedSeason(nextEpisode.season);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -122,6 +139,8 @@ const SeriesDetail = () => {
                     ? `${series.title} - T${selectedEpisode.season}E${selectedEpisode.episode}`
                     : series.title
                 }
+                nextLabel={nextEpisode ? `Próximo: T${nextEpisode.season}E${nextEpisode.episode}` : undefined}
+                onNextClick={nextEpisode ? handleNextEpisode : undefined}
               />
 
               {/* Series Info */}
@@ -197,8 +216,8 @@ const SeriesDetail = () => {
                             : 'bg-card border-border hover:border-primary/50'
                         )}
                       >
-                        {/* Thumbnail */}
-                        <div className="w-24 h-14 rounded-lg overflow-hidden bg-secondary flex-shrink-0">
+                        {/* Thumbnail with play overlay */}
+                        <div className="w-28 h-16 rounded-lg overflow-hidden bg-secondary flex-shrink-0 relative group/thumb">
                           {episode.thumbnail ? (
                             <img
                               src={episode.thumbnail}
@@ -206,10 +225,18 @@ const SeriesDetail = () => {
                               className="w-full h-full object-cover"
                             />
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center">
-                              <Play className="w-6 h-6 text-muted-foreground" />
-                            </div>
+                            <div className="w-full h-full bg-gradient-to-br from-muted to-secondary" />
                           )}
+                          {/* Play overlay */}
+                          <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover/thumb:opacity-100 transition-opacity">
+                            <div className="w-8 h-8 rounded-full bg-primary/90 flex items-center justify-center">
+                              <Play className="w-4 h-4 text-primary-foreground ml-0.5" />
+                            </div>
+                          </div>
+                          {/* Episode number badge */}
+                          <div className="absolute bottom-1 right-1 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded">
+                            {episode.episode}
+                          </div>
                         </div>
 
                         {/* Info */}

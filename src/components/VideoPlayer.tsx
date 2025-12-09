@@ -10,6 +10,7 @@ import {
   Subtitles,
   SkipBack,
   SkipForward,
+  ChevronRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
@@ -26,9 +27,11 @@ interface VideoPlayerProps {
   poster?: string | null;
   title?: string;
   subtitleUrl?: string | null;
+  nextLabel?: string;
+  onNextClick?: () => void;
 }
 
-export function VideoPlayer({ src, poster, title, subtitleUrl }: VideoPlayerProps) {
+export function VideoPlayer({ src, poster, title, subtitleUrl, nextLabel, onNextClick }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -41,7 +44,19 @@ export function VideoPlayer({ src, poster, title, subtitleUrl }: VideoPlayerProp
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showControls, setShowControls] = useState(true);
   const [subtitlesEnabled, setSubtitlesEnabled] = useState(false);
+  const [showNextButton, setShowNextButton] = useState(false);
   const controlsTimeoutRef = useRef<NodeJS.Timeout>();
+
+  // Show next button when video is 90% complete or has less than 30 seconds remaining
+  useEffect(() => {
+    if (onNextClick && duration > 0) {
+      const timeRemaining = duration - currentTime;
+      const percentComplete = (currentTime / duration) * 100;
+      setShowNextButton(percentComplete >= 90 || timeRemaining <= 30);
+    } else {
+      setShowNextButton(false);
+    }
+  }, [currentTime, duration, onNextClick]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -194,6 +209,20 @@ export function VideoPlayer({ src, poster, title, subtitleUrl }: VideoPlayerProp
           >
             <Play className="w-10 h-10 text-primary-foreground ml-1" />
           </button>
+        </div>
+      )}
+
+      {/* Next Episode/Part Button */}
+      {showNextButton && nextLabel && onNextClick && (
+        <div className="absolute bottom-24 right-4 animate-fade-in">
+          <Button
+            onClick={onNextClick}
+            className="gap-2 bg-primary hover:bg-primary/90 shadow-lg"
+            size="lg"
+          >
+            {nextLabel}
+            <ChevronRight className="w-5 h-5" />
+          </Button>
         </div>
       )}
 

@@ -12,8 +12,9 @@ import { Movie } from '@/types/database';
 
 const MovieDetail = () => {
   const { id } = useParams<{ id: string }>();
-  const [movie, setMovie] = useState<Movie | null>(null);
+  const [movie, setMovie] = useState<Movie & { video_url_part2?: string | null } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [currentPart, setCurrentPart] = useState<1 | 2>(1);
 
   useEffect(() => {
     if (id) {
@@ -31,9 +32,18 @@ const MovieDetail = () => {
     if (error) {
       console.error('Error fetching movie:', error);
     } else {
-      setMovie(data);
+      setMovie(data as any);
     }
     setIsLoading(false);
+  };
+
+  const hasPart2 = movie?.video_url_part2;
+  const currentVideoUrl = currentPart === 1 ? movie?.video_url : movie?.video_url_part2;
+
+  const handleNextPart = () => {
+    if (currentPart === 1 && hasPart2) {
+      setCurrentPart(2);
+    }
   };
 
   if (isLoading) {
@@ -92,11 +102,33 @@ const MovieDetail = () => {
           <div className="grid lg:grid-cols-3 gap-8">
             {/* Main Content */}
             <div className="lg:col-span-2 space-y-8">
+              {/* Part Selector */}
+              {hasPart2 && (
+                <div className="flex gap-2 mb-4">
+                  <Button
+                    variant={currentPart === 1 ? 'default' : 'outline'}
+                    onClick={() => setCurrentPart(1)}
+                    size="sm"
+                  >
+                    Parte 1
+                  </Button>
+                  <Button
+                    variant={currentPart === 2 ? 'default' : 'outline'}
+                    onClick={() => setCurrentPart(2)}
+                    size="sm"
+                  >
+                    Parte 2
+                  </Button>
+                </div>
+              )}
+
               {/* Video Player */}
               <VideoPlayer
-                src={movie.video_url}
+                src={currentVideoUrl || null}
                 poster={movie.thumbnail}
-                title={movie.title}
+                title={hasPart2 ? `${movie.title} - Parte ${currentPart}` : movie.title}
+                nextLabel={currentPart === 1 && hasPart2 ? 'Parte 2' : undefined}
+                onNextClick={currentPart === 1 && hasPart2 ? handleNextPart : undefined}
               />
 
               {/* Movie Info */}
