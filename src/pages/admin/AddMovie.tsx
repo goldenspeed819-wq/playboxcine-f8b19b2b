@@ -31,6 +31,7 @@ const AddMovie = () => {
     thumbnail: '',
     cover: '',
     video_url: '',
+    video_url_part2: '',
     category: '',
     duration: '',
     release_year: '',
@@ -59,6 +60,7 @@ const AddMovie = () => {
       thumbnail: formData.thumbnail || null,
       cover: formData.cover || null,
       video_url: formData.video_url || null,
+      video_url_part2: formData.video_url_part2 || null,
       category: formData.category || null,
       duration: formData.duration || null,
       release_year: formData.release_year ? parseInt(formData.release_year) : null,
@@ -232,6 +234,16 @@ const AddMovie = () => {
               <h3 className="font-display font-bold mb-4">Vídeo</h3>
               <VideoUpload
                 onUploadComplete={(url) => setFormData({ ...formData, video_url: url })}
+              />
+            </div>
+
+            <div className="p-6 bg-card rounded-2xl border border-dashed border-border/50">
+              <h3 className="font-display font-bold mb-2">Parte 2 (Opcional)</h3>
+              <p className="text-xs text-muted-foreground mb-4">
+                Se o filme foi dividido em duas partes por causa do tamanho, adicione a segunda parte aqui.
+              </p>
+              <VideoUpload
+                onUploadComplete={(url) => setFormData({ ...formData, video_url_part2: url })}
               />
             </div>
           </div>
