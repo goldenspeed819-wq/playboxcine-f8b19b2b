@@ -44,22 +44,20 @@ const Auth = () => {
           });
           navigate('/');
         }
-      } else {
-        const { error } = await signUp(email, password);
-        if (error) {
-          if (error.message.includes('already registered')) {
-            setError('Este email já está cadastrado.');
-          } else {
-            setError(error.message);
-          }
-        } else {
-          toast({
-            title: 'Conta criada!',
-            description: 'Sua conta foi criada com sucesso.',
-          });
-          navigate('/');
-        }
-      }
+     // No handleSubmit, onde trata o cadastro:
+} else {
+  const { error } = await signUp(email, password);
+  if (error) {
+    // ... erro handling
+  } else {
+    toast({
+      title: 'Conta criada!',
+      description: 'Configure seu perfil.',
+    });
+    navigate('/profile-setup'); // <-- Mudar de '/' para '/profile-setup'
+  }
+}
+
     } catch (err) {
       setError('Ocorreu um erro. Tente novamente.');
     }
