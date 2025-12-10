@@ -5,6 +5,7 @@ export interface Movie {
   thumbnail: string | null;
   cover: string | null;
   video_url: string | null;
+  video_url_part2: string | null;
   category: string | null;
   duration: string | null;
   release_year: number | null;
@@ -53,6 +54,13 @@ export interface Admin {
   id: string;
   email: string;
   password_hash: string;
+  created_at: string;
+}
+
+export interface Profile {
+  id: string;
+  email: string;
+  user_code: string;
   created_at: string;
 }
 
