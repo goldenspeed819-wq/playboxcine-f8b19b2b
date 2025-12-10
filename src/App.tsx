@@ -7,6 +7,11 @@ import { AuthProvider } from "@/contexts/AuthContext";
 
 // Public Pages
 import Index from "./pages/Index";
+import ProfileSetup from '@/pages/ProfileSetup';
+
+// Adicionar a rota:
+<Route path="/profile-setup" element={<ProfileSetup />} />
+
 import Movies from "./pages/Movies";
 import Series from "./pages/Series";
 import MovieDetail from "./pages/MovieDetail";
