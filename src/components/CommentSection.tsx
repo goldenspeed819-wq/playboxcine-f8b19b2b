@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Send, User } from 'lucide-react';
+import { Send, User, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -13,16 +13,19 @@ interface CommentSectionProps {
   episodeId?: string;
 }
 
+const ADMIN_USER = 'User001';
+
 export function CommentSection({ movieId, episodeId }: CommentSectionProps) {
   const [comments, setComments] = useState<Comment[]>([]);
   const [userName, setUserName] = useState('');
   const [text, setText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchComments();
-    
-    // Subscribe to realtime comments
+
+    // Subscribe to realtime comments (INSERT and DELETE)
     const channel = supabase
       .channel('comments-changes')
       .on(
@@ -40,6 +43,18 @@ export function CommentSection({ movieId, episodeId }: CommentSectionProps) {
           ) {
             setComments((prev) => [newComment, ...prev]);
           }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'comments',
+        },
+        (payload) => {
+          const deletedComment = payload.old as Comment;
+          setComments((prev) => prev.filter((c) => c.id !== deletedComment.id));
         }
       )
       .subscribe();
@@ -96,6 +111,35 @@ export function CommentSection({ movieId, episodeId }: CommentSectionProps) {
     }
     setIsLoading(false);
   };
+
+  const handleDelete = async (commentId: string) => {
+    setDeletingId(commentId);
+    
+    const { error } = await supabase
+      .from('comments')
+      .delete()
+      .eq('id', commentId);
+
+    if (error) {
+      console.error('Error deleting comment:', error);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível excluir o comentário.',
+        variant: 'destructive',
+      });
+    } else {
+      toast({
+        title: 'Sucesso',
+        description: 'Comentário excluído!',
+      });
+      // Remove from local state immediately
+      setComments((prev) => prev.filter((c) => c.id !== commentId));
+    }
+    
+    setDeletingId(null);
+  };
+
+  const isAdmin = userName.trim().toLowerCase() === ADMIN_USER.toLowerCase();
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -166,6 +210,19 @@ export function CommentSection({ movieId, episodeId }: CommentSectionProps) {
                   </div>
                   <p className="text-muted-foreground text-sm">{comment.text}</p>
                 </div>
+                {/* Delete button - only visible for User001 */}
+                {isAdmin && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10 flex-shrink-0"
+                    onClick={() => handleDelete(comment.id)}
+                    disabled={deletingId === comment.id}
+                    title="Excluir comentário"
+                  >
+                    <Trash2 className={cn("w-4 h-4", deletingId === comment.id && "animate-pulse")} />
+                  </Button>
+                )}
               </div>
             </div>
           ))
