@@ -50,7 +50,7 @@ export function Header() {
     } else {
       toast({
         title: 'Acesso negado',
-        description: 'Você não tem permissão para acessar o painel administrativo.',
+        description: '',
         variant: 'destructive',
       });
     }
