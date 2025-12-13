@@ -46,8 +46,8 @@ const AdminLayout = () => {
   { icon: List, label: 'Listar Filmes', href: '/admin/movies' },
   { icon: Plus, label: 'Adicionar Série', href: '/admin/series/add' },
   { icon: List, label: 'Listar Séries', href: '/admin/series' },
-  // Só mostra para Fundador
-  ...(profile?.user_code === 'Fundador' ? [{ icon: Shield, label: 'Gerenciar Admins', href: '/admin/manage-admins' }] : []),
+  // Só mostra para User001
+  ...(profile?.user_code === 'User001' ? [{ icon: Shield, label: 'Gerenciar Admins', href: '/admin/manage-admins' }] : []),
 ];
 
 

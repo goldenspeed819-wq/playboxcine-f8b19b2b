@@ -25,25 +25,24 @@ export function Header() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
- const handleSearch = (e: React.FormEvent) => {
-  e.preventDefault();
-  if (searchQuery.trim()) {
-    navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
-    setSearchOpen(false);
-    setSearchQuery('');
-  }
-};
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/movies?search=${encodeURIComponent(searchQuery.trim())}`);
+      setSearchOpen(false);
+      setSearchQuery('');
+    }
+  };
 
-const handleSearchClick = () => {
-  if (searchOpen && searchQuery.trim()) {
-    navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
-    setSearchOpen(false);
-    setSearchQuery('');
-  } else {
-    setSearchOpen(!searchOpen);
-  }
-};
-
+  const handleSearchClick = () => {
+    if (searchOpen && searchQuery.trim()) {
+      navigate(`/movies?search=${encodeURIComponent(searchQuery.trim())}`);
+      setSearchOpen(false);
+      setSearchQuery('');
+    } else {
+      setSearchOpen(!searchOpen);
+    }
+  };
 
   const handleAdminClick = () => {
     if (isAdmin) {
