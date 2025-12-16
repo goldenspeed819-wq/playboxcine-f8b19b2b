@@ -103,6 +103,15 @@ const ProfileSetup = () => {
       return;
     }
 
+    if (!selectedAvatar) {
+      toast({
+        title: 'Erro',
+        description: 'Selecione uma foto de perfil.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
     if (!user) return;
 
     setIsLoading(true);
@@ -124,16 +133,16 @@ const ProfileSetup = () => {
         description: 'Seu perfil foi salvo com sucesso.',
       });
       
-      navigate('/');
+      // Reload to update profile context
+      window.location.href = '/';
     } catch (error: any) {
       toast({
         title: 'Erro',
         description: error.message || 'Erro ao salvar perfil.',
         variant: 'destructive'
       });
+      setIsLoading(false);
     }
-
-    setIsLoading(false);
   };
 
   if (authLoading) {
@@ -246,7 +255,7 @@ const ProfileSetup = () => {
             <Button
               onClick={handleSubmit}
               className="w-full h-12 font-semibold neon-glow"
-              disabled={isLoading || !username.trim()}
+              disabled={isLoading || !username.trim() || !selectedAvatar}
             >
               {isLoading ? 'Salvando...' : 'Salvar Perfil'}
             </Button>
