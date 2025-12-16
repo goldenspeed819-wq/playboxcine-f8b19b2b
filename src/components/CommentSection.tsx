@@ -1,12 +1,22 @@
 import { useState, useEffect } from 'react';
 import { Send, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
-import { Comment } from '@/types/database';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
+
+interface Comment {
+  id: string;
+  movie_id: string | null;
+  episode_id: string | null;
+  user_name: string;
+  user_id: string | null;
+  user_avatar: string | null;
+  text: string;
+  created_at: string;
+}
 
 interface CommentSectionProps {
   movieId?: string;
@@ -15,9 +25,9 @@ interface CommentSectionProps {
 
 export function CommentSection({ movieId, episodeId }: CommentSectionProps) {
   const [comments, setComments] = useState<Comment[]>([]);
-  const [userName, setUserName] = useState('');
   const [text, setText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const { user, profile } = useAuth();
 
   useEffect(() => {
     fetchComments();
@@ -71,13 +81,15 @@ export function CommentSection({ movieId, episodeId }: CommentSectionProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!text.trim()) return;
+    if (!text.trim() || !user) return;
 
     setIsLoading(true);
     const { error } = await supabase.from('comments').insert({
       movie_id: movieId || null,
       episode_id: episodeId || null,
-      user_name: userName.trim() || 'Anônimo',
+      user_id: user.id,
+      user_name: profile?.username || 'Usuário',
+      user_avatar: profile?.avatar_url || null,
       text: text.trim(),
     });
 
@@ -117,22 +129,34 @@ export function CommentSection({ movieId, episodeId }: CommentSectionProps) {
 
       {/* Comment Form */}
       <form onSubmit={handleSubmit} className="space-y-4">
-        <Input
-          placeholder="Seu nome (opcional)"
-          value={userName}
-          onChange={(e) => setUserName(e.target.value)}
-          className="bg-secondary/50 border-border focus:border-primary"
-        />
-        <Textarea
-          placeholder="Escreva seu comentário..."
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          className="bg-secondary/50 border-border focus:border-primary min-h-24 resize-none"
-        />
-        <Button type="submit" disabled={isLoading || !text.trim()} className="gap-2">
-          <Send className="w-4 h-4" />
-          Enviar Comentário
-        </Button>
+        <div className="flex items-start gap-3">
+          {profile?.avatar_url ? (
+            <img 
+              src={profile.avatar_url} 
+              alt={profile.username || 'Avatar'} 
+              className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+            />
+          ) : (
+            <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+              <User className="w-5 h-5 text-primary" />
+            </div>
+          )}
+          <div className="flex-1">
+            <p className="text-sm font-semibold mb-2">{profile?.username || 'Usuário'}</p>
+            <Textarea
+              placeholder="Escreva seu comentário..."
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              className="bg-secondary/50 border-border focus:border-primary min-h-20 resize-none"
+            />
+          </div>
+        </div>
+        <div className="flex justify-end">
+          <Button type="submit" disabled={isLoading || !text.trim()} className="gap-2">
+            <Send className="w-4 h-4" />
+            Enviar
+          </Button>
+        </div>
       </form>
 
       {/* Comments List */}
@@ -152,9 +176,17 @@ export function CommentSection({ movieId, episodeId }: CommentSectionProps) {
               style={{ animationFillMode: 'forwards' }}
             >
               <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-                  <User className="w-5 h-5 text-primary" />
-                </div>
+                {comment.user_avatar ? (
+                  <img 
+                    src={comment.user_avatar} 
+                    alt={comment.user_name} 
+                    className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                  />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                    <User className="w-5 h-5 text-primary" />
+                  </div>
+                )}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <span className="font-semibold text-foreground">
