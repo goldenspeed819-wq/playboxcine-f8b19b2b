@@ -166,6 +166,42 @@ export type Database = {
           },
         ]
       }
+      live_channels: {
+        Row: {
+          category: string | null
+          created_at: string
+          description: string | null
+          id: string
+          iframe_url: string
+          is_featured: boolean | null
+          is_live: boolean | null
+          thumbnail: string | null
+          title: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          iframe_url: string
+          is_featured?: boolean | null
+          is_live?: boolean | null
+          thumbnail?: string | null
+          title: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          iframe_url?: string
+          is_featured?: boolean | null
+          is_live?: boolean | null
+          thumbnail?: string | null
+          title?: string
+        }
+        Relationships: []
+      }
       movies: {
         Row: {
           category: string | null
