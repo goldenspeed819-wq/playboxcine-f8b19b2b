@@ -84,6 +84,8 @@ export type Database = {
           id: string
           movie_id: string | null
           text: string
+          user_avatar: string | null
+          user_id: string | null
           user_name: string
         }
         Insert: {
@@ -92,6 +94,8 @@ export type Database = {
           id?: string
           movie_id?: string | null
           text: string
+          user_avatar?: string | null
+          user_id?: string | null
           user_name?: string
         }
         Update: {
@@ -100,6 +104,8 @@ export type Database = {
           id?: string
           movie_id?: string | null
           text?: string
+          user_avatar?: string | null
+          user_id?: string | null
           user_name?: string
         }
         Relationships: [
