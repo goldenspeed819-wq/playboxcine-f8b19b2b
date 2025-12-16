@@ -60,6 +60,7 @@ export function Header() {
     { href: '/', label: 'Início' },
     { href: '/movies', label: 'Filmes' },
     { href: '/series', label: 'Séries' },
+    { href: '/live', label: 'Ao Vivo' },
   ];
 
   return (
@@ -135,9 +136,18 @@ export function Header() {
             </Button>
             {profile && (
               <>
-                <span className="text-sm font-medium text-muted-foreground hidden sm:block">
-                  {profile.user_code}
-                </span>
+                <div className="flex items-center gap-2">
+                  {profile.avatar_url && (
+                    <img 
+                      src={profile.avatar_url} 
+                      alt="Avatar" 
+                      className="w-8 h-8 rounded-lg object-cover hidden sm:block"
+                    />
+                  )}
+                  <span className="text-sm font-medium text-muted-foreground hidden sm:block">
+                    {profile.username || profile.user_code}
+                  </span>
+                </div>
                 <Button
                   variant="ghost"
                   size="icon"

@@ -13,6 +13,7 @@ import MovieDetail from "./pages/MovieDetail";
 import SeriesDetail from "./pages/SeriesDetail";
 import Auth from "./pages/Auth";
 import ProfileSetup from "./pages/ProfileSetup";
+import LiveChannels from "./pages/LiveChannels";
 import NotFound from "./pages/NotFound";
 
 // Admin Pages
@@ -26,6 +27,7 @@ import ListSeries from "./pages/admin/ListSeries";
 import EditSeries from "./pages/admin/EditSeries";
 import ManageAdmins from "./pages/admin/ManageAdmins";
 import ManageAvatars from "./pages/admin/ManageAvatars";
+import ManageLiveChannels from "./pages/admin/ManageLiveChannels";
 
 const queryClient = new QueryClient();
 
@@ -45,6 +47,7 @@ const App = () => (
             <Route path="/series/:id" element={<SeriesDetail />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/profile-setup" element={<ProfileSetup />} />
+            <Route path="/live" element={<LiveChannels />} />
             
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminLayout />}>
@@ -57,6 +60,7 @@ const App = () => (
               <Route path="series/edit/:id" element={<EditSeries />} />
               <Route path="manage-admins" element={<ManageAdmins />} />
               <Route path="avatars" element={<ManageAvatars />} />
+              <Route path="live-channels" element={<ManageLiveChannels />} />
             </Route>
 
             {/* 404 */}
