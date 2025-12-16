@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Plus, Trash2, Edit, Radio, Eye, EyeOff } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Plus, Trash2, Edit, Radio, Eye, EyeOff, Upload, X, Image as ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,6 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 interface LiveChannel {
   id: string;
@@ -38,6 +39,8 @@ const ManageLiveChannels = () => {
     is_live: true
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchChannels = async () => {
     setIsLoading(true);
@@ -79,6 +82,54 @@ const ManageLiveChannels = () => {
       is_live: channel.is_live ?? true
     });
     setIsDialogOpen(true);
+  };
+
+  const handleThumbnailUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      toast({
+        title: 'Formato inválido',
+        description: 'Use arquivos JPG, PNG ou WEBP.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const fileName = `channel-${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+      
+      const { data, error } = await supabase.storage
+        .from('thumbnails')
+        .upload(fileName, file, {
+          cacheControl: '31536000',
+          upsert: true,
+        });
+
+      if (error) throw error;
+
+      const { data: urlData } = supabase.storage
+        .from('thumbnails')
+        .getPublicUrl(data.path);
+
+      setFormData({ ...formData, thumbnail: urlData.publicUrl });
+
+      toast({
+        title: 'Imagem enviada!',
+        description: 'A thumbnail foi enviada com sucesso.',
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Erro no upload',
+        description: error.message || 'Não foi possível enviar a imagem.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -214,7 +265,7 @@ const ManageLiveChannels = () => {
               Adicionar Canal
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
                 {editingChannel ? 'Editar Canal' : 'Adicionar Canal ao Vivo'}
@@ -250,21 +301,61 @@ const ManageLiveChannels = () => {
                   value={formData.iframe_url}
                   onChange={(e) => setFormData({ ...formData, iframe_url: e.target.value })}
                   placeholder="Cole o código do iframe ou a URL do player"
-                  className="bg-secondary/50 min-h-[100px] font-mono text-sm"
+                  className="bg-secondary/50 min-h-[80px] font-mono text-sm"
                 />
                 <p className="text-xs text-muted-foreground">
                   Cole o iframe completo ou apenas a URL src do player
                 </p>
               </div>
 
+              {/* Thumbnail Upload */}
               <div className="space-y-2">
-                <Label>Thumbnail URL</Label>
-                <Input
-                  value={formData.thumbnail}
-                  onChange={(e) => setFormData({ ...formData, thumbnail: e.target.value })}
-                  placeholder="https://exemplo.com/thumb.jpg"
-                  className="bg-secondary/50"
+                <Label>Thumbnail do Canal</Label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={handleThumbnailUpload}
+                  className="hidden"
                 />
+                
+                {!formData.thumbnail ? (
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploading}
+                    className={cn(
+                      'flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-xl transition-colors',
+                      'border-border hover:border-primary hover:bg-primary/5',
+                      isUploading && 'pointer-events-none opacity-50'
+                    )}
+                  >
+                    <ImageIcon className="w-8 h-8 text-muted-foreground mb-2" />
+                    <p className="text-sm font-medium">
+                      {isUploading ? 'Enviando...' : 'Clique para enviar imagem'}
+                    </p>
+                    <p className="text-xs text-muted-foreground">JPG, PNG ou WEBP</p>
+                  </button>
+                ) : (
+                  <div className="relative w-40">
+                    <div className="aspect-video rounded-lg overflow-hidden border border-border">
+                      <img
+                        src={formData.thumbnail}
+                        alt="Thumbnail"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="icon"
+                      className="absolute -top-2 -right-2 w-6 h-6"
+                      onClick={() => setFormData({ ...formData, thumbnail: '' })}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-2">
