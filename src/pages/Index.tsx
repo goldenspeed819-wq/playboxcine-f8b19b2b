@@ -22,6 +22,8 @@ const Index = () => {
         navigate('/auth');
       } else if (profile && (!profile.username || !profile.avatar_url)) {
         navigate('/profile-setup');
+      } else if (!profile) {
+        navigate('/');
       }
     }
   }, [user, profile, authLoading, navigate]);

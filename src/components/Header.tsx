@@ -58,7 +58,7 @@ export function Header() {
   };
 
   const navLinks = [
-    { href: '/', label: 'Início' },
+    { href: '/browse', label: 'Início' },
     { href: '/movies', label: 'Filmes' },
     { href: '/series', label: 'Séries' },
     { href: '/live', label: 'Ao Vivo' },
@@ -76,7 +76,7 @@ export function Header() {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16 md:h-20">
           {/* Logo */}
-          <Link to="/" className="flex items-center group">
+          <Link to="/browse" className="flex items-center group">
             <img 
               src={logo} 
               alt="PlayBox Cine" 
