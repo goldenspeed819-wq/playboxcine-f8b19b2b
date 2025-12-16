@@ -35,8 +35,8 @@ const Index = () => {
   const fetchContent = async () => {
     try {
       const [moviesRes, seriesRes] = await Promise.all([
-        supabase.from('movies').select('*').order('created_at', { ascending: false }),
-        supabase.from('series').select('*').order('created_at', { ascending: false }),
+        supabase.from('movies').select('*').order('title', { ascending: true }),
+        supabase.from('series').select('*').order('title', { ascending: true }),
       ]);
 
       if (moviesRes.data) setMovies(moviesRes.data);
