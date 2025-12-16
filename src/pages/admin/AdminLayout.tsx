@@ -10,6 +10,7 @@ import {
   Menu,
   X,
   Shield,
+  UserCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
@@ -46,6 +47,7 @@ const AdminLayout = () => {
   { icon: List, label: 'Listar Filmes', href: '/admin/movies' },
   { icon: Plus, label: 'Adicionar Série', href: '/admin/series/add' },
   { icon: List, label: 'Listar Séries', href: '/admin/series' },
+  { icon: UserCircle, label: 'Gerenciar Avatars', href: '/admin/avatars' },
   // Só mostra para Fundador
   ...(profile?.user_code === 'Fundador' ? [{ icon: Shield, label: 'Gerenciar Admins', href: '/admin/manage-admins' }] : []),
 ];

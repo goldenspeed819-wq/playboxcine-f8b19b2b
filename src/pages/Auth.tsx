@@ -14,14 +14,19 @@ const Auth = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const { signIn, signUp, user, isLoading: authLoading } = useAuth();
+  const { signIn, signUp, user, profile, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
     if (!authLoading && user) {
-      navigate('/');
+      // Check if profile is complete
+      if (profile && !profile.profile_completed) {
+        navigate('/profile-setup');
+      } else {
+        navigate('/');
+      }
     }
-  }, [user, authLoading, navigate]);
+  }, [user, profile, authLoading, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,9 +60,9 @@ const Auth = () => {
         } else {
           toast({
             title: 'Conta criada!',
-            description: 'Sua conta foi criada com sucesso.',
+            description: 'Agora configure seu perfil.',
           });
-          navigate('/');
+          navigate('/profile-setup');
         }
       }
     } catch (err) {
