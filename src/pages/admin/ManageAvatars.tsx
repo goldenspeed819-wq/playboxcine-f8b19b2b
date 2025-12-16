@@ -3,6 +3,7 @@ import { Wand2, Trash2, Film, Tv, RefreshCw, Upload, Plus, Image } from 'lucide-
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -32,6 +33,8 @@ const ManageAvatars = () => {
   const [manualImageUrl, setManualImageUrl] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [contentType, setContentType] = useState<'none' | 'movie' | 'series'>('none');
+  const [selectedContentId, setSelectedContentId] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchData = async () => {
@@ -170,10 +173,31 @@ const ManageAvatars = () => {
     }
 
     try {
-      const { error } = await supabase.from('avatars').insert({
+      const insertData: {
+        image_url: string;
+        character_name: string;
+        movie_id?: string;
+        series_id?: string;
+      } = {
         image_url: manualImageUrl,
         character_name: manualName || 'Avatar Personalizado'
-      });
+      };
+
+      if (contentType === 'movie' && selectedContentId) {
+        insertData.movie_id = selectedContentId;
+        const movie = movies.find(m => m.id === selectedContentId);
+        if (movie && !manualName) {
+          insertData.character_name = movie.title;
+        }
+      } else if (contentType === 'series' && selectedContentId) {
+        insertData.series_id = selectedContentId;
+        const s = series.find(s => s.id === selectedContentId);
+        if (s && !manualName) {
+          insertData.character_name = s.title;
+        }
+      }
+
+      const { error } = await supabase.from('avatars').insert(insertData);
 
       if (error) throw error;
 
@@ -185,6 +209,8 @@ const ManageAvatars = () => {
       setManualName('');
       setManualImageUrl('');
       setPreviewImage(null);
+      setContentType('none');
+      setSelectedContentId('');
       if (fileInputRef.current) fileInputRef.current.value = '';
       fetchData();
     } catch (error: any) {
@@ -307,6 +333,62 @@ const ManageAvatars = () => {
                 className="mt-1"
               />
             </div>
+
+            <div>
+              <Label>Vincular a Conteúdo (opcional)</Label>
+              <Select 
+                value={contentType} 
+                onValueChange={(value: 'none' | 'movie' | 'series') => {
+                  setContentType(value);
+                  setSelectedContentId('');
+                }}
+              >
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="Selecione o tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nenhum (Personalizado)</SelectItem>
+                  <SelectItem value="movie">Filme</SelectItem>
+                  <SelectItem value="series">Série</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {contentType === 'movie' && (
+              <div>
+                <Label>Selecione o Filme</Label>
+                <Select value={selectedContentId} onValueChange={setSelectedContentId}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Escolha um filme" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {movies.map(movie => (
+                      <SelectItem key={movie.id} value={movie.id}>
+                        {movie.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {contentType === 'series' && (
+              <div>
+                <Label>Selecione a Série</Label>
+                <Select value={selectedContentId} onValueChange={setSelectedContentId}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Escolha uma série" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {series.map(s => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             <div>
               <Label htmlFor="manualUrl">Ou cole a URL da imagem</Label>
