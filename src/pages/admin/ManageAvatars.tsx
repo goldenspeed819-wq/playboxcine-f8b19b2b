@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react';
-import { Wand2, Trash2, Film, Tv, RefreshCw } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Wand2, Trash2, Film, Tv, RefreshCw, Upload, Plus, Image } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -24,6 +26,13 @@ const ManageAvatars = () => {
   const [series, setSeries] = useState<Content[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
+  
+  // Manual upload state
+  const [manualName, setManualName] = useState('');
+  const [manualImageUrl, setManualImageUrl] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -54,7 +63,6 @@ const ManageAvatars = () => {
       // Generate from movies
       for (const movie of movies) {
         if (movie.thumbnail) {
-          // Check if avatar already exists
           const exists = avatars.some(a => a.movie_id === movie.id && a.image_url === movie.thumbnail);
           if (!exists) {
             newAvatars.push({
@@ -69,7 +77,6 @@ const ManageAvatars = () => {
       // Generate from series
       for (const s of series) {
         if (s.thumbnail) {
-          // Check if avatar already exists
           const exists = avatars.some(a => a.series_id === s.id && a.image_url === s.thumbnail);
           if (!exists) {
             newAvatars.push({
@@ -109,6 +116,84 @@ const ManageAvatars = () => {
     }
 
     setIsGenerating(false);
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Preview
+    const reader = new FileReader();
+    reader.onload = () => setPreviewImage(reader.result as string);
+    reader.readAsDataURL(file);
+
+    setIsUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `avatar-${Date.now()}.${fileExt}`;
+      const filePath = `avatars/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('thumbnails')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('thumbnails')
+        .getPublicUrl(filePath);
+
+      setManualImageUrl(publicUrl);
+      toast({
+        title: 'Imagem carregada!',
+        description: 'A imagem foi enviada com sucesso.',
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Erro no upload',
+        description: error.message || 'Erro ao fazer upload da imagem.',
+        variant: 'destructive'
+      });
+      setPreviewImage(null);
+    }
+    setIsUploading(false);
+  };
+
+  const handleManualAdd = async () => {
+    if (!manualImageUrl) {
+      toast({
+        title: 'Erro',
+        description: 'Faça upload de uma imagem ou insira a URL.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase.from('avatars').insert({
+        image_url: manualImageUrl,
+        character_name: manualName || 'Avatar Personalizado'
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Avatar adicionado!',
+        description: 'O avatar foi criado com sucesso.',
+      });
+
+      setManualName('');
+      setManualImageUrl('');
+      setPreviewImage(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      fetchData();
+    } catch (error: any) {
+      toast({
+        title: 'Erro',
+        description: error.message || 'Erro ao adicionar avatar.',
+        variant: 'destructive'
+      });
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -162,10 +247,9 @@ const ManageAvatars = () => {
     if (avatar.series_id) {
       return series.find(s => s.id === avatar.series_id)?.title || 'Série';
     }
-    return 'Sem conteúdo';
+    return avatar.character_name || 'Personalizado';
   };
 
-  // Count content with thumbnails
   const moviesWithThumbnails = movies.filter(m => m.thumbnail).length;
   const seriesWithThumbnails = series.filter(s => s.thumbnail).length;
 
@@ -174,8 +258,80 @@ const ManageAvatars = () => {
       <div>
         <h1 className="font-display text-3xl font-bold">Gerenciar Avatars</h1>
         <p className="text-muted-foreground mt-2">
-          Avatars são gerados automaticamente a partir das thumbnails dos filmes e séries.
+          Adicione avatars manualmente ou gere automaticamente a partir das thumbnails.
         </p>
+      </div>
+
+      {/* Manual Add Section */}
+      <div className="bg-card rounded-xl border border-border p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Plus className="w-5 h-5 text-primary" />
+          <h2 className="font-display text-xl font-bold">Adicionar Avatar Manualmente</h2>
+        </div>
+
+        <div className="grid md:grid-cols-[200px_1fr] gap-6">
+          {/* Image Upload */}
+          <div className="space-y-3">
+            <Label>Imagem do Avatar</Label>
+            <div 
+              className="aspect-square rounded-lg border-2 border-dashed border-border bg-secondary/30 flex items-center justify-center cursor-pointer hover:border-primary transition-colors overflow-hidden"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              {previewImage ? (
+                <img src={previewImage} alt="Preview" className="w-full h-full object-cover" />
+              ) : (
+                <div className="text-center p-4">
+                  <Image className="w-10 h-10 mx-auto mb-2 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">Clique para fazer upload</p>
+                </div>
+              )}
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleFileUpload}
+              className="hidden"
+            />
+          </div>
+
+          {/* Form Fields */}
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="manualName">Nome do Avatar (opcional)</Label>
+              <Input
+                id="manualName"
+                value={manualName}
+                onChange={(e) => setManualName(e.target.value)}
+                placeholder="Ex: Homem de Ferro, Naruto..."
+                className="mt-1"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="manualUrl">Ou cole a URL da imagem</Label>
+              <Input
+                id="manualUrl"
+                value={manualImageUrl}
+                onChange={(e) => {
+                  setManualImageUrl(e.target.value);
+                  setPreviewImage(e.target.value);
+                }}
+                placeholder="https://exemplo.com/imagem.jpg"
+                className="mt-1"
+              />
+            </div>
+
+            <Button 
+              onClick={handleManualAdd}
+              disabled={isUploading || !manualImageUrl}
+              className="w-full md:w-auto"
+            >
+              <Upload className="w-4 h-4 mr-2" />
+              {isUploading ? 'Enviando...' : 'Adicionar Avatar'}
+            </Button>
+          </div>
+        </div>
       </div>
 
       {/* Auto Generate Section */}
@@ -261,7 +417,7 @@ const ManageAvatars = () => {
                 </div>
                 <div className="mt-1">
                   <p className="text-xs text-muted-foreground truncate flex items-center gap-1">
-                    {avatar.movie_id ? <Film className="w-3 h-3" /> : <Tv className="w-3 h-3" />}
+                    {avatar.movie_id ? <Film className="w-3 h-3" /> : avatar.series_id ? <Tv className="w-3 h-3" /> : <Image className="w-3 h-3" />}
                     {getContentTitle(avatar)}
                   </p>
                 </div>
