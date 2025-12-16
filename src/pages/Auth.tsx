@@ -18,9 +18,9 @@ const Auth = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!authLoading && user) {
-      // Check if profile is complete
-      if (profile && !profile.profile_completed) {
+    if (!authLoading && user && profile) {
+      // Check if profile is complete (has username and avatar)
+      if (!profile.username || !profile.avatar_url) {
         navigate('/profile-setup');
       } else {
         navigate('/');
