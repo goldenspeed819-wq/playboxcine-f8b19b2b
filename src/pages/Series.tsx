@@ -20,7 +20,7 @@ const Series = () => {
     const { data, error } = await supabase
       .from('series')
       .select('*')
-      .order('created_at', { ascending: false });
+      .order('title', { ascending: true });
 
     if (error) {
       console.error('Error fetching series:', error);
