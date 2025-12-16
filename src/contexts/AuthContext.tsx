@@ -6,6 +6,9 @@ interface Profile {
   id: string;
   user_code: string;
   email: string;
+  username: string | null;
+  avatar_url: string | null;
+  profile_completed: boolean | null;
 }
 
 interface AuthContextType {

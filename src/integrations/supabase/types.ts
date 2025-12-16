@@ -35,6 +35,48 @@ export type Database = {
         }
         Relationships: []
       }
+      avatars: {
+        Row: {
+          character_name: string | null
+          created_at: string
+          id: string
+          image_url: string
+          movie_id: string | null
+          series_id: string | null
+        }
+        Insert: {
+          character_name?: string | null
+          created_at?: string
+          id?: string
+          image_url: string
+          movie_id?: string | null
+          series_id?: string | null
+        }
+        Update: {
+          character_name?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string
+          movie_id?: string | null
+          series_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "avatars_movie_id_fkey"
+            columns: ["movie_id"]
+            isOneToOne: false
+            referencedRelation: "movies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "avatars_series_id_fkey"
+            columns: ["series_id"]
+            isOneToOne: false
+            referencedRelation: "series"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       comments: {
         Row: {
           created_at: string
@@ -177,22 +219,31 @@ export type Database = {
       }
       profiles: {
         Row: {
+          avatar_url: string | null
           created_at: string
           email: string
           id: string
+          profile_completed: boolean | null
           user_code: string
+          username: string | null
         }
         Insert: {
+          avatar_url?: string | null
           created_at?: string
           email: string
           id: string
+          profile_completed?: boolean | null
           user_code: string
+          username?: string | null
         }
         Update: {
+          avatar_url?: string | null
           created_at?: string
           email?: string
           id?: string
+          profile_completed?: boolean | null
           user_code?: string
+          username?: string | null
         }
         Relationships: []
       }
