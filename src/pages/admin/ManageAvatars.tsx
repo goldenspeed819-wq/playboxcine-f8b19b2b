@@ -1,9 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Plus, Trash2, Film, Tv } from 'lucide-react';
+import { Wand2, Trash2, Film, Tv, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -18,6 +15,7 @@ interface Avatar {
 interface Content {
   id: string;
   title: string;
+  thumbnail: string | null;
 }
 
 const ManageAvatars = () => {
@@ -25,21 +23,15 @@ const ManageAvatars = () => {
   const [movies, setMovies] = useState<Content[]>([]);
   const [series, setSeries] = useState<Content[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  
-  // Form state
-  const [contentType, setContentType] = useState<'movie' | 'series'>('movie');
-  const [selectedContentId, setSelectedContentId] = useState('');
-  const [imageUrl, setImageUrl] = useState('');
-  const [characterName, setCharacterName] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const fetchData = async () => {
     setIsLoading(true);
     
     const [avatarsRes, moviesRes, seriesRes] = await Promise.all([
       supabase.from('avatars').select('*').order('created_at', { ascending: false }),
-      supabase.from('movies').select('id, title').order('title'),
-      supabase.from('series').select('id, title').order('title')
+      supabase.from('movies').select('id, title, thumbnail').order('title'),
+      supabase.from('series').select('id, title, thumbnail').order('title')
     ]);
 
     if (avatarsRes.data) setAvatars(avatarsRes.data);
@@ -53,48 +45,70 @@ const ManageAvatars = () => {
     fetchData();
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!selectedContentId || !imageUrl.trim()) {
-      toast({
-        title: 'Erro',
-        description: 'Preencha todos os campos obrigatórios.',
-        variant: 'destructive'
-      });
-      return;
-    }
-
-    setIsSubmitting(true);
+  const generateAvatarsFromThumbnails = async () => {
+    setIsGenerating(true);
 
     try {
-      const { error } = await supabase.from('avatars').insert({
-        movie_id: contentType === 'movie' ? selectedContentId : null,
-        series_id: contentType === 'series' ? selectedContentId : null,
-        image_url: imageUrl.trim(),
-        character_name: characterName.trim() || null
-      });
+      const newAvatars: { movie_id?: string; series_id?: string; image_url: string; character_name: string }[] = [];
+
+      // Generate from movies
+      for (const movie of movies) {
+        if (movie.thumbnail) {
+          // Check if avatar already exists
+          const exists = avatars.some(a => a.movie_id === movie.id && a.image_url === movie.thumbnail);
+          if (!exists) {
+            newAvatars.push({
+              movie_id: movie.id,
+              image_url: movie.thumbnail,
+              character_name: movie.title
+            });
+          }
+        }
+      }
+
+      // Generate from series
+      for (const s of series) {
+        if (s.thumbnail) {
+          // Check if avatar already exists
+          const exists = avatars.some(a => a.series_id === s.id && a.image_url === s.thumbnail);
+          if (!exists) {
+            newAvatars.push({
+              series_id: s.id,
+              image_url: s.thumbnail,
+              character_name: s.title
+            });
+          }
+        }
+      }
+
+      if (newAvatars.length === 0) {
+        toast({
+          title: 'Nenhum novo avatar',
+          description: 'Todos os avatars já foram gerados.',
+        });
+        setIsGenerating(false);
+        return;
+      }
+
+      const { error } = await supabase.from('avatars').insert(newAvatars);
 
       if (error) throw error;
 
       toast({
-        title: 'Avatar adicionado!',
-        description: 'O avatar foi adicionado com sucesso.',
+        title: 'Avatars gerados!',
+        description: `${newAvatars.length} avatars criados a partir das thumbnails.`,
       });
 
-      // Reset form
-      setImageUrl('');
-      setCharacterName('');
       fetchData();
     } catch (error: any) {
       toast({
         title: 'Erro',
-        description: error.message || 'Erro ao adicionar avatar.',
+        description: error.message || 'Erro ao gerar avatars.',
         variant: 'destructive'
       });
     }
 
-    setIsSubmitting(false);
+    setIsGenerating(false);
   };
 
   const handleDelete = async (id: string) => {
@@ -119,119 +133,120 @@ const ManageAvatars = () => {
     }
   };
 
+  const deleteAllAvatars = async () => {
+    if (!confirm('Tem certeza que deseja excluir TODOS os avatars? Esta ação não pode ser desfeita.')) return;
+
+    try {
+      const { error } = await supabase.from('avatars').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      if (error) throw error;
+
+      toast({
+        title: 'Avatars excluídos!',
+        description: 'Todos os avatars foram removidos.',
+      });
+
+      setAvatars([]);
+    } catch (error: any) {
+      toast({
+        title: 'Erro',
+        description: error.message || 'Erro ao excluir avatars.',
+        variant: 'destructive'
+      });
+    }
+  };
+
   const getContentTitle = (avatar: Avatar) => {
     if (avatar.movie_id) {
-      return movies.find(m => m.id === avatar.movie_id)?.title || 'Filme desconhecido';
+      return movies.find(m => m.id === avatar.movie_id)?.title || 'Filme';
     }
     if (avatar.series_id) {
-      return series.find(s => s.id === avatar.series_id)?.title || 'Série desconhecida';
+      return series.find(s => s.id === avatar.series_id)?.title || 'Série';
     }
     return 'Sem conteúdo';
   };
 
-  const contentOptions = contentType === 'movie' ? movies : series;
+  // Count content with thumbnails
+  const moviesWithThumbnails = movies.filter(m => m.thumbnail).length;
+  const seriesWithThumbnails = series.filter(s => s.thumbnail).length;
 
   return (
     <div className="space-y-8">
       <div>
         <h1 className="font-display text-3xl font-bold">Gerenciar Avatars</h1>
         <p className="text-muted-foreground mt-2">
-          Adicione fotos de personagens/atores para os usuários usarem como avatar.
+          Avatars são gerados automaticamente a partir das thumbnails dos filmes e séries.
         </p>
       </div>
 
-      {/* Add Avatar Form */}
+      {/* Auto Generate Section */}
       <div className="bg-card rounded-xl border border-border p-6">
-        <h2 className="font-display text-xl font-bold mb-4">Adicionar Avatar</h2>
-        
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Tipo de Conteúdo</Label>
-              <Select value={contentType} onValueChange={(v) => {
-                setContentType(v as 'movie' | 'series');
-                setSelectedContentId('');
-              }}>
-                <SelectTrigger className="bg-secondary/50">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="movie">
-                    <div className="flex items-center gap-2">
-                      <Film className="w-4 h-4" />
-                      Filme
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="series">
-                    <div className="flex items-center gap-2">
-                      <Tv className="w-4 h-4" />
-                      Série
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>{contentType === 'movie' ? 'Filme' : 'Série'} *</Label>
-              <Select value={selectedContentId} onValueChange={setSelectedContentId}>
-                <SelectTrigger className="bg-secondary/50">
-                  <SelectValue placeholder="Selecione..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {contentOptions.map(item => (
-                    <SelectItem key={item.id} value={item.id}>
-                      {item.title}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>URL da Imagem *</Label>
-              <Input
-                value={imageUrl}
-                onChange={(e) => setImageUrl(e.target.value)}
-                placeholder="https://exemplo.com/avatar.jpg"
-                className="bg-secondary/50"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Nome do Personagem</Label>
-              <Input
-                value={characterName}
-                onChange={(e) => setCharacterName(e.target.value)}
-                placeholder="Ex: Tony Stark"
-                className="bg-secondary/50"
-              />
-            </div>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="font-display text-xl font-bold">Gerar Avatars Automaticamente</h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              {moviesWithThumbnails} filmes e {seriesWithThumbnails} séries com thumbnails disponíveis
+            </p>
           </div>
+          <div className="flex gap-2">
+            <Button 
+              onClick={generateAvatarsFromThumbnails}
+              disabled={isGenerating}
+            >
+              <Wand2 className="w-4 h-4 mr-2" />
+              {isGenerating ? 'Gerando...' : 'Gerar Avatars'}
+            </Button>
+            <Button 
+              variant="outline"
+              onClick={fetchData}
+              disabled={isLoading}
+            >
+              <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+            </Button>
+          </div>
+        </div>
 
-          <Button type="submit" disabled={isSubmitting}>
-            <Plus className="w-4 h-4 mr-2" />
-            {isSubmitting ? 'Adicionando...' : 'Adicionar Avatar'}
-          </Button>
-        </form>
+        <div className="grid grid-cols-2 gap-4 text-center">
+          <div className="bg-secondary/30 rounded-lg p-4">
+            <Film className="w-8 h-8 mx-auto mb-2 text-primary" />
+            <p className="text-2xl font-bold">{movies.length}</p>
+            <p className="text-sm text-muted-foreground">Filmes</p>
+          </div>
+          <div className="bg-secondary/30 rounded-lg p-4">
+            <Tv className="w-8 h-8 mx-auto mb-2 text-primary" />
+            <p className="text-2xl font-bold">{series.length}</p>
+            <p className="text-sm text-muted-foreground">Séries</p>
+          </div>
+        </div>
       </div>
 
       {/* Avatars Grid */}
       <div className="bg-card rounded-xl border border-border p-6">
-        <h2 className="font-display text-xl font-bold mb-4">
-          Avatars Cadastrados ({avatars.length})
-        </h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-display text-xl font-bold">
+            Avatars Cadastrados ({avatars.length})
+          </h2>
+          {avatars.length > 0 && (
+            <Button variant="destructive" size="sm" onClick={deleteAllAvatars}>
+              <Trash2 className="w-4 h-4 mr-2" />
+              Excluir Todos
+            </Button>
+          )}
+        </div>
 
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           </div>
         ) : avatars.length === 0 ? (
-          <p className="text-muted-foreground text-center py-8">
-            Nenhum avatar cadastrado ainda.
-          </p>
+          <div className="text-center py-8">
+            <p className="text-muted-foreground mb-4">Nenhum avatar cadastrado ainda.</p>
+            <Button onClick={generateAvatarsFromThumbnails} disabled={isGenerating}>
+              <Wand2 className="w-4 h-4 mr-2" />
+              Gerar Avatars Agora
+            </Button>
+          </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4">
+          <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-7 lg:grid-cols-9 gap-3">
             {avatars.map(avatar => (
               <div key={avatar.id} className="group relative">
                 <div className="aspect-square rounded-lg overflow-hidden bg-secondary">
@@ -244,10 +259,7 @@ const ManageAvatars = () => {
                     }}
                   />
                 </div>
-                <div className="mt-2">
-                  <p className="text-xs font-medium truncate">
-                    {avatar.character_name || 'Sem nome'}
-                  </p>
+                <div className="mt-1">
                   <p className="text-xs text-muted-foreground truncate flex items-center gap-1">
                     {avatar.movie_id ? <Film className="w-3 h-3" /> : <Tv className="w-3 h-3" />}
                     {getContentTitle(avatar)}
@@ -255,9 +267,9 @@ const ManageAvatars = () => {
                 </div>
                 <button
                   onClick={() => handleDelete(avatar.id)}
-                  className="absolute top-2 right-2 p-1.5 bg-destructive text-destructive-foreground rounded-md opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="absolute top-1 right-1 p-1 bg-destructive text-destructive-foreground rounded opacity-0 group-hover:opacity-100 transition-opacity"
                 >
-                  <Trash2 className="w-4 h-4" />
+                  <Trash2 className="w-3 h-3" />
                 </button>
               </div>
             ))}
