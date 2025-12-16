@@ -23,7 +23,7 @@ const Movies = () => {
     const { data, error } = await supabase
       .from('movies')
       .select('*')
-      .order('created_at', { ascending: false });
+      .order('title', { ascending: true });
 
     if (error) {
       console.error('Error fetching movies:', error);

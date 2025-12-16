@@ -27,7 +27,7 @@ const LiveChannels = () => {
         .from('live_channels')
         .select('*')
         .eq('is_live', true)
-        .order('is_featured', { ascending: false });
+        .order('title', { ascending: true });
 
       if (data) setChannels(data);
       setIsLoading(false);
