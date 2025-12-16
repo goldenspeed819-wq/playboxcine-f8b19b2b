@@ -187,7 +187,7 @@ const Auth = () => {
                 : 'Já tem conta? Entrar'}
             </button>
             <p className="text-center text-sm text-muted-foreground">
-              <a href="/" className="hover:text-primary transition-colors">
+              <a href="/browse" className="hover:text-primary transition-colors">
                 ← Voltar ao site
               </a>
             </p>

@@ -7,6 +7,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 
 // Public Pages
 import Index from "./pages/Index";
+import ProfileSelection from "./pages/ProfileSelection";
 import Movies from "./pages/Movies";
 import Series from "./pages/Series";
 import MovieDetail from "./pages/MovieDetail";
@@ -41,7 +42,8 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             {/* Public Routes */}
-            <Route path="/" element={<Index />} />
+            <Route path="/" element={<ProfileSelection />} />
+            <Route path="/browse" element={<Index />} />
             <Route path="/movies" element={<Movies />} />
             <Route path="/series" element={<Series />} />
             <Route path="/movie/:id" element={<MovieDetail />} />

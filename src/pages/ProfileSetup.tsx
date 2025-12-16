@@ -31,6 +31,14 @@ const ProfileSetup = () => {
   const { user, profile, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
 
+  // Load existing profile data
+  useEffect(() => {
+    if (profile) {
+      if (profile.username) setUsername(profile.username);
+      if (profile.avatar_url) setSelectedAvatar(profile.avatar_url);
+    }
+  }, [profile]);
+
   useEffect(() => {
     if (!authLoading && !user) {
       navigate('/auth');
