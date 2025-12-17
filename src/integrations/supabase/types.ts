@@ -77,6 +77,30 @@ export type Database = {
           },
         ]
       }
+      blocked_ips: {
+        Row: {
+          blocked_at: string
+          expires_at: string
+          id: string
+          ip_address: string
+          reason: string | null
+        }
+        Insert: {
+          blocked_at?: string
+          expires_at: string
+          id?: string
+          ip_address: string
+          reason?: string | null
+        }
+        Update: {
+          blocked_at?: string
+          expires_at?: string
+          id?: string
+          ip_address?: string
+          reason?: string | null
+        }
+        Relationships: []
+      }
       comments: {
         Row: {
           created_at: string
