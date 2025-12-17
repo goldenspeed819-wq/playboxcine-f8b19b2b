@@ -101,8 +101,10 @@ const ProfileSelection = () => {
       localStorage.setItem('selectedProfile', JSON.stringify(selectedProfile));
       navigate('/browse');
     } else {
-      // Switch to another account - sign out and redirect to auth
-      toast.info('Para trocar de conta, faça login com as credenciais da outra conta.');
+      // Switch to another linked account - sign out and go to auth with email prefilled
+      localStorage.setItem('switchToEmail', selectedProfile.email);
+      await supabase.auth.signOut();
+      navigate('/auth');
     }
   };
 
