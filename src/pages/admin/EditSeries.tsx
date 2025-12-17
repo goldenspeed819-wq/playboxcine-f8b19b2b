@@ -70,6 +70,8 @@ const EditSeries = () => {
     video_url: '',
     thumbnail: '',
     duration: '',
+    intro_start: '',
+    intro_end: '',
   });
 
   useEffect(() => {
@@ -185,6 +187,8 @@ const EditSeries = () => {
       video_url: episodeForm.video_url,
       thumbnail: episodeForm.thumbnail || null,
       duration: episodeForm.duration || null,
+      intro_start: episodeForm.intro_start ? parseInt(episodeForm.intro_start) : null,
+      intro_end: episodeForm.intro_end ? parseInt(episodeForm.intro_end) : null,
     });
 
     if (error) {
@@ -207,6 +211,8 @@ const EditSeries = () => {
         video_url: '',
         thumbnail: '',
         duration: '',
+        intro_start: '',
+        intro_end: '',
       });
       fetchEpisodes();
     }
@@ -425,6 +431,33 @@ const EditSeries = () => {
                           className="bg-secondary/50"
                         />
                       </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Abertura - Início (segundos)</Label>
+                          <Input
+                            type="number"
+                            min="0"
+                            value={episodeForm.intro_start}
+                            onChange={(e) => setEpisodeForm({ ...episodeForm, intro_start: e.target.value })}
+                            placeholder="Ex: 5"
+                            className="bg-secondary/50"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Abertura - Fim (segundos)</Label>
+                          <Input
+                            type="number"
+                            min="0"
+                            value={episodeForm.intro_end}
+                            onChange={(e) => setEpisodeForm({ ...episodeForm, intro_end: e.target.value })}
+                            placeholder="Ex: 90"
+                            className="bg-secondary/50"
+                          />
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Defina o tempo em segundos para o botão "Pular Abertura" aparecer
+                      </p>
                       <div className="space-y-2">
                         <Label>Vídeo *</Label>
                         <VideoUpload

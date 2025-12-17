@@ -33,10 +33,11 @@ interface VideoPlayerProps {
   subtitleUrl?: string | null;
   nextLabel?: string;
   onNextClick?: () => void;
-  introEndTime?: number; // Time in seconds when intro ends
+  introStartTime?: number | null; // Time in seconds when intro starts
+  introEndTime?: number | null; // Time in seconds when intro ends
 }
 
-export function VideoPlayer({ src, poster, title, subtitleUrl, nextLabel, onNextClick, introEndTime = 90 }: VideoPlayerProps) {
+export function VideoPlayer({ src, poster, title, subtitleUrl, nextLabel, onNextClick, introStartTime, introEndTime }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -57,12 +58,13 @@ export function VideoPlayer({ src, poster, title, subtitleUrl, nextLabel, onNext
 
   // Show skip intro button during the intro period
   useEffect(() => {
-    if (introEndTime && currentTime >= 5 && currentTime < introEndTime) {
+    const hasIntro = introStartTime != null && introEndTime != null;
+    if (hasIntro && currentTime >= introStartTime && currentTime < introEndTime) {
       setShowSkipIntro(true);
     } else {
       setShowSkipIntro(false);
     }
-  }, [currentTime, introEndTime]);
+  }, [currentTime, introStartTime, introEndTime]);
 
   // Show next button when video is 90% complete or has less than 30 seconds remaining
   useEffect(() => {

@@ -221,6 +221,8 @@ const SeriesDetail = () => {
                 }
                 nextLabel={nextEpisode ? `Próximo: T${nextEpisode.season}E${nextEpisode.episode}` : undefined}
                 onNextClick={nextEpisode ? handleNextEpisode : undefined}
+                introStartTime={selectedEpisode?.intro_start}
+                introEndTime={selectedEpisode?.intro_end}
               />
 
               {/* Series Info */}

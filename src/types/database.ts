@@ -37,6 +37,8 @@ export interface Episode {
   video_url: string | null;
   thumbnail: string | null;
   duration: string | null;
+  intro_start: number | null;
+  intro_end: number | null;
   created_at: string;
 }
 
