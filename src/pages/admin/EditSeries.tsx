@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Tv, Save, ArrowLeft, Plus, Trash2, Play, AlertTriangle } from 'lucide-react';
+import { Tv, Save, ArrowLeft, Plus, Trash2, Play, AlertTriangle, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -48,6 +48,7 @@ const EditSeries = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [episodes, setEpisodes] = useState<Episode[]>([]);
   const [episodeDialogOpen, setEpisodeDialogOpen] = useState(false);
+  const [editingEpisode, setEditingEpisode] = useState<Episode | null>(null);
   const [deleteEpisodeId, setDeleteEpisodeId] = useState<string | null>(null);
   const [deletePassword, setDeletePassword] = useState('');
 
@@ -168,7 +169,38 @@ const EditSeries = () => {
     setIsSaving(false);
   };
 
-  const handleAddEpisode = async () => {
+  const resetEpisodeForm = () => {
+    setEpisodeForm({
+      season: '1',
+      episode: '1',
+      title: '',
+      description: '',
+      video_url: '',
+      thumbnail: '',
+      duration: '',
+      intro_start: '',
+      intro_end: '',
+    });
+    setEditingEpisode(null);
+  };
+
+  const openEditEpisodeDialog = (episode: Episode) => {
+    setEditingEpisode(episode);
+    setEpisodeForm({
+      season: episode.season.toString(),
+      episode: episode.episode.toString(),
+      title: episode.title || '',
+      description: episode.description || '',
+      video_url: episode.video_url || '',
+      thumbnail: episode.thumbnail || '',
+      duration: episode.duration || '',
+      intro_start: episode.intro_start?.toString() || '',
+      intro_end: episode.intro_end?.toString() || '',
+    });
+    setEpisodeDialogOpen(true);
+  };
+
+  const handleSaveEpisode = async () => {
     if (!episodeForm.video_url) {
       toast({
         title: 'Erro',
@@ -178,7 +210,7 @@ const EditSeries = () => {
       return;
     }
 
-    const { error } = await supabase.from('episodes').insert({
+    const episodeData = {
       series_id: id,
       season: parseInt(episodeForm.season),
       episode: parseInt(episodeForm.episode),
@@ -189,31 +221,37 @@ const EditSeries = () => {
       duration: episodeForm.duration || null,
       intro_start: episodeForm.intro_start ? parseInt(episodeForm.intro_start) : null,
       intro_end: episodeForm.intro_end ? parseInt(episodeForm.intro_end) : null,
-    });
+    };
+
+    let error;
+    if (editingEpisode) {
+      // Update existing episode
+      const result = await supabase
+        .from('episodes')
+        .update(episodeData)
+        .eq('id', editingEpisode.id);
+      error = result.error;
+    } else {
+      // Insert new episode
+      const result = await supabase.from('episodes').insert(episodeData);
+      error = result.error;
+    }
 
     if (error) {
       toast({
         title: 'Erro',
-        description: 'Não foi possível adicionar o episódio.',
+        description: editingEpisode 
+          ? 'Não foi possível atualizar o episódio.' 
+          : 'Não foi possível adicionar o episódio.',
         variant: 'destructive',
       });
     } else {
       toast({
         title: 'Sucesso!',
-        description: 'Episódio adicionado.',
+        description: editingEpisode ? 'Episódio atualizado.' : 'Episódio adicionado.',
       });
       setEpisodeDialogOpen(false);
-      setEpisodeForm({
-        season: '1',
-        episode: '1',
-        title: '',
-        description: '',
-        video_url: '',
-        thumbnail: '',
-        duration: '',
-        intro_start: '',
-        intro_end: '',
-      });
+      resetEpisodeForm();
       fetchEpisodes();
     }
   };
@@ -379,16 +417,21 @@ const EditSeries = () => {
             <div className="p-6 bg-card rounded-2xl border border-border">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-display font-bold">Episódios ({episodes.length})</h3>
-                <Dialog open={episodeDialogOpen} onOpenChange={setEpisodeDialogOpen}>
+                <Dialog open={episodeDialogOpen} onOpenChange={(open) => {
+                  setEpisodeDialogOpen(open);
+                  if (!open) resetEpisodeForm();
+                }}>
                   <DialogTrigger asChild>
-                    <Button size="sm" className="gap-2">
+                    <Button size="sm" className="gap-2" onClick={() => resetEpisodeForm()}>
                       <Plus className="w-4 h-4" />
                       Adicionar
                     </Button>
                   </DialogTrigger>
                   <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
-                      <DialogTitle>Adicionar Episódio</DialogTitle>
+                      <DialogTitle>
+                        {editingEpisode ? 'Editar Episódio' : 'Adicionar Episódio'}
+                      </DialogTitle>
                     </DialogHeader>
                     <div className="space-y-4 py-4">
                       <div className="grid grid-cols-2 gap-4">
@@ -459,13 +502,18 @@ const EditSeries = () => {
                         Defina o tempo em segundos para o botão "Pular Abertura" aparecer
                       </p>
                       <div className="space-y-2">
-                        <Label>Vídeo *</Label>
+                        <Label>Vídeo {!editingEpisode && '*'}</Label>
                         <VideoUpload
                           onUploadComplete={(url) => setEpisodeForm({ ...episodeForm, video_url: url })}
                         />
+                        {editingEpisode && episodeForm.video_url && (
+                          <p className="text-xs text-muted-foreground">
+                            Vídeo atual configurado. Faça upload para substituir.
+                          </p>
+                        )}
                       </div>
-                      <Button onClick={handleAddEpisode} className="w-full">
-                        Adicionar Episódio
+                      <Button onClick={handleSaveEpisode} className="w-full">
+                        {editingEpisode ? 'Salvar Alterações' : 'Adicionar Episódio'}
                       </Button>
                     </div>
                   </DialogContent>
@@ -490,10 +538,21 @@ const EditSeries = () => {
                         <p className="font-semibold text-sm">
                           T{ep.season}E{ep.episode}: {ep.title || `Episódio ${ep.episode}`}
                         </p>
-                        {ep.duration && (
-                          <p className="text-xs text-muted-foreground">{ep.duration}</p>
-                        )}
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          {ep.duration && <span>{ep.duration}</span>}
+                          {ep.intro_start != null && ep.intro_end != null && (
+                            <span className="text-primary">• Abertura: {ep.intro_start}s - {ep.intro_end}s</span>
+                          )}
+                        </div>
                       </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-muted-foreground hover:text-foreground hover:bg-secondary"
+                        onClick={() => openEditEpisodeDialog(ep)}
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
                       <Button
                         variant="ghost"
                         size="icon"
