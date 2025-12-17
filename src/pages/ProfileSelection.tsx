@@ -29,7 +29,7 @@ const ProfileSelection = () => {
   const { user, profile, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [linkedProfiles, setLinkedProfiles] = useState<LinkedProfile[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [email, setEmail] = useState('');
@@ -39,61 +39,68 @@ const ProfileSelection = () => {
 
   useEffect(() => {
     if (user && profile) {
-      fetchLinkedAccounts();
+      void fetchLinkedAccounts();
+    } else {
+      setLinkedProfiles([]);
+      setIsLoading(false);
     }
   }, [user, profile]);
 
   const fetchLinkedAccounts = async () => {
     if (!user || !profile) return;
 
-    // Get all linked account IDs (where current user is primary or linked)
-    const { data: links, error: linksError } = await supabase
-      .from('linked_accounts')
-      .select('primary_user_id, linked_user_id')
-      .or(`primary_user_id.eq.${user.id},linked_user_id.eq.${user.id}`);
+    setIsLoading(true);
 
-    if (linksError) {
-      console.error('Error fetching linked accounts:', linksError);
+    try {
+      // Get all linked account IDs (where current user is primary or linked)
+      const { data: links, error: linksError } = await supabase
+        .from('linked_accounts')
+        .select('primary_user_id, linked_user_id')
+        .or(`primary_user_id.eq.${user.id},linked_user_id.eq.${user.id}`);
+
+      if (linksError) {
+        console.error('Error fetching linked accounts:', linksError);
+        return;
+      }
+
+      // Collect all unique user IDs
+      const userIds = new Set<string>([user.id]);
+      links?.forEach((link) => {
+        userIds.add(link.primary_user_id);
+        userIds.add(link.linked_user_id);
+      });
+
+      // Fetch profiles for all linked users
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, email, username, avatar_url')
+        .in('id', Array.from(userIds));
+
+      if (profilesError) {
+        console.error('Error fetching profiles:', profilesError);
+        return;
+      }
+
+      const allProfiles: LinkedProfile[] =
+        profiles?.map((p) => ({
+          id: p.id,
+          email: p.email,
+          username: p.username,
+          avatar_url: p.avatar_url,
+          isCurrentUser: p.id === user.id,
+        })) || [];
+
+      // Current user should always appear first
+      allProfiles.sort((a, b) => {
+        if (a.isCurrentUser) return -1;
+        if (b.isCurrentUser) return 1;
+        return 0;
+      });
+
+      setLinkedProfiles(allProfiles);
+    } finally {
       setIsLoading(false);
-      return;
     }
-
-    // Collect all unique user IDs
-    const userIds = new Set<string>([user.id]);
-    links?.forEach((link) => {
-      userIds.add(link.primary_user_id);
-      userIds.add(link.linked_user_id);
-    });
-
-    // Fetch profiles for all linked users
-    const { data: profiles, error: profilesError } = await supabase
-      .from('profiles')
-      .select('id, email, username, avatar_url')
-      .in('id', Array.from(userIds));
-
-    if (profilesError) {
-      console.error('Error fetching profiles:', profilesError);
-      setIsLoading(false);
-      return;
-    }
-
-    const allProfiles: LinkedProfile[] = profiles?.map((p) => ({
-      id: p.id,
-      email: p.email,
-      username: p.username,
-      avatar_url: p.avatar_url,
-      isCurrentUser: p.id === user.id,
-    })) || [];
-
-    // Current user should always appear first
-    allProfiles.sort((a, b) => {
-      if (a.isCurrentUser) return -1;
-      if (b.isCurrentUser) return 1;
-      return 0;
-    });
-
-    setLinkedProfiles(allProfiles);
-    setIsLoading(false);
   };
 
   const handleSelectProfile = async (selectedProfile: LinkedProfile) => {

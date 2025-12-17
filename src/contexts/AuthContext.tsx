@@ -31,53 +31,104 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchProfile = async (userId: string) => {
-    const { data: profileData } = await supabase
+  const fetchProfileAndRole = async (sessionUser: User) => {
+    const userId = sessionUser.id;
+    const email = sessionUser.email ?? '';
+
+    // Profile
+    const { data: profileData, error: profileError } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', userId)
-      .single();
-    
-    if (profileData) {
-      setProfile(profileData);
+      .maybeSingle();
+
+    if (profileError) {
+      console.error('Error fetching profile:', profileError);
     }
 
-    const { data: roleData } = await supabase
+    // If profile does not exist yet, create it (prevents infinite loaders)
+    let resolvedProfile = profileData ?? null;
+    if (!resolvedProfile) {
+      const { data: userCode, error: userCodeError } = await supabase.rpc('generate_user_code');
+      if (userCodeError) {
+        console.error('Error generating user code:', userCodeError);
+      }
+
+      const fallbackUserCode = `User${userId.slice(0, 4)}`;
+      const resolvedUserCode = typeof userCode === 'string' ? userCode : fallbackUserCode;
+
+      const { error: insertError } = await supabase.from('profiles').insert({
+        id: userId,
+        email,
+        user_code: resolvedUserCode,
+      });
+
+      if (insertError) {
+        console.error('Error creating profile:', insertError);
+      } else {
+        const { data: createdProfile, error: createdProfileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', userId)
+          .maybeSingle();
+
+        if (createdProfileError) {
+          console.error('Error refetching created profile:', createdProfileError);
+        }
+
+        resolvedProfile = createdProfile ?? null;
+      }
+    }
+
+    setProfile(resolvedProfile);
+
+    // Role
+    const { data: roleData, error: roleError } = await supabase
       .from('user_roles')
       .select('role')
       .eq('user_id', userId)
       .eq('role', 'admin')
-      .single();
-    
+      .maybeSingle();
+
+    if (roleError) {
+      console.error('Error fetching role:', roleError);
+    }
+
     setIsAdmin(!!roleData);
   };
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        if (session?.user) {
-          setTimeout(() => {
-            fetchProfile(session.user.id);
-          }, 0);
+    const hydrate = async (nextSession: Session | null) => {
+      setIsLoading(true);
+
+      try {
+        setSession(nextSession);
+        setUser(nextSession?.user ?? null);
+
+        if (nextSession?.user) {
+          await fetchProfileAndRole(nextSession.user);
         } else {
           setProfile(null);
           setIsAdmin(false);
         }
+      } catch (err) {
+        console.error('Auth hydrate failed:', err);
+        // Failsafe: avoid freezing the UI in loading state
+        setProfile(null);
+        setIsAdmin(false);
+      } finally {
         setIsLoading(false);
       }
-    );
+    };
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        fetchProfile(session.user.id);
-      }
-      setIsLoading(false);
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      void hydrate(nextSession);
+    });
+
+    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      void hydrate(currentSession);
     });
 
     return () => subscription.unsubscribe();
