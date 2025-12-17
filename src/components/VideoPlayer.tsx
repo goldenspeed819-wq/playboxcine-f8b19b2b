@@ -33,9 +33,10 @@ interface VideoPlayerProps {
   subtitleUrl?: string | null;
   nextLabel?: string;
   onNextClick?: () => void;
+  introEndTime?: number; // Time in seconds when intro ends
 }
 
-export function VideoPlayer({ src, poster, title, subtitleUrl, nextLabel, onNextClick }: VideoPlayerProps) {
+export function VideoPlayer({ src, poster, title, subtitleUrl, nextLabel, onNextClick, introEndTime = 90 }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -50,8 +51,18 @@ export function VideoPlayer({ src, poster, title, subtitleUrl, nextLabel, onNext
   const [showControls, setShowControls] = useState(true);
   const [subtitlesEnabled, setSubtitlesEnabled] = useState(false);
   const [showNextButton, setShowNextButton] = useState(false);
+  const [showSkipIntro, setShowSkipIntro] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const controlsTimeoutRef = useRef<NodeJS.Timeout>();
+
+  // Show skip intro button during the intro period
+  useEffect(() => {
+    if (introEndTime && currentTime >= 5 && currentTime < introEndTime) {
+      setShowSkipIntro(true);
+    } else {
+      setShowSkipIntro(false);
+    }
+  }, [currentTime, introEndTime]);
 
   // Show next button when video is 90% complete or has less than 30 seconds remaining
   useEffect(() => {
@@ -184,6 +195,12 @@ export function VideoPlayer({ src, poster, title, subtitleUrl, nextLabel, onNext
     video.currentTime = Math.max(0, Math.min(video.currentTime + seconds, duration));
   };
 
+  const skipIntro = () => {
+    const video = videoRef.current;
+    if (!video || !introEndTime) return;
+    video.currentTime = introEndTime;
+  };
+
   const changePlaybackSpeed = (speed: number) => {
     const video = videoRef.current;
     if (!video) return;
@@ -258,6 +275,20 @@ export function VideoPlayer({ src, poster, title, subtitleUrl, nextLabel, onNext
           >
             <Play className="w-10 h-10 text-primary-foreground ml-1" />
           </button>
+        </div>
+      )}
+
+      {/* Skip Intro Button */}
+      {showSkipIntro && isPlaying && (
+        <div className="absolute bottom-24 right-4 animate-fade-in z-10">
+          <Button
+            onClick={skipIntro}
+            className="gap-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm border border-white/30 text-white shadow-lg"
+            size="lg"
+          >
+            Pular Abertura
+            <ChevronRight className="w-5 h-5" />
+          </Button>
         </div>
       )}
 
