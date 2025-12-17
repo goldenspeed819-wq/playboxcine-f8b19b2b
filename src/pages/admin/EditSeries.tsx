@@ -502,6 +502,16 @@ const EditSeries = () => {
                         Defina o tempo em segundos para o botão "Pular Abertura" aparecer
                       </p>
                       <div className="space-y-2">
+                        <Label>Thumbnail do Episódio</Label>
+                        <ThumbnailUpload
+                          onUploadComplete={(url) => setEpisodeForm({ ...episodeForm, thumbnail: url })}
+                          currentUrl={episodeForm.thumbnail}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Imagem de cena do episódio (recomendado: 16:9)
+                        </p>
+                      </div>
+                      <div className="space-y-2">
                         <Label>Vídeo {!editingEpisode && '*'}</Label>
                         <VideoUpload
                           onUploadComplete={(url) => setEpisodeForm({ ...episodeForm, video_url: url })}
@@ -531,11 +541,19 @@ const EditSeries = () => {
                       key={ep.id}
                       className="flex items-center gap-3 p-3 bg-secondary/30 rounded-lg"
                     >
-                      <div className="w-16 h-10 rounded bg-secondary flex items-center justify-center">
-                        <Play className="w-4 h-4 text-muted-foreground" />
+                      <div className="w-20 h-12 rounded overflow-hidden bg-secondary flex items-center justify-center flex-shrink-0">
+                        {ep.thumbnail ? (
+                          <img
+                            src={ep.thumbnail}
+                            alt={ep.title || `Episódio ${ep.episode}`}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <Play className="w-4 h-4 text-muted-foreground" />
+                        )}
                       </div>
-                      <div className="flex-1">
-                        <p className="font-semibold text-sm">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-sm truncate">
                           T{ep.season}E{ep.episode}: {ep.title || `Episódio ${ep.episode}`}
                         </p>
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
