@@ -14,8 +14,19 @@ const Auth = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [switchingAccount, setSwitchingAccount] = useState(false);
   const { signIn, signUp, user, profile, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // Check if we're switching accounts
+    const switchToEmail = localStorage.getItem('switchToEmail');
+    if (switchToEmail) {
+      setEmail(switchToEmail);
+      setSwitchingAccount(true);
+      localStorage.removeItem('switchToEmail');
+    }
+  }, []);
 
   useEffect(() => {
     if (!authLoading && user && profile) {
@@ -113,6 +124,12 @@ const Auth = () => {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="p-6 bg-card rounded-2xl border border-border space-y-4">
+            {switchingAccount && (
+              <div className="p-3 bg-primary/10 border border-primary/50 rounded-lg text-primary text-sm">
+                Trocando para conta: <strong>{email}</strong>
+              </div>
+            )}
+
             {error && (
               <div className="p-3 bg-destructive/10 border border-destructive/50 rounded-lg flex items-center gap-2 text-destructive text-sm">
                 <AlertCircle className="w-4 h-4" />
