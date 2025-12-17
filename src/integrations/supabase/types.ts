@@ -132,6 +132,8 @@ export type Database = {
           duration: string | null
           episode: number
           id: string
+          intro_end: number | null
+          intro_start: number | null
           season: number
           series_id: string
           thumbnail: string | null
@@ -144,6 +146,8 @@ export type Database = {
           duration?: string | null
           episode?: number
           id?: string
+          intro_end?: number | null
+          intro_start?: number | null
           season?: number
           series_id: string
           thumbnail?: string | null
@@ -156,6 +160,8 @@ export type Database = {
           duration?: string | null
           episode?: number
           id?: string
+          intro_end?: number | null
+          intro_start?: number | null
           season?: number
           series_id?: string
           thumbnail?: string | null
