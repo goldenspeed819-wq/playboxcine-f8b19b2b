@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { ContactDialog } from './ContactDialog';
 
 export function Footer() {
   return (
@@ -57,7 +58,7 @@ export function Footer() {
                 <span className="text-muted-foreground text-sm">Política de Privacidade</span>
               </li>
               <li>
-                <span className="text-muted-foreground text-sm">Contato</span>
+                <ContactDialog />
               </li>
             </ul>
           </div>
