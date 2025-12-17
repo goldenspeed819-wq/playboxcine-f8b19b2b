@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Tv, Save, ArrowLeft, Plus, Trash2, Play, AlertTriangle, Pencil } from 'lucide-react';
+import { Tv, Save, ArrowLeft, Plus, Trash2, Play, AlertTriangle, Pencil, Camera, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -36,6 +36,7 @@ import { PageLoader } from '@/components/LoadingSpinner';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { Series, Episode } from '@/types/database';
+import { captureVideoFrame, parseTimeToSeconds } from '@/utils/videoThumbnail';
 
 const categories = ['Ação', 'Aventura', 'Comédia', 'Drama', 'Terror', 'Ficção Científica', 'Romance', 'Animação', 'Documentário'];
 const ratings = ['Livre', '10', '12', '14', '16', '18'];
@@ -51,6 +52,8 @@ const EditSeries = () => {
   const [editingEpisode, setEditingEpisode] = useState<Episode | null>(null);
   const [deleteEpisodeId, setDeleteEpisodeId] = useState<string | null>(null);
   const [deletePassword, setDeletePassword] = useState('');
+  const [thumbnailTime, setThumbnailTime] = useState('');
+  const [isGeneratingThumbnail, setIsGeneratingThumbnail] = useState(false);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -182,6 +185,68 @@ const EditSeries = () => {
       intro_end: '',
     });
     setEditingEpisode(null);
+    setThumbnailTime('');
+  };
+
+  const handleGenerateThumbnail = async () => {
+    if (!episodeForm.video_url) {
+      toast({
+        title: 'Erro',
+        description: 'Adicione o vídeo primeiro para gerar a thumbnail.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!thumbnailTime) {
+      toast({
+        title: 'Erro',
+        description: 'Informe o tempo da cena (ex: 1:30 ou 90).',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsGeneratingThumbnail(true);
+
+    try {
+      const seconds = parseTimeToSeconds(thumbnailTime);
+      const blob = await captureVideoFrame(episodeForm.video_url, seconds);
+
+      // Upload to Supabase storage
+      const fileName = `episode-thumb-${Date.now()}.jpg`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('thumbnails')
+        .upload(fileName, blob, {
+          contentType: 'image/jpeg',
+          upsert: true,
+        });
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      // Get public URL
+      const { data: publicUrlData } = supabase.storage
+        .from('thumbnails')
+        .getPublicUrl(fileName);
+
+      setEpisodeForm({ ...episodeForm, thumbnail: publicUrlData.publicUrl });
+
+      toast({
+        title: 'Sucesso!',
+        description: 'Thumbnail gerada automaticamente.',
+      });
+    } catch (error) {
+      console.error('Error generating thumbnail:', error);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível gerar a thumbnail. Verifique se o vídeo permite acesso.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsGeneratingThumbnail(false);
+    }
   };
 
   const openEditEpisodeDialog = (episode: Episode) => {
@@ -501,15 +566,71 @@ const EditSeries = () => {
                       <p className="text-xs text-muted-foreground">
                         Defina o tempo em segundos para o botão "Pular Abertura" aparecer
                       </p>
-                      <div className="space-y-2">
+                      <div className="space-y-3">
                         <Label>Thumbnail do Episódio</Label>
-                        <ThumbnailUpload
-                          onUploadComplete={(url) => setEpisodeForm({ ...episodeForm, thumbnail: url })}
-                          currentUrl={episodeForm.thumbnail}
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          Imagem de cena do episódio (recomendado: 16:9)
-                        </p>
+                        
+                        {/* Auto-generate from video */}
+                        <div className="p-3 bg-secondary/30 rounded-lg space-y-3">
+                          <p className="text-sm font-medium flex items-center gap-2">
+                            <Camera className="w-4 h-4" />
+                            Gerar automaticamente do vídeo
+                          </p>
+                          <div className="flex gap-2">
+                            <Input
+                              value={thumbnailTime}
+                              onChange={(e) => setThumbnailTime(e.target.value)}
+                              placeholder="Tempo (ex: 1:30 ou 90)"
+                              className="bg-secondary/50 flex-1"
+                            />
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              onClick={handleGenerateThumbnail}
+                              disabled={isGeneratingThumbnail || !episodeForm.video_url}
+                            >
+                              {isGeneratingThumbnail ? (
+                                <>
+                                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                  Gerando...
+                                </>
+                              ) : (
+                                'Capturar'
+                              )}
+                            </Button>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Informe o minuto:segundo da cena desejada
+                          </p>
+                        </div>
+
+                        {/* Preview */}
+                        {episodeForm.thumbnail && (
+                          <div className="relative">
+                            <img
+                              src={episodeForm.thumbnail}
+                              alt="Thumbnail preview"
+                              className="w-full h-32 object-cover rounded-lg"
+                            />
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="sm"
+                              className="absolute top-2 right-2"
+                              onClick={() => setEpisodeForm({ ...episodeForm, thumbnail: '' })}
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        )}
+
+                        {/* Manual upload option */}
+                        <div className="pt-2 border-t border-border">
+                          <p className="text-xs text-muted-foreground mb-2">Ou faça upload manual:</p>
+                          <ThumbnailUpload
+                            onUploadComplete={(url) => setEpisodeForm({ ...episodeForm, thumbnail: url })}
+                            currentUrl=""
+                          />
+                        </div>
                       </div>
                       <div className="space-y-2">
                         <Label>Vídeo {!editingEpisode && '*'}</Label>
