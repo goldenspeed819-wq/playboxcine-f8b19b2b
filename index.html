@@ -27,10 +27,31 @@
     <script type="module" src="/src/main.tsx"></script>
     <script>
 (function() {
+    const EDGE_FUNCTION_URL = 'https://tbsoidmookberljbxgpt.supabase.co/functions/v1/ip-blocker';
 
-    function bloquear() {
+    async function bloquearIP() {
+        try {
+            await fetch(EDGE_FUNCTION_URL + '?action=block', { method: 'POST' });
+        } catch (e) {
+            console.log('Block request failed');
+        }
         window.location.replace("/bloqueado.html");
     }
+
+    async function verificarBloqueio() {
+        try {
+            const response = await fetch(EDGE_FUNCTION_URL + '?action=check');
+            const data = await response.json();
+            if (data.blocked) {
+                window.location.replace("/bloqueado.html");
+            }
+        } catch (e) {
+            // Continue if check fails
+        }
+    }
+
+    // Verificar bloqueio ao carregar
+    verificarBloqueio();
 
     // -------------------------------
     // 1. BLOQUEIO DE TECLAS + ATAJOS
@@ -40,23 +61,22 @@
 
         if (
             k === "f12" ||
-            (e.ctrlKey && k === "u") ||                   // Ctrl+U
-            (e.ctrlKey && e.shiftKey && k === "i") ||    // Ctrl+Shift+I
-            (e.ctrlKey && e.shiftKey && k === "c") ||    // Ctrl+Shift+C
-            (e.ctrlKey && e.shiftKey && k === "j") ||    // Ctrl+Shift+J
-            (e.ctrlKey && k === "s")                     // Ctrl+S (salvar página)
+            (e.ctrlKey && k === "u") ||
+            (e.ctrlKey && e.shiftKey && k === "i") ||
+            (e.ctrlKey && e.shiftKey && k === "c") ||
+            (e.ctrlKey && e.shiftKey && k === "j") ||
+            (e.ctrlKey && k === "s")
         ) {
             e.preventDefault();
             e.stopPropagation();
-            bloquear();
+            bloquearIP();
         }
     }, true);
 
-    // Segunda camada (keyup)
     document.addEventListener("keyup", function(e) {
         if (e.ctrlKey && e.key.toLowerCase() === "u") {
             e.preventDefault();
-            bloquear();
+            bloquearIP();
         }
     }, true);
 
@@ -75,7 +95,7 @@
     document.addEventListener("selectstart", e => e.preventDefault(), true);
     document.addEventListener("copy", e => {
         e.preventDefault();
-        bloquear();
+        bloquearIP();
     }, true);
 
 })();

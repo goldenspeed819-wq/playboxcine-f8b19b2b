@@ -1,1 +1,7 @@
 project_id = "tbsoidmookberljbxgpt"
+
+[functions.link-account]
+verify_jwt = true
+
+[functions.ip-blocker]
+verify_jwt = false
