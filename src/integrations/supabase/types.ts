@@ -172,6 +172,27 @@ export type Database = {
           },
         ]
       }
+      linked_accounts: {
+        Row: {
+          created_at: string
+          id: string
+          linked_user_id: string
+          primary_user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          linked_user_id: string
+          primary_user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          linked_user_id?: string
+          primary_user_id?: string
+        }
+        Relationships: []
+      }
       live_channels: {
         Row: {
           category: string | null
