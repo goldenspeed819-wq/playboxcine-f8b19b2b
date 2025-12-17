@@ -26,7 +26,7 @@ interface LinkedProfile {
 const MAX_ACCOUNTS = 5;
 
 const ProfileSelection = () => {
-  const { user, profile, isLoading: authLoading, signIn, signUp } = useAuth();
+  const { user, profile, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [linkedProfiles, setLinkedProfiles] = useState<LinkedProfile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -122,54 +122,35 @@ const ProfileSelection = () => {
 
     try {
       if (authTab === 'signup') {
-        // Create new account
-        const { error: signUpError } = await signUp(email.trim(), password);
-        if (signUpError) {
-          toast.error(signUpError.message || 'Erro ao criar conta');
-          setIsSubmitting(false);
-          return;
-        }
-        toast.success('Conta criada! Verifique seu email para confirmar.');
-      } else {
-        // Login to existing account - we need to verify credentials first
-        // Create a temporary session to validate credentials
-        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-          email: email.trim(),
-          password: password,
-        });
+        // For signup, we'll create the account first, then user needs to login to link
+        toast.info('Para criar uma nova conta, faça o cadastro na página de login e depois vincule aqui.');
+        setShowAddDialog(false);
+        setEmail('');
+        setPassword('');
+        setIsSubmitting(false);
+        return;
+      }
 
-        if (signInError) {
-          toast.error(signInError.message || 'Credenciais inválidas');
-          setIsSubmitting(false);
-          return;
-        }
+      // Use edge function to verify and link without changing session
+      const { data, error } = await supabase.functions.invoke('link-account', {
+        body: { email: email.trim(), password },
+      });
 
-        // Now link this account
-        const linkedUserId = signInData.user?.id;
-        if (linkedUserId && linkedUserId !== user.id) {
-          // Sign back in as original user first
-          // We need to store the link before switching back
-          const { error: linkError } = await supabase
-            .from('linked_accounts')
-            .insert({
-              primary_user_id: user.id,
-              linked_user_id: linkedUserId,
-            });
+      if (error) {
+        toast.error('Erro ao vincular conta');
+        setIsSubmitting(false);
+        return;
+      }
 
-          if (linkError) {
-            if (linkError.code === '23505') {
-              toast.error('Esta conta já está vinculada');
-            } else {
-              console.error('Error linking account:', linkError);
-              toast.error('Erro ao vincular conta');
-            }
-          } else {
-            toast.success('Conta vinculada com sucesso!');
-            fetchLinkedAccounts();
-          }
-        } else {
-          toast.error('Não é possível vincular a mesma conta');
-        }
+      if (data.error) {
+        toast.error(data.error);
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (data.success && data.linkedProfile) {
+        setLinkedProfiles([...linkedProfiles, data.linkedProfile]);
+        toast.success('Conta vinculada com sucesso!');
       }
 
       setShowAddDialog(false);
