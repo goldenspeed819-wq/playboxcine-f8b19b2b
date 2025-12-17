@@ -78,40 +78,6 @@
         bloquear();
     }, true);
 
-    // -------------------------------
-    // 4. DETECÇÃO AVANÇADA DE DEVTOOLS
-    // -------------------------------
-    let devtoolsOpen = false;
-
-    function detectDevTools() {
-        const threshold = 170;
-
-        if (
-            window.outerWidth - window.innerWidth > threshold ||
-            window.outerHeight - window.innerHeight > threshold
-        ) {
-            if (!devtoolsOpen) {
-                devtoolsOpen = true;
-                bloquear();
-            }
-        }
-    }
-
-    setInterval(detectDevTools, 300);
-
-    // -------------------------------
-    // 5. MÉTODO PRÓ (anti Chrome DevTools)
-    // -------------------------------
-    (function() {
-        const element = new Image();
-        Object.defineProperty(element, 'id', {
-            get: function() {
-                bloquear();
-            }
-        });
-        console.log(element);
-    })();
-
 })();
 </script>
   </body>
