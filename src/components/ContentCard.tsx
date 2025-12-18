@@ -77,7 +77,7 @@ export function ContentCard({ item, type, index = 0 }: ContentCardProps) {
           {item.title}
         </h3>
         <p className="text-xs text-muted-foreground mt-1">
-          {item.release_year || type === 'movie' ? 'Filme' : 'Série'}
+          {type === 'movie' ? 'Filme' : 'Série'}
         </p>
       </div>
     </Link>
