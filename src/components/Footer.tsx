@@ -56,7 +56,9 @@ export function Footer() {
             </h3>
             <ul className="space-y-3">
               <li>
-                <span className="text-muted-foreground text-sm cursor-not-allowed">Termos de Uso</span>
+                <Link to="/terms" className="text-muted-foreground hover:text-foreground transition-colors text-sm">
+                  Termos de Uso
+                </Link>
               </li>
               <li>
                 <Link to="/privacy" className="text-muted-foreground hover:text-foreground transition-colors text-sm">
