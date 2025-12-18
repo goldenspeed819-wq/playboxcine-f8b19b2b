@@ -86,7 +86,7 @@ const Index = () => {
       {/* Content Sections */}
       <main className="relative z-10 -mt-20">
         {releases.length > 0 && (
-          <ContentRow title="Lançamentos" items={releases} type="movie" />
+          <ContentRow title="Lançamentos" items={releases} type="mixed" />
         )}
         <ContentRow title="Filmes" items={recentMovies} type="movie" />
         <ContentRow title="Séries" items={recentSeries} type="series" />

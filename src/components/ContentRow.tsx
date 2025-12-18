@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 interface ContentRowProps {
   title: string;
   items: (Movie | Series)[];
-  type: 'movie' | 'series';
+  type: 'movie' | 'series' | 'mixed';
 }
 
 export function ContentRow({ title, items, type }: ContentRowProps) {
@@ -21,6 +21,11 @@ export function ContentRow({ title, items, type }: ContentRowProps) {
       left: direction === 'left' ? -scrollAmount : scrollAmount,
       behavior: 'smooth',
     });
+  };
+
+  const resolveItemType = (item: Movie | Series): 'movie' | 'series' => {
+    // Movies have video_url/cover fields; Series doesn't.
+    return 'video_url' in item ? 'movie' : 'series';
   };
 
   if (items.length === 0) return null;
@@ -62,7 +67,11 @@ export function ContentRow({ title, items, type }: ContentRowProps) {
         >
           {items.map((item, index) => (
             <div key={item.id} className="flex-shrink-0 w-40 md:w-48">
-              <ContentCard item={item} type={type} index={index} />
+              <ContentCard
+                item={item}
+                type={type === 'mixed' ? resolveItemType(item) : type}
+                index={index}
+              />
             </div>
           ))}
         </div>
