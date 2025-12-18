@@ -105,69 +105,82 @@ export function Header() {
             ))}
           </nav>
 
-          {/* Search & Mobile Menu */}
-          <div className="flex items-center gap-2">
-            <form onSubmit={handleSearch} className={cn(
-              'transition-all duration-300 overflow-hidden',
-              searchOpen ? 'w-48 md:w-64' : 'w-0'
-            )}>
-              <Input
-                placeholder="Buscar filmes..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="bg-secondary/50 border-border focus:border-primary h-9"
-                autoFocus={searchOpen}
-              />
-            </form>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleSearchClick}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              <Search className="w-5 h-5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleAdminClick}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              <MoreVertical className="w-5 h-5" />
-            </Button>
+          {/* Search & Actions */}
+          <div className="flex items-center gap-1 md:gap-2">
+            {/* Search */}
+            <div className="flex items-center">
+              <form onSubmit={handleSearch} className={cn(
+                'transition-all duration-300 overflow-hidden',
+                searchOpen ? 'w-40 md:w-56' : 'w-0'
+              )}>
+                <Input
+                  placeholder="Buscar..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="bg-secondary/80 border-border/50 focus:border-primary h-8 text-sm rounded-full px-4"
+                  autoFocus={searchOpen}
+                />
+              </form>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleSearchClick}
+                className="text-muted-foreground hover:text-foreground hover:bg-secondary/50 h-9 w-9 rounded-full"
+              >
+                <Search className="w-4 h-4" />
+              </Button>
+            </div>
+
+            {/* Divider */}
+            <div className="hidden sm:block h-6 w-px bg-border/50" />
+
+            {/* User Profile */}
             {profile && (
-              <>
-                <div className="flex items-center gap-2">
-                  {profile.avatar_url && (
-                    <img 
-                      src={profile.avatar_url} 
-                      alt="Avatar" 
-                      className="w-8 h-8 rounded-lg object-cover hidden sm:block"
-                    />
-                  )}
-                  <span className="text-sm font-medium text-muted-foreground hidden sm:block">
-                    {profile.username || profile.user_code}
-                  </span>
-                </div>
+              <div className="hidden sm:flex items-center gap-2 px-2 py-1.5 rounded-full bg-secondary/30 hover:bg-secondary/50 transition-colors">
+                {profile.avatar_url && (
+                  <img 
+                    src={profile.avatar_url} 
+                    alt="Avatar" 
+                    className="w-7 h-7 rounded-full object-cover ring-2 ring-primary/20"
+                  />
+                )}
+                <span className="text-xs font-medium text-foreground max-w-[80px] truncate">
+                  {profile.username || profile.user_code}
+                </span>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex items-center gap-0.5">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleAdminClick}
+                className="text-muted-foreground hover:text-foreground hover:bg-secondary/50 h-8 w-8 rounded-full"
+                title="Menu"
+              >
+                <MoreVertical className="w-4 h-4" />
+              </Button>
+              {profile && (
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={signOut}
-                  className="text-muted-foreground hover:text-foreground"
+                  className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-8 w-8 rounded-full"
                   title="Sair"
                 >
-                  <LogOut className="w-5 h-5" />
+                  <LogOut className="w-4 h-4" />
                 </Button>
-              </>
-            )}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="md:hidden text-muted-foreground hover:text-foreground"
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-            >
-              {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </Button>
+              )}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="md:hidden text-muted-foreground hover:text-foreground hover:bg-secondary/50 h-8 w-8 rounded-full"
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+              >
+                {isMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+              </Button>
+            </div>
           </div>
         </div>
 
