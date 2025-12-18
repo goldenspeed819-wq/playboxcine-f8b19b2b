@@ -152,15 +152,17 @@ export function Header() {
 
             {/* Action Buttons */}
             <div className="flex items-center gap-0.5">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleAdminClick}
-                className="text-muted-foreground hover:text-foreground hover:bg-secondary/50 h-8 w-8 rounded-full"
-                title="Menu"
-              >
-                <MoreVertical className="w-4 h-4" />
-              </Button>
+              {isAdmin && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleAdminClick}
+                  className="text-muted-foreground hover:text-foreground hover:bg-secondary/50 h-8 w-8 rounded-full"
+                  title="Painel Admin"
+                >
+                  <MoreVertical className="w-4 h-4" />
+                </Button>
+              )}
               {profile && (
                 <Button
                   variant="ghost"
