@@ -88,10 +88,10 @@ const Index = () => {
         <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-transparent to-background pointer-events-none" />
         
         {releases.length > 0 && (
-          <ContentRow title="🔥 Lançamentos" items={releases} type="mixed" />
+          <ContentRow title="Lançamentos" items={releases} type="mixed" />
         )}
-        <ContentRow title="🎬 Filmes" items={recentMovies} type="movie" />
-        <ContentRow title="📺 Séries" items={recentSeries} type="series" />
+        <ContentRow title="Filmes" items={recentMovies} type="movie" />
+        <ContentRow title="Séries" items={recentSeries} type="series" />
       </main>
 
       <Footer />
