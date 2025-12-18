@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { BackgroundProvider, BackgroundImage } from "@/contexts/BackgroundContext";
 
 // Public Pages
 import Index from "./pages/Index";
@@ -33,6 +34,7 @@ import EditSeries from "./pages/admin/EditSeries";
 import ManageAdmins from "./pages/admin/ManageAdmins";
 import ManageAvatars from "./pages/admin/ManageAvatars";
 import ManageLiveChannels from "./pages/admin/ManageLiveChannels";
+import SiteSettings from "./pages/admin/SiteSettings";
 
 const queryClient = new QueryClient();
 
@@ -40,43 +42,47 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <AuthProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            {/* Public Routes */}
-            <Route path="/" element={<ProfileSelection />} />
-            <Route path="/browse" element={<Index />} />
-            <Route path="/movies" element={<Movies />} />
-            <Route path="/series" element={<Series />} />
-            <Route path="/movie/:id" element={<MovieDetail />} />
-            <Route path="/series/:id" element={<SeriesDetail />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/profile-setup" element={<ProfileSetup />} />
-            <Route path="/live" element={<LiveChannels />} />
-            <Route path="/search" element={<Search />} />
-            <Route path="/privacy" element={<PrivacyPolicy />} />
-            <Route path="/terms" element={<TermsOfUse />} />
-            <Route path="/settings" element={<Settings />} />
-            
-            {/* Admin Routes */}
-            <Route path="/admin" element={<AdminLayout />}>
-              <Route index element={<Dashboard />} />
-              <Route path="movies" element={<ListMovies />} />
-              <Route path="movies/add" element={<AddMovie />} />
-              <Route path="movies/edit/:id" element={<EditMovie />} />
-              <Route path="series" element={<ListSeries />} />
-              <Route path="series/add" element={<AddSeries />} />
-              <Route path="series/edit/:id" element={<EditSeries />} />
-              <Route path="manage-admins" element={<ManageAdmins />} />
-              <Route path="avatars" element={<ManageAvatars />} />
-              <Route path="live-channels" element={<ManageLiveChannels />} />
-            </Route>
+        <BackgroundProvider>
+          <BackgroundImage />
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              {/* Public Routes */}
+              <Route path="/" element={<ProfileSelection />} />
+              <Route path="/browse" element={<Index />} />
+              <Route path="/movies" element={<Movies />} />
+              <Route path="/series" element={<Series />} />
+              <Route path="/movie/:id" element={<MovieDetail />} />
+              <Route path="/series/:id" element={<SeriesDetail />} />
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/profile-setup" element={<ProfileSetup />} />
+              <Route path="/live" element={<LiveChannels />} />
+              <Route path="/search" element={<Search />} />
+              <Route path="/privacy" element={<PrivacyPolicy />} />
+              <Route path="/terms" element={<TermsOfUse />} />
+              <Route path="/settings" element={<Settings />} />
+              
+              {/* Admin Routes */}
+              <Route path="/admin" element={<AdminLayout />}>
+                <Route index element={<Dashboard />} />
+                <Route path="movies" element={<ListMovies />} />
+                <Route path="movies/add" element={<AddMovie />} />
+                <Route path="movies/edit/:id" element={<EditMovie />} />
+                <Route path="series" element={<ListSeries />} />
+                <Route path="series/add" element={<AddSeries />} />
+                <Route path="series/edit/:id" element={<EditSeries />} />
+                <Route path="manage-admins" element={<ManageAdmins />} />
+                <Route path="avatars" element={<ManageAvatars />} />
+                <Route path="live-channels" element={<ManageLiveChannels />} />
+                <Route path="site-settings" element={<SiteSettings />} />
+              </Route>
 
-            {/* 404 */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
+              {/* 404 */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </BackgroundProvider>
       </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
