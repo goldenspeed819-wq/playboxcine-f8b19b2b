@@ -55,7 +55,9 @@ export function Footer() {
                 <span className="text-muted-foreground text-sm">Termos de Uso</span>
               </li>
               <li>
-                <span className="text-muted-foreground text-sm">Política de Privacidade</span>
+                <Link to="/privacy" className="text-muted-foreground hover:text-primary transition-colors text-sm">
+                  Política de Privacidade
+                </Link>
               </li>
               <li>
                 <ContactDialog />
