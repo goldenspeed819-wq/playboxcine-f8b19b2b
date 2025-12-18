@@ -17,6 +17,7 @@ import ProfileSetup from "./pages/ProfileSetup";
 import LiveChannels from "./pages/LiveChannels";
 import Search from "./pages/Search";
 import NotFound from "./pages/NotFound";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 
 // Admin Pages
 import AdminLayout from "./pages/admin/AdminLayout";
@@ -52,6 +53,7 @@ const App = () => (
             <Route path="/profile-setup" element={<ProfileSetup />} />
             <Route path="/live" element={<LiveChannels />} />
             <Route path="/search" element={<Search />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
             
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminLayout />}>
