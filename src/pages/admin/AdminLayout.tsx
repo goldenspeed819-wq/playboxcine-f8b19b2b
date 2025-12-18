@@ -12,6 +12,7 @@ import {
   Shield,
   UserCircle,
   Radio,
+  Settings,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
@@ -50,6 +51,7 @@ const AdminLayout = () => {
   { icon: List, label: 'Listar Séries', href: '/admin/series' },
   { icon: Radio, label: 'Canais ao Vivo', href: '/admin/live-channels' },
   { icon: UserCircle, label: 'Gerenciar Avatars', href: '/admin/avatars' },
+  { icon: Settings, label: 'Configurações', href: '/admin/site-settings' },
   // Só mostra para Fundador
   ...(profile?.user_code === 'Fundador' ? [{ icon: Shield, label: 'Gerenciar Admins', href: '/admin/manage-admins' }] : []),
 ];
