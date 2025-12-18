@@ -18,6 +18,7 @@ import LiveChannels from "./pages/LiveChannels";
 import Search from "./pages/Search";
 import NotFound from "./pages/NotFound";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfUse from "./pages/TermsOfUse";
 
 // Admin Pages
 import AdminLayout from "./pages/admin/AdminLayout";
@@ -54,6 +55,7 @@ const App = () => (
             <Route path="/live" element={<LiveChannels />} />
             <Route path="/search" element={<Search />} />
             <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/terms" element={<TermsOfUse />} />
             
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminLayout />}>
