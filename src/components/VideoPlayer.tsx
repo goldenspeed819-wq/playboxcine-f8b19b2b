@@ -14,6 +14,7 @@ import {
   PictureInPicture2,
   Rewind,
   FastForward,
+  AlertCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
@@ -53,7 +54,19 @@ export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introS
   const [showNextButton, setShowNextButton] = useState(false);
   const [showSkipIntro, setShowSkipIntro] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
+  const [videoError, setVideoError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const controlsTimeoutRef = useRef<NodeJS.Timeout>();
+
+  // Reset states when src changes
+  useEffect(() => {
+    setVideoError(null);
+    setIsLoading(true);
+    setIsPlaying(false);
+    setProgress(0);
+    setCurrentTime(0);
+    setDuration(0);
+  }, [src]);
 
   useEffect(() => {
     const hasIntro = introStartTime != null && introEndTime != null;
@@ -85,6 +98,8 @@ export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introS
 
     const handleLoadedMetadata = () => {
       setDuration(video.duration);
+      setIsLoading(false);
+      setVideoError(null);
     };
 
     const handleProgress = () => {
@@ -98,6 +113,33 @@ export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introS
     const handleEnded = () => setIsPlaying(false);
     const handleLeavePiP = () => setIsPiP(false);
     const handleEnterPiP = () => setIsPiP(true);
+    const handleCanPlay = () => {
+      setIsLoading(false);
+      setVideoError(null);
+    };
+    const handleWaiting = () => setIsLoading(true);
+    const handleError = () => {
+      const error = video.error;
+      let errorMessage = 'Erro ao carregar o vídeo';
+      if (error) {
+        switch (error.code) {
+          case 1:
+            errorMessage = 'Carregamento do vídeo foi interrompido';
+            break;
+          case 2:
+            errorMessage = 'Erro de rede ao carregar o vídeo';
+            break;
+          case 3:
+            errorMessage = 'Formato de vídeo não suportado pelo navegador';
+            break;
+          case 4:
+            errorMessage = 'Vídeo não encontrado ou inacessível';
+            break;
+        }
+      }
+      setVideoError(errorMessage);
+      setIsLoading(false);
+    };
 
     video.addEventListener('timeupdate', handleTimeUpdate);
     video.addEventListener('loadedmetadata', handleLoadedMetadata);
@@ -107,6 +149,9 @@ export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introS
     video.addEventListener('ended', handleEnded);
     video.addEventListener('leavepictureinpicture', handleLeavePiP);
     video.addEventListener('enterpictureinpicture', handleEnterPiP);
+    video.addEventListener('canplay', handleCanPlay);
+    video.addEventListener('waiting', handleWaiting);
+    video.addEventListener('error', handleError);
 
     return () => {
       video.removeEventListener('timeupdate', handleTimeUpdate);
@@ -117,8 +162,11 @@ export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introS
       video.removeEventListener('ended', handleEnded);
       video.removeEventListener('leavepictureinpicture', handleLeavePiP);
       video.removeEventListener('enterpictureinpicture', handleEnterPiP);
+      video.removeEventListener('canplay', handleCanPlay);
+      video.removeEventListener('waiting', handleWaiting);
+      video.removeEventListener('error', handleError);
     };
-  }, []);
+  }, [src]);
 
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -268,11 +316,31 @@ export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introS
         poster={poster || undefined}
         className="w-full h-full object-contain bg-black"
         onClick={togglePlay}
-        crossOrigin="anonymous"
+        playsInline
       />
 
+      {/* Loading Indicator */}
+      {isLoading && !videoError && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/60">
+          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+        </div>
+      )}
+
+      {/* Error State */}
+      {videoError && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/80">
+          <div className="text-center p-6">
+            <div className="w-16 h-16 rounded-full bg-destructive/20 flex items-center justify-center mx-auto mb-4">
+              <AlertCircle className="w-8 h-8 text-destructive" />
+            </div>
+            <p className="text-destructive font-medium mb-2">{videoError}</p>
+            <p className="text-muted-foreground text-sm">Verifique se o vídeo está em formato compatível (MP4, WebM)</p>
+          </div>
+        </div>
+      )}
+
       {/* Center Play Button Overlay */}
-      {!isPlaying && (
+      {!isPlaying && !videoError && !isLoading && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <button
             onClick={togglePlay}
