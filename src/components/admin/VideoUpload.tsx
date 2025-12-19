@@ -1,11 +1,12 @@
 import { useState, useRef } from 'react';
-import { Upload, X, FileVideo, CheckCircle, Pause, Play, Link, ExternalLink } from 'lucide-react';
+import { Upload, X, FileVideo, CheckCircle, Pause, Play, Link, ExternalLink, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { useVideoConverter } from '@/hooks/useVideoConverter';
 import * as tus from 'tus-js-client';
 
 interface VideoUploadProps {
@@ -23,10 +24,13 @@ export function VideoUpload({ onUploadComplete, currentUrl }: VideoUploadProps) 
   const [uploadSpeed, setUploadSpeed] = useState<string>('');
   const [timeRemaining, setTimeRemaining] = useState<string>('');
   const [externalUrl, setExternalUrl] = useState<string>('');
+  const [isConverting, setIsConverting] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const uploadRef = useRef<tus.Upload | null>(null);
   const lastProgressRef = useRef<{ time: number; bytes: number }>({ time: 0, bytes: 0 });
   const speedHistoryRef = useRef<number[]>([]);
+  
+  const { convertToMp4, needsConversion, conversionProgress, resetProgress } = useVideoConverter();
 
   // Check if current URL is external
   const isExternalUrl = (url: string) => {
@@ -44,12 +48,15 @@ export function VideoUpload({ onUploadComplete, currentUrl }: VideoUploadProps) 
     const selectedFile = e.target.files?.[0];
     if (!selectedFile) return;
 
-    // Validate file type
-    const validTypes = ['video/mp4', 'video/webm', 'video/x-matroska'];
-    if (!validTypes.includes(selectedFile.type)) {
+    // Validate file type - accept more formats for conversion
+    const validTypes = ['video/mp4', 'video/webm', 'video/x-matroska', 'video/avi', 'video/mp2t'];
+    const extension = selectedFile.name.split('.').pop()?.toLowerCase();
+    const validExtensions = ['mp4', 'webm', 'mkv', 'ts', 'mts', 'avi'];
+    
+    if (!validTypes.includes(selectedFile.type) && !validExtensions.includes(extension || '')) {
       toast({
         title: 'Formato inválido',
-        description: 'Use arquivos MP4, WEBM ou MKV.',
+        description: 'Use arquivos MP4, WEBM, MKV, TS ou AVI.',
         variant: 'destructive',
       });
       return;
@@ -68,6 +75,36 @@ export function VideoUpload({ onUploadComplete, currentUrl }: VideoUploadProps) 
   const handleUpload = async () => {
     if (!file) return;
 
+    let fileToUpload = file;
+    
+    // Check if conversion is needed
+    if (needsConversion(file)) {
+      setIsConverting(true);
+      try {
+        toast({
+          title: 'Convertendo vídeo',
+          description: 'Convertendo para MP4 para compatibilidade com navegadores...',
+        });
+        fileToUpload = await convertToMp4(file);
+        setFile(fileToUpload);
+        toast({
+          title: 'Conversão concluída!',
+          description: 'Iniciando upload...',
+        });
+      } catch (error) {
+        toast({
+          title: 'Erro na conversão',
+          description: 'Não foi possível converter o vídeo. Tente um arquivo MP4.',
+          variant: 'destructive',
+        });
+        setIsConverting(false);
+        resetProgress();
+        return;
+      }
+      setIsConverting(false);
+      resetProgress();
+    }
+
     setIsUploading(true);
     setProgress(0);
     setUploadSpeed('');
@@ -75,11 +112,11 @@ export function VideoUpload({ onUploadComplete, currentUrl }: VideoUploadProps) 
     lastProgressRef.current = { time: Date.now(), bytes: 0 };
     speedHistoryRef.current = [];
 
-    const fileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+    const fileName = `${Date.now()}-${fileToUpload.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
     const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-    const upload = new tus.Upload(file, {
+    const upload = new tus.Upload(fileToUpload, {
       endpoint: `${supabaseUrl}/storage/v1/upload/resumable`,
       retryDelays: [0, 1000, 3000, 5000],
       chunkSize: 10 * 1024 * 1024, // 10MB chunks for faster upload
@@ -93,7 +130,7 @@ export function VideoUpload({ onUploadComplete, currentUrl }: VideoUploadProps) 
       metadata: {
         bucketName: 'videos',
         objectName: fileName,
-        contentType: file.type,
+        contentType: fileToUpload.type || 'video/mp4',
         cacheControl: '31536000',
       },
       onError: (error) => {
@@ -314,14 +351,14 @@ export function VideoUpload({ onUploadComplete, currentUrl }: VideoUploadProps) 
                 Clique para selecionar um vídeo
               </p>
               <p className="text-xs text-muted-foreground">
-                MP4, WEBM ou MKV (máx. 100GB)
+                MP4, WEBM, MKV, TS ou AVI (conversão automática)
               </p>
             </div>
             <input
               ref={inputRef}
               type="file"
               className="hidden"
-              accept="video/mp4,video/webm,video/x-matroska"
+              accept="video/mp4,video/webm,video/x-matroska,video/mp2t,video/avi,.mkv,.ts,.mts,.avi"
               onChange={handleFileSelect}
             />
           </label>
@@ -376,8 +413,30 @@ export function VideoUpload({ onUploadComplete, currentUrl }: VideoUploadProps) 
               </Button>
             </div>
 
-            {/* Progress Bar */}
-            {isUploading && (
+            {/* Conversion Warning */}
+            {needsConversion(file) && !isConverting && !isUploading && (
+              <div className="p-3 bg-amber-500/10 rounded-lg border border-amber-500/20">
+                <p className="text-xs text-amber-600 dark:text-amber-400">
+                  ⚠️ Este arquivo será convertido para MP4 antes do upload para garantir compatibilidade com navegadores.
+                </p>
+              </div>
+            )}
+
+            {/* Conversion Progress */}
+            {isConverting && conversionProgress && (
+              <div className="space-y-2 p-3 bg-primary/10 rounded-lg border border-primary/20">
+                <div className="flex items-center gap-2">
+                  <RefreshCw className="w-4 h-4 text-primary animate-spin" />
+                  <span className="text-sm font-medium text-primary">
+                    {conversionProgress.message}
+                  </span>
+                </div>
+                <Progress value={conversionProgress.progress} className="h-2" />
+              </div>
+            )}
+
+            {/* Upload Progress Bar */}
+            {isUploading && !isConverting && (
               <div className="space-y-2">
                 <Progress value={progress} className="h-2" />
                 <div className="flex justify-between text-xs text-muted-foreground">
@@ -391,10 +450,15 @@ export function VideoUpload({ onUploadComplete, currentUrl }: VideoUploadProps) 
             )}
 
             {/* Action Buttons */}
-            {!isUploading ? (
+            {!isUploading && !isConverting ? (
               <Button onClick={handleUpload} className="w-full gap-2">
                 <Upload className="w-4 h-4" />
-                Confirmar Upload
+                {needsConversion(file) ? 'Converter e Enviar' : 'Confirmar Upload'}
+              </Button>
+            ) : isConverting ? (
+              <Button disabled className="w-full gap-2">
+                <RefreshCw className="w-4 h-4 animate-spin" />
+                Convertendo...
               </Button>
             ) : (
               <div className="flex gap-2">
