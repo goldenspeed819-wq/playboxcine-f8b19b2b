@@ -21,10 +21,12 @@ export function VideoUpload({ onUploadComplete, currentUrl }: VideoUploadProps) 
   const [progress, setProgress] = useState(0);
   const [uploadedUrl, setUploadedUrl] = useState<string | null>(currentUrl || null);
   const [uploadSpeed, setUploadSpeed] = useState<string>('');
+  const [timeRemaining, setTimeRemaining] = useState<string>('');
   const [externalUrl, setExternalUrl] = useState<string>('');
   const inputRef = useRef<HTMLInputElement>(null);
   const uploadRef = useRef<tus.Upload | null>(null);
   const lastProgressRef = useRef<{ time: number; bytes: number }>({ time: 0, bytes: 0 });
+  const speedHistoryRef = useRef<number[]>([]);
 
   // Check if current URL is external
   const isExternalUrl = (url: string) => {
@@ -69,7 +71,9 @@ export function VideoUpload({ onUploadComplete, currentUrl }: VideoUploadProps) 
     setIsUploading(true);
     setProgress(0);
     setUploadSpeed('');
+    setTimeRemaining('');
     lastProgressRef.current = { time: Date.now(), bytes: 0 };
+    speedHistoryRef.current = [];
 
     const fileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -77,8 +81,8 @@ export function VideoUpload({ onUploadComplete, currentUrl }: VideoUploadProps) 
 
     const upload = new tus.Upload(file, {
       endpoint: `${supabaseUrl}/storage/v1/upload/resumable`,
-      retryDelays: [0, 1000, 3000, 5000, 10000],
-      chunkSize: 6 * 1024 * 1024, // 6MB chunks
+      retryDelays: [0, 1000, 3000, 5000],
+      chunkSize: 10 * 1024 * 1024, // 10MB chunks for faster upload
       headers: {
         authorization: `Bearer ${supabaseKey}`,
         apikey: supabaseKey,
@@ -106,13 +110,29 @@ export function VideoUpload({ onUploadComplete, currentUrl }: VideoUploadProps) 
         const percent = Math.round((bytesUploaded / bytesTotal) * 100);
         setProgress(percent);
 
-        // Calculate upload speed
+        // Calculate upload speed and ETA
         const now = Date.now();
         const timeDiff = (now - lastProgressRef.current.time) / 1000;
-        if (timeDiff >= 1) {
+        if (timeDiff >= 0.5) {
           const bytesDiff = bytesUploaded - lastProgressRef.current.bytes;
           const speed = bytesDiff / timeDiff;
-          setUploadSpeed(formatSpeed(speed));
+          
+          // Keep last 5 speed samples for smoothing
+          speedHistoryRef.current.push(speed);
+          if (speedHistoryRef.current.length > 5) {
+            speedHistoryRef.current.shift();
+          }
+          
+          const avgSpeed = speedHistoryRef.current.reduce((a, b) => a + b, 0) / speedHistoryRef.current.length;
+          setUploadSpeed(formatSpeed(avgSpeed));
+          
+          // Calculate remaining time
+          const bytesRemaining = bytesTotal - bytesUploaded;
+          if (avgSpeed > 0) {
+            const secondsRemaining = bytesRemaining / avgSpeed;
+            setTimeRemaining(formatTimeRemaining(secondsRemaining));
+          }
+          
           lastProgressRef.current = { time: now, bytes: bytesUploaded };
         }
       },
@@ -218,6 +238,14 @@ export function VideoUpload({ onUploadComplete, currentUrl }: VideoUploadProps) 
     const sizes = ['B/s', 'KB/s', 'MB/s', 'GB/s'];
     const i = Math.floor(Math.log(bytesPerSecond) / Math.log(k));
     return parseFloat((bytesPerSecond / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+  };
+
+  const formatTimeRemaining = (seconds: number) => {
+    if (seconds < 60) return `${Math.round(seconds)}s restantes`;
+    if (seconds < 3600) return `${Math.round(seconds / 60)}min restantes`;
+    const hours = Math.floor(seconds / 3600);
+    const mins = Math.round((seconds % 3600) / 60);
+    return `${hours}h ${mins}min restantes`;
   };
 
   // If already has URL, show success state
@@ -354,7 +382,10 @@ export function VideoUpload({ onUploadComplete, currentUrl }: VideoUploadProps) 
                 <Progress value={progress} className="h-2" />
                 <div className="flex justify-between text-xs text-muted-foreground">
                   <span>{isPaused ? 'Pausado' : 'Enviando...'} {progress}%</span>
-                  {uploadSpeed && <span>{uploadSpeed}</span>}
+                  <div className="flex gap-3">
+                    {timeRemaining && <span>{timeRemaining}</span>}
+                    {uploadSpeed && <span className="text-primary">{uploadSpeed}</span>}
+                  </div>
                 </div>
               </div>
             )}
