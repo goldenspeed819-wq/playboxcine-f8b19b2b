@@ -4,7 +4,6 @@ import {
   Pause,
   Volume2,
   VolumeX,
-  Volume1,
   Maximize,
   Minimize,
   Settings,
@@ -15,6 +14,7 @@ import {
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { Slider } from '@/components/ui/slider';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,23 +37,16 @@ export function VideoPlayer({ src, poster }: VideoPlayerProps) {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [progress, setProgress] = useState(0);
-
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
-
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isPiP, setIsPiP] = useState(false);
+  const [isFillMode, setIsFillMode] = useState(false);
+  const [playbackSpeed, setPlaybackSpeed] = useState(1);
 
-  const [isFillMode, setIsFillMode] = useState(
-    () => localStorage.getItem('video-fill-mode') === 'true'
-  );
-
+  const [showPreview, setShowPreview] = useState(false);
   const [hoverTime, setHoverTime] = useState(0);
   const [hoverX, setHoverX] = useState(0);
-
-  useEffect(() => {
-    localStorage.setItem('video-fill-mode', String(isFillMode));
-  }, [isFillMode]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -99,7 +92,7 @@ export function VideoPlayer({ src, poster }: VideoPlayerProps) {
     if (document.pictureInPictureElement) {
       await document.exitPictureInPicture();
       setIsPiP(false);
-    } else if (document.pictureInPictureEnabled) {
+    } else {
       await videoRef.current.requestPictureInPicture();
       setIsPiP(true);
     }
@@ -117,15 +110,14 @@ export function VideoPlayer({ src, poster }: VideoPlayerProps) {
       : `${m}:${s.toString().padStart(2, '0')}`;
   };
 
-  const VolumeIcon =
-    isMuted || volume === 0 ? VolumeX : volume < 0.5 ? Volume1 : Volume2;
+  const VolumeIcon = isMuted || volume === 0 ? VolumeX : Volume2;
 
   if (!src) return null;
 
   return (
     <div
       ref={containerRef}
-      className="relative w-full aspect-video bg-black overflow-hidden rounded-xl"
+      className="relative w-full h-full bg-black overflow-hidden rounded-xl"
     >
       {/* VIDEO */}
       <video
@@ -141,91 +133,101 @@ export function VideoPlayer({ src, poster }: VideoPlayerProps) {
       />
 
       {/* CONTROLES */}
-      <div className="absolute bottom-0 left-0 right-0 px-4 pb-3 pt-10 bg-gradient-to-t from-black/90 via-black/50 to-transparent">
-
-        {/* PREVIEW */}
-        <div
-          className="absolute bottom-16 pointer-events-none"
-          style={{ left: hoverX - 80 }}
-        >
-          <video
-            ref={previewRef}
-            src={src}
-            muted
-            className="w-40 h-24 object-cover rounded-md border border-white/20"
-          />
-          <div className="text-center text-xs text-white mt-1">
-            {formatTime(hoverTime)}
-          </div>
-        </div>
-
+      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent px-4 pb-3 pt-10">
         {/* TIMELINE */}
-        <input
-          type="range"
-          min={0}
-          max={100}
-          step={0.1}
-          value={progress}
-          onMouseMove={e => {
-            const rect = e.currentTarget.getBoundingClientRect();
-            const percent = ((e.clientX - rect.left) / rect.width) * 100;
-            const time = (percent / 100) * duration;
-            setHoverTime(time);
-            setHoverX(e.clientX - rect.left);
-            previewRef.current &&
-              (previewRef.current.currentTime = time);
-          }}
-          onChange={e => {
-            const v = Number(e.target.value);
-            videoRef.current!.currentTime = (v / 100) * duration;
-            setProgress(v);
-          }}
-          className="range-red w-full"
-          style={{ '--value': `${progress}%` } as React.CSSProperties}
-        />
+        <div
+          className="relative"
+          onMouseEnter={() => setShowPreview(true)}
+          onMouseLeave={() => setShowPreview(false)}
+          onTouchStart={() => setShowPreview(true)}
+          onTouchEnd={() => setShowPreview(false)}
+        >
+          <Slider
+            value={[progress]}
+            max={100}
+            step={0.1}
+            onValueChange={v => {
+              if (!videoRef.current) return;
+              videoRef.current.currentTime = (v[0] / 100) * duration;
+            }}
+            onPointerMove={e => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              const percent = (e.clientX - rect.left) / rect.width;
+              const time = percent * duration;
+              setHoverTime(time);
+              setHoverX(e.clientX - rect.left);
+              if (previewRef.current)
+                previewRef.current.currentTime = time;
+            }}
+            className="
+              [&_.range]:bg-red-500
+              [&_.track]:bg-neutral-700
+              [&_[role=slider]]:border-black
+            "
+          />
+
+          {showPreview && (
+            <div
+              className="absolute -top-24 pointer-events-none"
+              style={{ left: hoverX - 60 }}
+            >
+              <video
+                ref={previewRef}
+                src={src}
+                muted
+                className="w-28 h-16 object-cover rounded-md border border-white/20"
+              />
+              <div className="text-xs text-white text-center mt-1">
+                {formatTime(hoverTime)}
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* CONTROLES */}
         <div className="flex items-center justify-between mt-3 text-white">
-
           {/* ESQUERDA */}
           <div className="flex items-center gap-2">
             <Button size="icon" variant="ghost" onClick={togglePlay}>
               {isPlaying ? <Pause /> : <Play />}
             </Button>
 
-            <Button size="icon" variant="ghost" onClick={() => (videoRef.current!.currentTime -= 10)}>
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={() => (videoRef.current!.currentTime -= 10)}
+            >
               <Rewind />
             </Button>
 
-            <Button size="icon" variant="ghost" onClick={() => (videoRef.current!.currentTime += 10)}>
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={() => (videoRef.current!.currentTime += 10)}
+            >
               <FastForward />
             </Button>
 
-            <Button size="icon" variant="ghost" onClick={() => {
-              setIsMuted(!isMuted);
-              videoRef.current!.muted = !isMuted;
-            }}>
-              <VolumeIcon />
-            </Button>
-
-            {/* VOLUME */}
-            <input
-              type="range"
-              min={0}
-              max={1}
-              step={0.01}
-              value={isMuted ? 0 : volume}
-              onChange={e => {
-                const v = Number(e.target.value);
-                setVolume(v);
-                videoRef.current!.volume = v;
-                setIsMuted(v === 0);
+            <VolumeIcon />
+            <Slider
+              value={[volume * 100]}
+              max={100}
+              step={1}
+              onValueChange={v => {
+                const vol = v[0] / 100;
+                setVolume(vol);
+                videoRef.current!.volume = vol;
+                setIsMuted(vol === 0);
               }}
-              className="range-red w-24"
-              style={{ '--value': `${(isMuted ? 0 : volume) * 100}%` } as React.CSSProperties}
+              className="
+                w-24
+                [&_.range]:bg-red-500
+                [&_.track]:bg-neutral-700
+                [&_[role=slider]]:border-black
+              "
             />
 
-            <span className="text-sm">
+            <span className="text-sm text-white/80">
               {formatTime(currentTime)} / {formatTime(duration)}
             </span>
           </div>
@@ -239,38 +241,37 @@ export function VideoPlayer({ src, poster }: VideoPlayerProps) {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                {[0.5, 1, 1.25, 1.5, 2].map(s => (
+                {[0.5, 1, 1.25, 1.5, 2].map(speed => (
                   <DropdownMenuItem
-                    key={s}
-                    onClick={() => (videoRef.current!.playbackRate = s)}
+                    key={speed}
+                    onClick={() => {
+                      videoRef.current!.playbackRate = speed;
+                      setPlaybackSpeed(speed);
+                    }}
                     className={cn(
-                      videoRef.current?.playbackRate === s &&
-                        'text-red-500 font-bold'
+                      playbackSpeed === speed &&
+                        'text-red-500 font-semibold'
                     )}
                   >
-                    {s}x
+                    {speed}x
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* BIG PICTURE */}
             <Button size="icon" variant="ghost" onClick={togglePiP}>
               <PictureInPicture2 />
             </Button>
 
-            {/* TELA ESTICADA */}
             <Button
               size="icon"
               variant="ghost"
-              onClick={() => setIsFillMode(v => !v)}
+              onClick={() => setIsFillMode(p => !p)}
               className={cn(isFillMode && 'text-red-500')}
-              title="Tela esticada"
             >
               <Crop />
             </Button>
 
-            {/* FULLSCREEN */}
             <Button size="icon" variant="ghost" onClick={toggleFullscreen}>
               {isFullscreen ? <Minimize /> : <Maximize />}
             </Button>
