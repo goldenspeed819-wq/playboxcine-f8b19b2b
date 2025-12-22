@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect } from 'react';
 import {
   Play,
   Pause,
@@ -11,163 +11,142 @@ import {
   PictureInPicture2,
   Rewind,
   FastForward,
-  Crop
-} from 'lucide-react'
+  Crop,
+} from 'lucide-react';
 
-import { Button } from '@/components/ui/button'
-import { Slider } from '@/components/ui/slider'
+import { Button } from '@/components/ui/button';
+import { Slider } from '@/components/ui/slider';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger
-} from '@/components/ui/dropdown-menu'
-import { cn } from '@/lib/utils'
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { cn } from '@/lib/utils';
 
 interface VideoPlayerProps {
-  src: string | null
-  poster?: string | null
-  title?: string
+  src: string | null;
+  poster?: string | null;
+  title?: string;
 }
 
 export function VideoPlayer({ src, poster }: VideoPlayerProps) {
-  const videoRef = useRef<HTMLVideoElement>(null)
-  const containerRef = useRef<HTMLDivElement>(null)
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  // 🎥 player
-  const [isPlaying, setIsPlaying] = useState(false)
-  const [currentTime, setCurrentTime] = useState(0)
-  const [duration, setDuration] = useState(0)
-  const [progress, setProgress] = useState(0)
-  const [isFullscreen, setIsFullscreen] = useState(false)
-  const [isPiP, setIsPiP] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [progress, setProgress] = useState(0);
 
-  // 🔊 volume
-  const [volume, setVolume] = useState(100) // 0–200
-  const [isMuted, setIsMuted] = useState(false)
+  const [volume, setVolume] = useState(1);
+  const [isMuted, setIsMuted] = useState(false);
 
-  // 🔥 fill mode (sem bordas)
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isPiP, setIsPiP] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const [playbackSpeed, setPlaybackSpeed] = useState(1);
+
+  /* 🔥 Tela esticada (preencher sem bordas) */
   const [isFillMode, setIsFillMode] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return false
-    return localStorage.getItem('video-fill-mode') === 'true'
-  })
-
-  // 🔊 Web Audio (volume boost)
-  const audioCtxRef = useRef<AudioContext | null>(null)
-  const gainNodeRef = useRef<GainNode | null>(null)
+    if (typeof window === 'undefined') return false;
+    return localStorage.getItem('video-fill-mode') === 'true';
+  });
 
   useEffect(() => {
-    localStorage.setItem('video-fill-mode', String(isFillMode))
-  }, [isFillMode])
+    localStorage.setItem('video-fill-mode', String(isFillMode));
+  }, [isFillMode]);
 
-  // 🎥 eventos
+  /* 🔄 Atualização de tempo */
   useEffect(() => {
-    const video = videoRef.current
-    if (!video) return
+    const video = videoRef.current;
+    if (!video) return;
 
-    const onTime = () => {
-      setCurrentTime(video.currentTime)
-      setProgress((video.currentTime / video.duration) * 100)
-    }
+    const update = () => {
+      setCurrentTime(video.currentTime);
+      setProgress((video.currentTime / video.duration) * 100 || 0);
+    };
 
-    const onLoad = () => {
-      setDuration(video.duration)
-      setIsLoading(false)
-    }
+    const loaded = () => {
+      setDuration(video.duration);
+      setIsLoading(false);
+    };
 
-    video.addEventListener('timeupdate', onTime)
-    video.addEventListener('loadedmetadata', onLoad)
+    video.addEventListener('timeupdate', update);
+    video.addEventListener('loadedmetadata', loaded);
 
     return () => {
-      video.removeEventListener('timeupdate', onTime)
-      video.removeEventListener('loadedmetadata', onLoad)
-    }
-  }, [src])
+      video.removeEventListener('timeupdate', update);
+      video.removeEventListener('loadedmetadata', loaded);
+    };
+  }, [src]);
 
-  // fullscreen state
+  /* 🖥 Fullscreen */
   useEffect(() => {
-    const fs = () => setIsFullscreen(!!document.fullscreenElement)
-    document.addEventListener('fullscreenchange', fs)
-    return () => document.removeEventListener('fullscreenchange', fs)
-  }, [])
-
-  // 🔊 init audio boost
-  useEffect(() => {
-    if (!videoRef.current) return
-
-    const ctx = new AudioContext()
-    const source = ctx.createMediaElementSource(videoRef.current)
-    const gain = ctx.createGain()
-
-    gain.gain.value = volume / 100
-
-    source.connect(gain)
-    gain.connect(ctx.destination)
-
-    audioCtxRef.current = ctx
-    gainNodeRef.current = gain
-
-    return () => {
-      ctx.close()
-    }
-  }, [])
-
-  // 🔊 update volume boost
-  useEffect(() => {
-    if (gainNodeRef.current) {
-      gainNodeRef.current.gain.value = isMuted ? 0 : volume / 100
-    }
-  }, [volume, isMuted])
+    const fs = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', fs);
+    return () => document.removeEventListener('fullscreenchange', fs);
+  }, []);
 
   const togglePlay = () => {
-    if (!videoRef.current) return
-    isPlaying ? videoRef.current.pause() : videoRef.current.play()
-    setIsPlaying(!isPlaying)
-  }
+    if (!videoRef.current) return;
+    isPlaying ? videoRef.current.pause() : videoRef.current.play();
+    setIsPlaying(!isPlaying);
+  };
 
   const toggleFullscreen = () => {
-    if (!containerRef.current) return
+    if (!containerRef.current) return;
     !isFullscreen
       ? containerRef.current.requestFullscreen()
-      : document.exitFullscreen()
-  }
+      : document.exitFullscreen();
+  };
 
   const togglePiP = async () => {
-    if (!videoRef.current) return
+    if (!videoRef.current) return;
     if (document.pictureInPictureElement) {
-      await document.exitPictureInPicture()
-      setIsPiP(false)
+      await document.exitPictureInPicture();
+      setIsPiP(false);
     } else if (document.pictureInPictureEnabled) {
-      await videoRef.current.requestPictureInPicture()
-      setIsPiP(true)
+      await videoRef.current.requestPictureInPicture();
+      setIsPiP(true);
     }
-  }
+  };
 
-  const toggleFillMode = () => setIsFillMode(v => !v)
+  const toggleFillMode = () => setIsFillMode(v => !v);
 
-  const formatTime = (t: number) => {
-    if (!isFinite(t)) return '0:00'
-    const m = Math.floor(t / 60)
-    const s = Math.floor(t % 60)
-    return `${m}:${s.toString().padStart(2, '0')}`
-  }
+  /* ⏱ Tempo correto (horas após 59 min) */
+  const formatTime = (time: number) => {
+    if (!Number.isFinite(time)) return '0:00';
+
+    const hours = Math.floor(time / 3600);
+    const minutes = Math.floor((time % 3600) / 60);
+    const seconds = Math.floor(time % 60);
+
+    if (hours > 0) {
+      return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds
+        .toString()
+        .padStart(2, '0')}`;
+    }
+
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  };
 
   const VolumeIcon =
-    isMuted || volume === 0 ? VolumeX : volume < 50 ? Volume1 : Volume2
+    isMuted || volume === 0 ? VolumeX : volume < 0.5 ? Volume1 : Volume2;
 
   if (!src) {
     return (
       <div className="flex items-center justify-center h-64 bg-black text-white/60 rounded-xl">
         Nenhum vídeo disponível
       </div>
-    )
+    );
   }
 
   return (
     <div
       ref={containerRef}
-      className="relative w-full h-full bg-black overflow-hidden rounded-xl"
+      className="relative w-full max-h-[70vh] bg-black overflow-hidden rounded-xl"
     >
       {/* VIDEO */}
       <video
@@ -175,7 +154,7 @@ export function VideoPlayer({ src, poster }: VideoPlayerProps) {
         src={src}
         poster={poster || undefined}
         className={cn(
-          'w-full h-full bg-black',
+          'w-full h-full',
           isFillMode ? 'object-cover' : 'object-contain'
         )}
         onClick={togglePlay}
@@ -191,19 +170,20 @@ export function VideoPlayer({ src, poster }: VideoPlayerProps) {
 
       {/* CONTROLES */}
       <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent px-4 pb-3 pt-12">
+        {/* PROGRESSO */}
         <Slider
           value={[progress]}
-          onValueChange={v => {
-            if (!videoRef.current) return
-            videoRef.current.currentTime = (v[0] / 100) * duration
-          }}
           max={100}
           step={0.1}
+          onValueChange={v => {
+            if (!videoRef.current) return;
+            videoRef.current.currentTime = (v[0] / 100) * duration;
+          }}
         />
 
         <div className="flex items-center justify-between mt-3">
           {/* ESQUERDA */}
-          <div className="flex items-center gap-2 text-white">
+          <div className="flex items-center gap-3 text-white">
             <Button size="icon" variant="ghost" onClick={togglePlay}>
               {isPlaying ? <Pause /> : <Play />}
             </Button>
@@ -224,14 +204,11 @@ export function VideoPlayer({ src, poster }: VideoPlayerProps) {
               <FastForward />
             </Button>
 
-            <span className="text-sm text-white/80">
+            <span className="text-sm text-white/80 min-w-[110px]">
               {formatTime(currentTime)} / {formatTime(duration)}
             </span>
-          </div>
 
-          {/* DIREITA */}
-          <div className="flex items-center gap-2 text-white">
-            {/* 🔊 VOLUME BOOST */}
+            {/* VOLUME */}
             <Button
               size="icon"
               variant="ghost"
@@ -242,14 +219,23 @@ export function VideoPlayer({ src, poster }: VideoPlayerProps) {
 
             <div className="w-24">
               <Slider
-                value={[volume]}
-                max={200}
+                value={[isMuted ? 0 : volume * 100]}
+                max={100}
                 step={1}
-                onValueChange={v => setVolume(v[0])}
+                onValueChange={v => {
+                  if (!videoRef.current) return;
+                  const vol = v[0] / 100;
+                  setVolume(vol);
+                  videoRef.current.volume = vol;
+                  setIsMuted(vol === 0);
+                }}
               />
             </div>
+          </div>
 
-            {/* ⚙️ SETTINGS */}
+          {/* DIREITA */}
+          <div className="flex items-center gap-1 text-white">
+            {/* VELOCIDADE */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button size="icon" variant="ghost">
@@ -261,9 +247,14 @@ export function VideoPlayer({ src, poster }: VideoPlayerProps) {
                   <DropdownMenuItem
                     key={speed}
                     onClick={() => {
-                      if (videoRef.current)
-                        videoRef.current.playbackRate = speed
+                      if (!videoRef.current) return;
+                      videoRef.current.playbackRate = speed;
+                      setPlaybackSpeed(speed);
                     }}
+                    className={cn(
+                      playbackSpeed === speed &&
+                        'text-red-500 bg-red-500/15 font-semibold'
+                    )}
                   >
                     {speed}x
                   </DropdownMenuItem>
@@ -276,11 +267,12 @@ export function VideoPlayer({ src, poster }: VideoPlayerProps) {
               <PictureInPicture2 />
             </Button>
 
-            {/* 🔥 TELA ESTICADA */}
+            {/* TELA ESTICADA */}
             <Button
               size="icon"
               variant="ghost"
               onClick={toggleFillMode}
+              title="Tela Esticada"
               className={cn(isFillMode && 'text-primary bg-primary/20')}
             >
               <Crop />
@@ -294,5 +286,5 @@ export function VideoPlayer({ src, poster }: VideoPlayerProps) {
         </div>
       </div>
     </div>
-  )
+  );
 }
