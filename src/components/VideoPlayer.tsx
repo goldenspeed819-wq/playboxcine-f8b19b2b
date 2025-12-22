@@ -48,7 +48,6 @@ export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introS
   const [currentTime, setCurrentTime] = useState(0);
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
-  const [isStretched, setIsStretched] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isPiP, setIsPiP] = useState(false);
   const [showControls, setShowControls] = useState(true);
@@ -188,9 +187,6 @@ export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introS
       }, 3000);
     }
   };
-const toggleStretch = () => {
-  setIsStretched(prev => !prev);
-};
 
   const togglePlay = () => {
     const video = videoRef.current;
@@ -314,16 +310,14 @@ const toggleStretch = () => {
       onMouseLeave={() => isPlaying && setShowControls(false)}
     >
       {/* Video Element */}
-  <video
-  ref={videoRef}
-  src={src}
-  poster={poster || undefined}
-  className="w-full h-full object-contain bg-black"
-  onClick={togglePlay}
-  playsInline
-  style={{ objectFit: isStretched ? 'cover' : 'contain' }}
-/>
-
+      <video
+        ref={videoRef}
+        src={src}
+        poster={poster || undefined}
+        className="w-full h-full object-contain bg-black"
+        onClick={togglePlay}
+        playsInline
+      />
 
       {/* Loading Indicator */}
       {isLoading && !videoError && (
@@ -530,18 +524,6 @@ const toggleStretch = () => {
             >
               <PictureInPicture2 className="w-5 h-5" />
             </Button>
-
-     <Button
-  variant="ghost"
-  size="icon"
-  className="text-white hover:bg-white/15 h-10 w-10 rounded-full"
-  onClick={toggleStretch}
-  title="Esticar tela"
->
-  <Minimize className="w-5 h-5" />
-</Button>
-
-
 
             {/* Fullscreen */}
             <Button
