@@ -24,9 +24,11 @@ import { cn } from "@/lib/utils"
 interface VideoPlayerProps {
   src: string
   poster?: string
+  introStartTime?: number | null; // Time in seconds when intro starts
+introEndTime?: number | null; // Time in seconds when intro ends
 }
 
-export function VideoPlayer({ src, poster }: VideoPlayerProps) {
+export function VideoPlayer({ src, poster, title, subtitleUrl, nextLabel, onNextClick, introStartTime, introEndTime }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const timelineRef = useRef<HTMLDivElement>(null)
@@ -42,6 +44,65 @@ export function VideoPlayer({ src, poster }: VideoPlayerProps) {
   const [dragging, setDragging] = useState(false)
   const [showControls, setShowControls] = useState(true)
   const [speed, setSpeed] = useState(1)
+  // Show skip intro button during the intro period
+  useEffect(() => {
+    const hasIntro = introStartTime != null && introEndTime != null;
+    if (hasIntro && currentTime >= introStartTime && currentTime < introEndTime) {
+      setShowSkipIntro(true);
+    } else {
+      setShowSkipIntro(false);
+    }
+  }, [currentTime, introStartTime, introEndTime]);
+    // Show next button when video is 90% complete or has less than 30 seconds remaining
+  useEffect(() => {
+    if (onNextClick && duration > 0) {
+      const timeRemaining = duration - currentTime;
+      const percentComplete = (currentTime / duration) * 100;
+      setShowNextButton(percentComplete >= 90 || timeRemaining <= 30);
+    } else {
+      setShowNextButton(false);
+    }
+  }, [currentTime, duration, onNextClick]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const handleTimeUpdate = () => {
+      setCurrentTime(video.currentTime);
+      setProgress((video.currentTime / video.duration) * 100);
+    };
+
+    const handleLoadedMetadata = () => {
+      setDuration(video.duration);
+    };
+
+    const handleProgress = () => {
+      if (video.buffered.length > 0) {
+        setBuffered((video.buffered.end(video.buffered.length - 1) / video.duration) * 100);
+      }
+    };
+
+    const handlePlay = () => setIsPlaying(true);
+    const handlePause = () => setIsPlaying(false);
+    const handleEnded = () => setIsPlaying(false);
+
+    video.addEventListener('timeupdate', handleTimeUpdate);
+    video.addEventListener('loadedmetadata', handleLoadedMetadata);
+    video.addEventListener('progress', handleProgress);
+    video.addEventListener('play', handlePlay);
+    video.addEventListener('pause', handlePause);
+    video.addEventListener('ended', handleEnded);
+
+    return () => {
+      video.removeEventListener('timeupdate', handleTimeUpdate);
+      video.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      video.removeEventListener('progress', handleProgress);
+      video.removeEventListener('play', handlePlay);
+      video.removeEventListener('pause', handlePause);
+      video.removeEventListener('ended', handleEnded);
+    };
+  }, []);
 
   /* ---------------- PLAY STATE REAL ---------------- */
   useEffect(() => {
