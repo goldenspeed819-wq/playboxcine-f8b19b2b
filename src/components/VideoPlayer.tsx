@@ -8,6 +8,7 @@ import {
   Minimize,
   PictureInPicture2,
   Crop,
+  Settings,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
@@ -22,18 +23,22 @@ export function VideoPlayer({ src, poster }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const previewRef = useRef<HTMLVideoElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const timelineRef = useRef<HTMLDivElement>(null)
 
   const [playing, setPlaying] = useState(false)
-  const [progress, setProgress] = useState(0)
   const [duration, setDuration] = useState(0)
   const [current, setCurrent] = useState(0)
+  const [progress, setProgress] = useState(0)
+
   const [volume, setVolume] = useState(1)
   const [muted, setMuted] = useState(false)
+
   const [fullscreen, setFullscreen] = useState(false)
   const [fill, setFill] = useState(false)
 
   const [previewTime, setPreviewTime] = useState<number | null>(null)
   const [previewX, setPreviewX] = useState(0)
+  const [dragging, setDragging] = useState(false)
 
   /* ▶️ PLAY */
   const togglePlay = () => {
@@ -50,7 +55,7 @@ export function VideoPlayer({ src, poster }: VideoPlayerProps) {
     videoRef.current.muted = muted
   }, [volume, muted])
 
-  /* ⏱️ TEMPO */
+  /* ⏱️ TIME UPDATE */
   useEffect(() => {
     const v = videoRef.current
     if (!v) return
@@ -84,40 +89,61 @@ export function VideoPlayer({ src, poster }: VideoPlayerProps) {
     return () => document.removeEventListener("fullscreenchange", fn)
   }, [])
 
-  /* 🖼️ PiP */
+  /* 🖼️ BIG PICTURE */
   const togglePiP = async () => {
     if (!videoRef.current) return
     if (document.pictureInPictureElement) {
       await document.exitPictureInPicture()
-    } else {
+    } else if (document.pictureInPictureEnabled) {
       await videoRef.current.requestPictureInPicture()
     }
   }
 
-  /* 📐 PREVIEW (PEQUENO) */
-  const onMoveTimeline = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!videoRef.current || !previewRef.current) return
-    const rect = e.currentTarget.getBoundingClientRect()
-    const percent = (e.clientX - rect.left) / rect.width
-    const time = percent * duration
+  /* ⏱️ FORMATADOR COM HORAS */
+  const formatTime = (t: number) => {
+    if (!isFinite(t)) return "0:00"
+    const h = Math.floor(t / 3600)
+    const m = Math.floor((t % 3600) / 60)
+    const s = Math.floor(t % 60)
 
-    previewRef.current.currentTime = time
-    setPreviewTime(time)
-    setPreviewX(e.clientX - rect.left)
+    if (h > 0) {
+      return `${h}:${m.toString().padStart(2, "0")}:${s
+        .toString()
+        .padStart(2, "0")}`
+    }
+    return `${m}:${s.toString().padStart(2, "0")}`
   }
 
-  const format = (t: number) => {
-    if (!t) return "0:00"
-    const m = Math.floor(t / 60)
-    const s = Math.floor(t % 60)
-    return `${m}:${s.toString().padStart(2, "0")}`
+  /* 📌 POSIÇÃO NA TIMELINE */
+  const getTimeFromEvent = (e: React.MouseEvent) => {
+    if (!timelineRef.current) return 0
+    const rect = timelineRef.current.getBoundingClientRect()
+    const x = Math.min(Math.max(0, e.clientX - rect.left), rect.width)
+    return (x / rect.width) * duration
+  }
+
+  /* 🖼️ PREVIEW */
+  const onMoveTimeline = (e: React.MouseEvent) => {
+    if (!previewRef.current || !videoRef.current) return
+
+    const time = getTimeFromEvent(e)
+    previewRef.current.currentTime = time
+
+    const rect = timelineRef.current!.getBoundingClientRect()
+    setPreviewX(e.clientX - rect.left)
+    setPreviewTime(time)
+
+    if (dragging) {
+      videoRef.current.currentTime = time
+    }
   }
 
   return (
     <div
       ref={containerRef}
-      className="relative w-full bg-black overflow-hidden rounded-xl"
+      className="relative w-full bg-black rounded-xl overflow-hidden"
     >
+      {/* VIDEO */}
       <video
         ref={videoRef}
         src={src}
@@ -132,38 +158,57 @@ export function VideoPlayer({ src, poster }: VideoPlayerProps) {
       />
 
       {/* CONTROLES */}
-      <div className="absolute bottom-0 w-full p-3 bg-gradient-to-t from-black/80 to-transparent">
+      <div className="absolute bottom-0 w-full px-4 pb-3 pt-10 bg-gradient-to-t from-black/90 via-black/60 to-transparent">
 
         {/* TIMELINE */}
         <div
-          className="relative mb-2"
+          ref={timelineRef}
+          className="relative mb-3"
           onMouseMove={onMoveTimeline}
-          onMouseLeave={() => setPreviewTime(null)}
+          onMouseLeave={() => {
+            setPreviewTime(null)
+            setDragging(false)
+          }}
+          onMouseDown={e => {
+            setDragging(true)
+            if (videoRef.current) {
+              videoRef.current.currentTime = getTimeFromEvent(e)
+            }
+          }}
+          onMouseUp={() => setDragging(false)}
         >
+          {/* PREVIEW */}
           {previewTime !== null && (
             <div
               style={{
                 position: "absolute",
                 left: previewX - 60,
-                bottom: 24,
+                bottom: 22,
                 width: 120,
                 height: 68,
                 background: "black",
                 borderRadius: 6,
                 overflow: "hidden",
+                pointerEvents: "none",
               }}
             >
               <video
                 ref={previewRef}
                 src={src}
                 muted
-                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                playsInline
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                }}
               />
             </div>
           )}
 
           <Slider
             value={[progress]}
+            step={0.1}
             onValueChange={v => {
               if (!videoRef.current) return
               videoRef.current.currentTime = (v[0] / 100) * duration
@@ -171,43 +216,54 @@ export function VideoPlayer({ src, poster }: VideoPlayerProps) {
           />
         </div>
 
-        {/* BOTÕES */}
-        <div className="flex items-center gap-2 text-white">
-          <Button size="icon" variant="ghost" onClick={togglePlay}>
-            {playing ? <Pause /> : <Play />}
-          </Button>
+        {/* BARRA INFERIOR */}
+        <div className="flex items-center justify-between text-white">
 
-          <span className="text-sm">
-            {format(current)} / {format(duration)}
-          </span>
+          {/* ESQUERDA */}
+          <div className="flex items-center gap-2">
+            <Button size="icon" variant="ghost" onClick={togglePlay}>
+              {playing ? <Pause /> : <Play />}
+            </Button>
 
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={() => setMuted(!muted)}
-          >
-            {muted ? <VolumeX /> : <Volume2 />}
-          </Button>
+            <span className="text-sm">
+              {formatTime(current)} / {formatTime(duration)}
+            </span>
 
-          <Slider
-            value={[volume]}
-            max={1}
-            step={0.01}
-            onValueChange={v => setVolume(v[0])}
-            className="w-24"
-          />
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={() => setMuted(!muted)}
+            >
+              {muted ? <VolumeX /> : <Volume2 />}
+            </Button>
 
-          <Button size="icon" variant="ghost" onClick={() => setFill(!fill)}>
-            <Crop />
-          </Button>
+            <Slider
+              value={[volume]}
+              max={1}
+              step={0.01}
+              onValueChange={v => setVolume(v[0])}
+              className="w-24"
+            />
+          </div>
 
-          <Button size="icon" variant="ghost" onClick={togglePiP}>
-            <PictureInPicture2 />
-          </Button>
+          {/* DIREITA */}
+          <div className="flex items-center gap-1">
+            <Button size="icon" variant="ghost">
+              <Settings />
+            </Button>
 
-          <Button size="icon" variant="ghost" onClick={toggleFullscreen}>
-            {fullscreen ? <Minimize /> : <Maximize />}
-          </Button>
+            <Button size="icon" variant="ghost" onClick={togglePiP}>
+              <PictureInPicture2 />
+            </Button>
+
+            <Button size="icon" variant="ghost" onClick={() => setFill(!fill)}>
+              <Crop />
+            </Button>
+
+            <Button size="icon" variant="ghost" onClick={toggleFullscreen}>
+              {fullscreen ? <Minimize /> : <Maximize />}
+            </Button>
+          </div>
         </div>
       </div>
     </div>
