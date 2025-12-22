@@ -41,7 +41,6 @@ export function VideoPlayer({ src, poster, title }: VideoPlayerProps) {
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [isPiP, setIsPiP] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -129,23 +128,9 @@ export function VideoPlayer({ src, poster, title }: VideoPlayerProps) {
 };
 
 
-  const handleVolumeChange = (value: number[]) => {
-    const video = videoRef.current;
-    if (!video) return;
+  const VolumeIcon =
+    isMuted || volume === 0 ? VolumeX : volume < 0.5 ? Volume1 : Volume2;
 
-    const newVolume = value[0] / 100;
-    video.volume = newVolume;
-    setVolume(newVolume);
-    setIsMuted(newVolume === 0);
-  };
-
-  const toggleMute = () => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    video.muted = !isMuted;
-    setIsMuted(!isMuted);
-  };
   if (!src) {
     return (
       <div className="flex items-center justify-center h-64 bg-black text-white/60 rounded-xl">
@@ -230,32 +215,13 @@ export function VideoPlayer({ src, poster, title }: VideoPlayerProps) {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 {[0.5, 1, 1.25, 1.5, 2].map(speed => (
-                 <DropdownMenuItem
-  key={speed}
-  onClick={() => {
-    if (videoRef.current) {
-      videoRef.current.playbackRate = speed;
-      setPlaybackSpeed(speed);
-    }
-  }}
-  className={cn(
-    'cursor-pointer',
-    playbackSpeed === speed &&
-      'text-red-500 bg-red-500/15 font-semibold'
-  )}
->
-  {speed}x
-</DropdownMenuItem>
-
-                   onClick={() => {
-  if (videoRef.current) {
-    videoRef.current.playbackRate = speed;
-    setPlaybackSpeed(speed);
-  }
-}}
-
-                  
-
+                  <DropdownMenuItem
+                    key={speed}
+                    onClick={() => {
+                      if (videoRef.current) {
+                        videoRef.current.playbackRate = speed;
+                      }
+                    }}
                   >
                     {speed}x
                   </DropdownMenuItem>
