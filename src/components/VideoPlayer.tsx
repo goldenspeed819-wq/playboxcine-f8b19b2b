@@ -1,80 +1,56 @@
-import { useState, useRef, useEffect } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import {
   Play,
   Pause,
   Volume2,
   VolumeX,
-  Volume1,
   Maximize,
   Minimize,
   Settings,
-  PictureInPicture2,
-  Rewind,
-  FastForward,
-  Crop,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
+  DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 
-interface VideoPlayerProps {
-  src: string | null;
-  poster?: string | null;
-  title?: string;
-}
-
-export function VideoPlayer({ src, poster }: VideoPlayerProps) {
+export function VideoPlayer({ src, poster }) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const previewRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const timelineRef = useRef<HTMLDivElement>(null);
 
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
+  const [playing, setPlaying] = useState(false);
+  const [time, setTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [progress, setProgress] = useState(0);
 
   const [volume, setVolume] = useState(1);
-  const [isMuted, setIsMuted] = useState(false);
+  const [muted, setMuted] = useState(false);
 
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const [isPiP, setIsPiP] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-
-  const [playbackSpeed, setPlaybackSpeed] = useState(1);
-
-  const [isFillMode, setIsFillMode] = useState(
-    typeof window !== 'undefined' &&
-      localStorage.getItem('video-fill-mode') === 'true'
-  );
-
-  const [hoverTime, setHoverTime] = useState<number | null>(null);
   const [hoverX, setHoverX] = useState(0);
-  const [isScrubbing, setIsScrubbing] = useState(false);
+  const [hoverTime, setHoverTime] = useState<number | null>(null);
+  const [scrubbing, setScrubbing] = useState(false);
 
-  /* ---------------- EFFECTS ---------------- */
+  const [fullscreen, setFullscreen] = useState(false);
+  const [speed, setSpeed] = useState(1);
 
-  useEffect(() => {
-    localStorage.setItem('video-fill-mode', String(isFillMode));
-  }, [isFillMode]);
+  /* ---------------- EVENTS ---------------- */
 
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
 
     const update = () => {
-      setCurrentTime(video.currentTime);
+      setTime(video.currentTime);
       setProgress((video.currentTime / video.duration) * 100);
     };
 
-    const loaded = () => {
-      setDuration(video.duration);
-      setIsLoading(false);
-    };
+    const loaded = () => setDuration(video.duration);
 
     video.addEventListener('timeupdate', update);
     video.addEventListener('loadedmetadata', loaded);
@@ -83,51 +59,17 @@ export function VideoPlayer({ src, poster }: VideoPlayerProps) {
       video.removeEventListener('timeupdate', update);
       video.removeEventListener('loadedmetadata', loaded);
     };
-  }, [src]);
+  }, []);
 
   useEffect(() => {
-    const fs = () => setIsFullscreen(!!document.fullscreenElement);
+    const fs = () => setFullscreen(!!document.fullscreenElement);
     document.addEventListener('fullscreenchange', fs);
     return () => document.removeEventListener('fullscreenchange', fs);
   }, []);
 
-  /* ---------------- FUNÇÕES ---------------- */
+  /* ---------------- UTILS ---------------- */
 
-  const togglePlay = () => {
-    if (!videoRef.current) return;
-    isPlaying ? videoRef.current.pause() : videoRef.current.play();
-    setIsPlaying(!isPlaying);
-  };
-
-  const toggleFullscreen = () => {
-    if (!containerRef.current) return;
-    !isFullscreen
-      ? containerRef.current.requestFullscreen()
-      : document.exitFullscreen();
-  };
-
-  const togglePiP = async () => {
-    if (!videoRef.current) return;
-    document.pictureInPictureElement
-      ? document.exitPictureInPicture()
-      : videoRef.current.requestPictureInPicture();
-    setIsPiP(!isPiP);
-  };
-
-  const toggleFillMode = () => setIsFillMode(prev => !prev);
-
-  const getTimeFromEvent = (
-    e: React.MouseEvent | React.TouchEvent,
-    element: HTMLDivElement
-  ) => {
-    const rect = element.getBoundingClientRect();
-    const clientX =
-      'touches' in e ? e.touches[0].clientX : e.clientX;
-    const x = Math.min(Math.max(clientX - rect.left, 0), rect.width);
-    return { time: (x / rect.width) * duration, x };
-  };
-
-  const formatTime = (t: number) => {
+  const format = (t: number) => {
     if (!isFinite(t)) return '0:00';
     const h = Math.floor(t / 3600);
     const m = Math.floor((t % 3600) / 60);
@@ -139,10 +81,27 @@ export function VideoPlayer({ src, poster }: VideoPlayerProps) {
       : `${m}:${s.toString().padStart(2, '0')}`;
   };
 
-  const VolumeIcon =
-    isMuted || volume === 0 ? VolumeX : volume < 0.5 ? Volume1 : Volume2;
+  const calcTime = (clientX: number) => {
+    const rect = timelineRef.current!.getBoundingClientRect();
+    const x = Math.min(Math.max(clientX - rect.left, 0), rect.width);
+    return {
+      x,
+      time: (x / rect.width) * duration,
+    };
+  };
 
-  if (!src) return null;
+  /* ---------------- ACTIONS ---------------- */
+
+  const togglePlay = () => {
+    playing ? videoRef.current!.pause() : videoRef.current!.play();
+    setPlaying(!playing);
+  };
+
+  const toggleFullscreen = () => {
+    !fullscreen
+      ? containerRef.current!.requestFullscreen()
+      : document.exitFullscreen();
+  };
 
   /* ---------------- RENDER ---------------- */
 
@@ -151,98 +110,112 @@ export function VideoPlayer({ src, poster }: VideoPlayerProps) {
       ref={containerRef}
       className="relative w-full aspect-video bg-black rounded-xl overflow-hidden"
     >
+      {/* VIDEO */}
       <video
         ref={videoRef}
         src={src}
-        poster={poster || undefined}
-        className={cn(
-          'w-full h-full',
-          isFillMode ? 'object-cover' : 'object-contain'
-        )}
+        poster={poster}
+        className="w-full h-full object-contain"
         onClick={togglePlay}
         playsInline
       />
 
+      {/* PREVIEW VIDEO */}
+      {hoverTime !== null && (
+        <div
+          className="absolute bottom-24 z-20"
+          style={{ left: hoverX, transform: 'translateX(-50%)' }}
+        >
+          <video
+            ref={previewRef}
+            src={src}
+            muted
+            className="w-40 h-24 object-cover rounded-md border border-black"
+            style={{ background: '#000' }}
+            onLoadedMetadata={() =>
+              (previewRef.current!.currentTime = hoverTime)
+            }
+          />
+          <div className="text-xs text-center mt-1 text-white">
+            {format(hoverTime)}
+          </div>
+        </div>
+      )}
+
       {/* TIMELINE */}
       <div className="absolute bottom-20 left-4 right-4">
         <div
-          className="relative h-1.5 bg-white/30 rounded cursor-pointer"
+          ref={timelineRef}
+          className="relative h-2 bg-white/30 rounded cursor-pointer"
           onMouseDown={e => {
-            setIsScrubbing(true);
-            const { time } = getTimeFromEvent(e, e.currentTarget);
+            setScrubbing(true);
+            const { time } = calcTime(e.clientX);
             videoRef.current!.currentTime = time;
           }}
           onMouseMove={e => {
-            const { time, x } = getTimeFromEvent(e, e.currentTarget);
-            setHoverTime(time);
+            const { time, x } = calcTime(e.clientX);
             setHoverX(x);
-            if (isScrubbing) videoRef.current!.currentTime = time;
+            setHoverTime(time);
+            previewRef.current &&
+              (previewRef.current.currentTime = time);
+            if (scrubbing) videoRef.current!.currentTime = time;
           }}
-          onMouseUp={() => setIsScrubbing(false)}
           onMouseLeave={() => {
             setHoverTime(null);
-            setIsScrubbing(false);
+            setScrubbing(false);
           }}
+          onMouseUp={() => setScrubbing(false)}
         >
+          {/* PROGRESS */}
           <div
             className="absolute h-full bg-red-500 rounded"
             style={{ width: `${progress}%` }}
           />
 
-          {/* PREVIEW PEQUENO */}
-          {hoverTime !== null && (
-            <>
-              <div
-                className="absolute -top-7 px-2 py-0.5 text-xs bg-black text-white rounded"
-                style={{ left: hoverX, transform: 'translateX(-50%)' }}
-              >
-                {formatTime(hoverTime)}
-              </div>
-              <div
-                className="absolute top-[-4px] bottom-[-4px] w-[1.5px] bg-white"
-                style={{ left: hoverX }}
-              />
-            </>
-          )}
+          {/* HEAD */}
+          <div
+            className="absolute top-1/2 w-3 h-3 bg-black rounded-full -translate-y-1/2"
+            style={{ left: `${progress}%`, transform: 'translate(-50%, -50%)' }}
+          />
         </div>
       </div>
 
-      {/* CONTROLES */}
-      <div className="absolute bottom-0 left-0 right-0 flex items-center justify-between px-4 py-3 bg-gradient-to-t from-black/90">
+      {/* CONTROLS */}
+      <div className="absolute bottom-0 left-0 right-0 px-4 py-3 bg-gradient-to-t from-black/90 flex justify-between items-center">
         <div className="flex items-center gap-2 text-white">
           <Button size="icon" variant="ghost" onClick={togglePlay}>
-            {isPlaying ? <Pause /> : <Play />}
+            {playing ? <Pause /> : <Play />}
           </Button>
 
-          <Button size="icon" variant="ghost" onClick={() => (videoRef.current!.currentTime -= 10)}>
-            <Rewind />
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={() => setMuted(!muted)}
+          >
+            {muted || volume === 0 ? <VolumeX /> : <Volume2 />}
           </Button>
 
-          <Button size="icon" variant="ghost" onClick={() => (videoRef.current!.currentTime += 10)}>
-            <FastForward />
-          </Button>
-
-          <Button size="icon" variant="ghost" onClick={() => setIsMuted(!isMuted)}>
-            <VolumeIcon />
-          </Button>
-
+          {/* VOLUME SLIDER */}
           <input
             type="range"
             min={0}
             max={1}
             step={0.01}
-            value={isMuted ? 0 : volume}
+            value={muted ? 0 : volume}
             onChange={e => {
               const v = Number(e.target.value);
               setVolume(v);
               videoRef.current!.volume = v;
-              setIsMuted(v === 0);
+              setMuted(v === 0);
             }}
-            className="w-20"
+            className="w-24 accent-red-500"
+            style={{
+              accentColor: 'red',
+            }}
           />
 
           <span className="text-sm">
-            {formatTime(currentTime)} / {formatTime(duration)}
+            {format(time)} / {format(duration)}
           </span>
         </div>
 
@@ -254,38 +227,23 @@ export function VideoPlayer({ src, poster }: VideoPlayerProps) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              {[0.5, 1, 1.25, 1.5, 2].map(speed => (
+              {[0.5, 1, 1.25, 1.5, 2].map(v => (
                 <DropdownMenuItem
-                  key={speed}
-                  className={cn(
-                    playbackSpeed === speed && 'text-red-500 font-bold'
-                  )}
+                  key={v}
+                  className={cn(speed === v && 'text-red-500 font-bold')}
                   onClick={() => {
-                    videoRef.current!.playbackRate = speed;
-                    setPlaybackSpeed(speed);
+                    videoRef.current!.playbackRate = v;
+                    setSpeed(v);
                   }}
                 >
-                  {speed}x
+                  {v}x
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <Button size="icon" variant="ghost" onClick={togglePiP}>
-            <PictureInPicture2 />
-          </Button>
-
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={toggleFillMode}
-            className={cn(isFillMode && 'text-red-500')}
-          >
-            <Crop />
-          </Button>
-
           <Button size="icon" variant="ghost" onClick={toggleFullscreen}>
-            {isFullscreen ? <Minimize /> : <Maximize />}
+            {fullscreen ? <Minimize /> : <Maximize />}
           </Button>
         </div>
       </div>
