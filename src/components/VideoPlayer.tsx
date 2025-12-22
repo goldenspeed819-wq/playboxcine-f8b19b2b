@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from "react"
+import { useEffect, useRef, useState } from "react"
 import {
   Play,
   Pause,
@@ -12,7 +12,6 @@ import {
   RotateCcw,
   RotateCw,
 } from "lucide-react"
-
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -23,10 +22,11 @@ import {
 import { cn } from "@/lib/utils"
 
 export function VideoPlayer({ src, poster }: { src: string; poster?: string }) {
+  const containerRef = useRef<HTMLDivElement>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
   const previewRef = useRef<HTMLVideoElement>(null)
   const timelineRef = useRef<HTMLDivElement>(null)
-  const containerRef = useRef<HTMLDivElement>(null)
+  const volumeRef = useRef<HTMLDivElement>(null)
 
   const [playing, setPlaying] = useState(false)
   const [duration, setDuration] = useState(0)
@@ -39,13 +39,13 @@ export function VideoPlayer({ src, poster }: { src: string; poster?: string }) {
   const [fullscreen, setFullscreen] = useState(false)
   const [fill, setFill] = useState(false)
 
-  const [dragging, setDragging] = useState(false)
+  const [draggingTime, setDraggingTime] = useState(false)
+  const [draggingVolume, setDraggingVolume] = useState(false)
+
   const [previewTime, setPreviewTime] = useState<number | null>(null)
   const [previewX, setPreviewX] = useState(0)
 
-  const [playbackRate, setPlaybackRate] = useState(1)
-
-  /* ▶️ PLAY */
+  /* PLAY */
   const togglePlay = () => {
     if (!videoRef.current) return
     videoRef.current.paused
@@ -53,7 +53,7 @@ export function VideoPlayer({ src, poster }: { src: string; poster?: string }) {
       : videoRef.current.pause()
   }
 
-  /* ⏱️ TIME */
+  /* TIME */
   useEffect(() => {
     const v = videoRef.current
     if (!v) return
@@ -73,7 +73,6 @@ export function VideoPlayer({ src, poster }: { src: string; poster?: string }) {
     }
   }, [])
 
-  /* FORMAT */
   const formatTime = (t: number) => {
     const h = Math.floor(t / 3600)
     const m = Math.floor((t % 3600) / 60)
@@ -107,26 +106,36 @@ export function VideoPlayer({ src, poster }: { src: string; poster?: string }) {
       : videoRef.current.requestPictureInPicture()
   }
 
-  /* TIMELINE CALC */
-  const calcTime = (clientX: number) => {
+  /* CALC TIME */
+  const calcTime = (x: number) => {
     if (!timelineRef.current) return 0
-    const rect = timelineRef.current.getBoundingClientRect()
-    const x = Math.min(Math.max(0, clientX - rect.left), rect.width)
-    return (x / rect.width) * duration
+    const r = timelineRef.current.getBoundingClientRect()
+    return Math.min(Math.max(0, (x - r.left) / r.width), 1) * duration
+  }
+
+  const calcVolume = (x: number) => {
+    if (!volumeRef.current) return 1
+    const r = volumeRef.current.getBoundingClientRect()
+    return Math.min(Math.max(0, (x - r.left) / r.width), 1)
   }
 
   /* GLOBAL DRAG */
   useEffect(() => {
-    if (!dragging) return
-
     const move = (e: MouseEvent) => {
-      const time = calcTime(e.clientX)
-      if (videoRef.current) videoRef.current.currentTime = time
+      if (draggingTime && videoRef.current) {
+        videoRef.current.currentTime = calcTime(e.clientX)
+      }
+      if (draggingVolume && videoRef.current) {
+        const v = calcVolume(e.clientX)
+        setVolume(v)
+        videoRef.current.volume = v
+        setMuted(v === 0)
+      }
     }
 
     const up = () => {
-      setDragging(false)
-      setPreviewTime(null)
+      setDraggingTime(false)
+      setDraggingVolume(false)
     }
 
     window.addEventListener("mousemove", move)
@@ -136,13 +145,13 @@ export function VideoPlayer({ src, poster }: { src: string; poster?: string }) {
       window.removeEventListener("mousemove", move)
       window.removeEventListener("mouseup", up)
     }
-  }, [dragging])
+  }, [draggingTime, draggingVolume])
 
   return (
     <div
       ref={containerRef}
       className="relative bg-black rounded-xl overflow-hidden"
-      style={{ width: 830, height: 400 }}
+      style={{ width: 830, height: 560 }}
     >
       <video
         ref={videoRef}
@@ -153,34 +162,31 @@ export function VideoPlayer({ src, poster }: { src: string; poster?: string }) {
           fill ? "object-cover" : "object-contain"
         )}
         muted={muted}
-        volume={volume}
-        onPlay={() => setPlaying(true)}
-        onPause={() => setPlaying(false)}
       />
 
       {/* CONTROLES */}
-      <div className="absolute bottom-0 w-full px-4 pb-3 pt-10 bg-gradient-to-t from-black/90 via-black/60 to-transparent">
+      <div className="absolute bottom-0 w-full px-4 pb-3 pt-10 bg-gradient-to-t from-black/90 via-black/60 to-transparent text-white">
 
         {/* TIMELINE */}
         <div
           ref={timelineRef}
-          className="relative mb-3 h-3 cursor-pointer"
+          className="relative mb-4 h-3 cursor-pointer"
           onMouseMove={e => {
-            const time = calcTime(e.clientX)
-            setPreviewTime(time)
+            const t = calcTime(e.clientX)
+            setPreviewTime(t)
             setPreviewX(e.nativeEvent.offsetX)
-            if (previewRef.current) previewRef.current.currentTime = time
+            if (previewRef.current) previewRef.current.currentTime = t
           }}
-          onMouseLeave={() => !dragging && setPreviewTime(null)}
+          onMouseLeave={() => !draggingTime && setPreviewTime(null)}
           onMouseDown={e => {
-            setDragging(true)
+            setDraggingTime(true)
             if (videoRef.current)
               videoRef.current.currentTime = calcTime(e.clientX)
           }}
         >
           {previewTime !== null && (
             <div
-              className="absolute bottom-5 bg-black rounded overflow-hidden"
+              className="absolute bottom-6 bg-black rounded overflow-hidden"
               style={{ left: previewX - 60, width: 120, height: 70 }}
             >
               <video
@@ -197,10 +203,14 @@ export function VideoPlayer({ src, poster }: { src: string; poster?: string }) {
             className="absolute inset-y-0 left-0 bg-red-600 rounded-full"
             style={{ width: `${progress}%` }}
           />
+          <div
+            className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-black rounded-full"
+            style={{ left: `calc(${progress}% - 8px)` }}
+          />
         </div>
 
         {/* BOTÕES */}
-        <div className="flex items-center justify-between text-white">
+        <div className="flex items-center justify-between">
 
           {/* ESQUERDA */}
           <div className="flex items-center gap-2">
@@ -226,36 +236,31 @@ export function VideoPlayer({ src, poster }: { src: string; poster?: string }) {
           </div>
 
           {/* DIREITA */}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
             <Button size="icon" variant="ghost" onClick={() => setMuted(!muted)}>
               {muted ? <VolumeX /> : <Volume2 />}
             </Button>
 
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button size="icon" variant="ghost">
-                  <Settings />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {[0.5, 1, 1.25, 1.5, 2].map(rate => (
-                  <DropdownMenuItem
-                    key={rate}
-                    onClick={() => {
-                      if (videoRef.current) {
-                        videoRef.current.playbackRate = rate
-                        setPlaybackRate(rate)
-                      }
-                    }}
-                    className={cn(
-                      playbackRate === rate && "font-bold text-red-500"
-                    )}
-                  >
-                    {rate}x
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <div
+              ref={volumeRef}
+              className="relative w-24 h-2 cursor-pointer"
+              onMouseDown={e => {
+                setDraggingVolume(true)
+                const v = calcVolume(e.clientX)
+                setVolume(v)
+                if (videoRef.current) videoRef.current.volume = v
+              }}
+            >
+              <div className="absolute inset-0 bg-white/20 rounded-full" />
+              <div
+                className="absolute inset-y-0 left-0 bg-red-600 rounded-full"
+                style={{ width: `${volume * 100}%` }}
+              />
+              <div
+                className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-black rounded-full"
+                style={{ left: `calc(${volume * 100}% - 8px)` }}
+              />
+            </div>
 
             <Button size="icon" variant="ghost" onClick={togglePiP}>
               <PictureInPicture2 />
