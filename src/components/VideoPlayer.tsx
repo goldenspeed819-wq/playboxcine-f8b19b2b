@@ -17,6 +17,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { RectangleHorizontal } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 import {
   DropdownMenu,
@@ -524,20 +525,20 @@ export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introS
             >
               <PictureInPicture2 className="w-5 h-5" />
             </Button>
-{/* Theater Mode (Esticar tela) */}
+            {/* Esticar Tela (Modo Cinema) */}
 <Button
   variant="ghost"
   size="icon"
-  className="text-white hover:bg-white/15 h-10 w-10 rounded-full transition-all hover:scale-105"
   onClick={toggleTheaterMode}
   title={isTheater ? 'Modo normal' : 'Esticar tela'}
->
-  {isTheater ? (
-    <Minimize className="w-5 h-5" />
-  ) : (
-    <Maximize className="w-5 h-5" />
+  className={cn(
+    'text-white h-10 w-10 rounded-full transition-all hover:bg-white/15 hover:scale-105',
+    isTheater && 'bg-white/20'
   )}
+>
+  <RectangleHorizontal className="w-5 h-5" />
 </Button>
+
 
             {/* Fullscreen */}
             <Button
