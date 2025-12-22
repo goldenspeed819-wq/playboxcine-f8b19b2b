@@ -200,7 +200,7 @@ export function VideoPlayer({ src, poster }: VideoPlayerProps) {
                 src={src}
                 muted
                 playsInline
-                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                style={{ width: "450p", height: "320p", objectFit: "cover" }}
               />
             </div>
           )}
