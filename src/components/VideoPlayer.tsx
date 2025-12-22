@@ -15,7 +15,6 @@ import {
   Rewind,
   FastForward,
   AlertCircle,
-  Expand,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
@@ -51,7 +50,6 @@ export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introS
   const [isMuted, setIsMuted] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isPiP, setIsPiP] = useState(false);
-  const [isStretched, setIsStretched] = useState(false);
   const [showControls, setShowControls] = useState(true);
   const [showNextButton, setShowNextButton] = useState(false);
   const [showSkipIntro, setShowSkipIntro] = useState(false);
@@ -253,9 +251,7 @@ export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introS
       console.error('PiP error:', error);
     }
   };
-const toggleStretch = () => {
-  setIsStretched(!isStretched);
-};
+
   const skip = (seconds: number) => {
     const video = videoRef.current;
     if (!video) return;
@@ -314,16 +310,15 @@ const toggleStretch = () => {
       onMouseLeave={() => isPlaying && setShowControls(false)}
     >
       {/* Video Element */}
-<video
-  ref={videoRef}
-  src={src}
-  poster={poster || undefined}
-  className={cn(  "w-full h-full bg-black transition-all duration-300",
-    isStretched ? "object-fill" : "object-contain"
-  )}
-  onClick={togglePlay}
-  playsInline
-/>
+      <video
+        ref={videoRef}
+        src={src}
+        poster={poster || undefined}
+        className="w-full h-full object-contain bg-black"
+        onClick={togglePlay}
+        playsInline
+      />
+
       {/* Loading Indicator */}
       {isLoading && !videoError && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/60">
@@ -483,62 +478,70 @@ const toggleStretch = () => {
           </div>
 
           {/* Right Controls */}
-<div className="flex items-center gap-1 shrink-0"> {/* Adicionei shrink-0 para não espremer os botões */}
-  
-  {/* Settings */}
-  <DropdownMenu>
-    <DropdownMenuTrigger asChild>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="text-white hover:bg-white/15 h-10 w-10 rounded-full transition-all hover:scale-105"
-        title="Configurações"
-      >
-        <Settings className="w-5 h-5" />
-      </Button>
-      </DropdownMenuTrigger>
+          <div className="flex items-center gap-1">
+            {/* Settings */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-white hover:bg-white/15 h-10 w-10 rounded-full transition-all hover:scale-105"
+                  title="Configurações"
+                >
+                  <Settings className="w-5 h-5" />
+                </Button>
+              </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="bg-black/90 backdrop-blur-xl border-white/10 min-w-[160px] rounded-xl">
                 <div className="px-3 py-2 text-xs font-semibold text-white/60 uppercase tracking-wider">
                   Velocidade
                 </div>
                 {[0.5, 0.75, 1, 1.25, 1.5, 2].map((speed) => (
                   <DropdownMenuItem
-  {/* Picture-in-Picture */}
-  <Button
-    variant="ghost"
-    size="icon"
-    className={cn(
-      'text-white hover:bg-white/15 h-10 w-10 rounded-full transition-all hover:scale-105',
-      isPiP && 'text-primary bg-primary/20'
-    )}
-    onClick={togglePiP}
-    title="Picture-in-Picture"
-  >
-    <PictureInPicture2 className="w-5 h-5" />
-  </Button>
+                    key={speed}
+                    onClick={() => changePlaybackSpeed(speed)}
+                    className={cn(
+                      'text-white/90 focus:bg-white/15 focus:text-white rounded-lg mx-1',
+                      playbackSpeed === speed && 'bg-primary/20 text-primary'
+                    )}
+                  >
+                    {speed === 1 ? 'Normal' : `${speed}x`}
+                    {playbackSpeed === speed && <span className="ml-auto text-primary">✓</span>}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
 
-  {/* BOTÃO ESTICAR - Verifique se o ícone Expand está importado no topo! */}
-  <Button
-    variant="ghost"
-    size="icon"
-    className={cn(
-      "text-white hover:bg-white/15 h-10 w-10 rounded-full transition-all hover:scale-105",
-      isStretched && "text-primary bg-primary/20"
-    )}
-    onClick={toggleStretch}
-    title={isStretched ? "Restaurar proporção" : "Esticar vídeo"}
-  >
-    <Expand className="w-5 h-5" />
-  </button>
+            {/* Picture-in-Picture Mode */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn(
+                'text-white hover:bg-white/15 h-10 w-10 rounded-full transition-all hover:scale-105',
+                isPiP && 'text-primary bg-primary/20'
+              )}
+              onClick={togglePiP}
+              title="Picture-in-Picture"
+            >
+              <PictureInPicture2 className="w-5 h-5" />
+            </Button>
 
-  {/* Fullscreen */}
-  <Button
-    variant="ghost"
-    size="icon"
-    className="text-white hover:bg-white/15 h-10 w-10 rounded-full transition-all hover:scale-105"
-    onClick={toggleFullscreen}
-    title={isFullscreen ? 'Sair da tela cheia' : 'Tela cheia'}
-  >
-    {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
-  </Button>
-</div>
+            {/* Fullscreen */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-white hover:bg-white/15 h-10 w-10 rounded-full transition-all hover:scale-105"
+              onClick={toggleFullscreen}
+              title={isFullscreen ? 'Sair da tela cheia' : 'Tela cheia'}
+            >
+              {isFullscreen ? (
+                <Minimize className="w-5 h-5" />
+              ) : (
+                <Maximize className="w-5 h-5" />
+              )}
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
