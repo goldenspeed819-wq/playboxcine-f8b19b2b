@@ -45,7 +45,6 @@ export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introS
   const [progress, setProgress] = useState(0);
   const [buffered, setBuffered] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [isTheater, setIsTheater] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
@@ -199,9 +198,6 @@ export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introS
       video.play();
     }
   };
-const toggleTheaterMode = () => {
-  setIsTheater((prev) => !prev);
-};
 
   const handleSeek = (value: number[]) => {
     const video = videoRef.current;
@@ -307,17 +303,11 @@ const toggleTheaterMode = () => {
   }
 
   return (
-   <div
-  ref={containerRef}
-  className={cn(
-    'video-player-container group relative overflow-hidden bg-black transition-all duration-300',
-    isTheater
-      ? 'w-full h-[85vh] rounded-none'
-      : 'w-[830px] h-[560px] rounded-xl mx-auto'
-  )}
->
-
-   
+    <div
+      ref={containerRef}
+      className="video-player-container group relative rounded-xl overflow-hidden bg-black"
+      onMouseMove={handleMouseMove}
+      onMouseLeave={() => isPlaying && setShowControls(false)}
     >
       {/* Video Element */}
       <video
@@ -534,8 +524,7 @@ const toggleTheaterMode = () => {
             >
               <PictureInPicture2 className="w-5 h-5" />
             </Button>
-
-            {/* Theater Mode (Esticar tela) */}
+{/* Theater Mode (Esticar tela) */}
 <Button
   variant="ghost"
   size="icon"
@@ -549,7 +538,6 @@ const toggleTheaterMode = () => {
     <Maximize className="w-5 h-5" />
   )}
 </Button>
-
 
             {/* Fullscreen */}
             <Button
