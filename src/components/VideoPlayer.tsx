@@ -15,7 +15,7 @@ import {
   Rewind,
   FastForward,
   AlertCircle,
-  Expand, // Adicionado
+  Expand,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
@@ -51,7 +51,7 @@ export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introS
   const [isMuted, setIsMuted] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isPiP, setIsPiP] = useState(false);
-  const [isStretched, setIsStretched] = useState(false); // Adicionado
+  const [isStretched, setIsStretched] = useState(false);
   const [showControls, setShowControls] = useState(true);
   const [showNextButton, setShowNextButton] = useState(false);
   const [showSkipIntro, setShowSkipIntro] = useState(false);
@@ -125,10 +125,18 @@ export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introS
       let errorMessage = 'Erro ao carregar o vídeo';
       if (error) {
         switch (error.code) {
-          case 1: errorMessage = 'Carregamento do vídeo foi interrompido'; break;
-          case 2: errorMessage = 'Erro de rede ao carregar o vídeo'; break;
-          case 3: errorMessage = 'Formato de vídeo não suportado pelo navegador'; break;
-          case 4: errorMessage = 'Vídeo não encontrado ou inacessível'; break;
+          case 1:
+            errorMessage = 'Carregamento do vídeo foi interrompido';
+            break;
+          case 2:
+            errorMessage = 'Erro de rede ao carregar o vídeo';
+            break;
+          case 3:
+            errorMessage = 'Formato de vídeo não suportado pelo navegador';
+            break;
+          case 4:
+            errorMessage = 'Vídeo não encontrado ou inacessível';
+            break;
         }
       }
       setVideoError(errorMessage);
@@ -185,12 +193,18 @@ export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introS
   const togglePlay = () => {
     const video = videoRef.current;
     if (!video) return;
-    if (isPlaying) { video.pause(); } else { video.play(); }
+
+    if (isPlaying) {
+      video.pause();
+    } else {
+      video.play();
+    }
   };
 
   const handleSeek = (value: number[]) => {
     const video = videoRef.current;
     if (!video) return;
+
     const newTime = (value[0] / 100) * duration;
     video.currentTime = newTime;
     setProgress(value[0]);
@@ -199,6 +213,7 @@ export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introS
   const handleVolumeChange = (value: number[]) => {
     const video = videoRef.current;
     if (!video) return;
+
     const newVolume = value[0] / 100;
     video.volume = newVolume;
     setVolume(newVolume);
@@ -208,6 +223,7 @@ export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introS
   const toggleMute = () => {
     const video = videoRef.current;
     if (!video) return;
+
     video.muted = !isMuted;
     setIsMuted(!isMuted);
   };
@@ -215,6 +231,7 @@ export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introS
   const toggleFullscreen = () => {
     const container = containerRef.current;
     if (!container) return;
+
     if (!isFullscreen) {
       container.requestFullscreen?.();
     } else {
@@ -225,6 +242,7 @@ export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introS
   const togglePiP = async () => {
     const video = videoRef.current;
     if (!video) return;
+
     try {
       if (document.pictureInPictureElement) {
         await document.exitPictureInPicture();
@@ -235,11 +253,9 @@ export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introS
       console.error('PiP error:', error);
     }
   };
-
-  const toggleStretch = () => {
-    setIsStretched(!isStretched);
-  };
-
+const toggleStretch = () => {
+  setIsStretched(!isStretched);
+};
   const skip = (seconds: number) => {
     const video = videoRef.current;
     if (!video) return;
@@ -264,6 +280,7 @@ export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introS
     const hours = Math.floor(time / 3600);
     const minutes = Math.floor((time % 3600) / 60);
     const seconds = Math.floor(time % 60);
+
     if (hours > 0) {
       return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     }
@@ -296,19 +313,17 @@ export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introS
       onMouseMove={handleMouseMove}
       onMouseLeave={() => isPlaying && setShowControls(false)}
     >
-      {/* Video Element com Classe Dinâmica para Esticar */}
-      <video
-        ref={videoRef}
-        src={src}
-        poster={poster || undefined}
-        className={cn(
-          "w-full h-full bg-black transition-all duration-300",
-          isStretched ? "object-fill" : "object-contain"
-        )}
-        onClick={togglePlay}
-        playsInline
-      />
-
+      {/* Video Element */}
+<video
+  ref={videoRef}
+  src={src}
+  poster={poster || undefined}
+  className={cn(  "w-full h-full bg-black transition-all duration-300",
+    isStretched ? "object-fill" : "object-contain"
+  )}
+  onClick={togglePlay}
+  playsInline
+/>
       {/* Loading Indicator */}
       {isLoading && !videoError && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/60">
@@ -355,7 +370,7 @@ export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introS
         </div>
       )}
 
-      {/* Next Episode Button */}
+      {/* Next Episode/Part Button */}
       {showNextButton && nextLabel && onNextClick && (
         <div className="absolute bottom-28 right-6 animate-fade-in z-10">
           <Button
@@ -369,14 +384,16 @@ export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introS
         </div>
       )}
 
-      {/* Title */}
+      {/* Title - Top */}
       {title && showControls && (
         <div className="absolute top-0 left-0 right-0 p-5 bg-gradient-to-b from-black/80 via-black/40 to-transparent transition-opacity duration-300">
-          <h3 className="font-display font-bold text-lg text-white drop-shadow-lg">{title}</h3>
+          <h3 className="font-display font-bold text-lg text-white drop-shadow-lg">
+            {title}
+          </h3>
         </div>
       )}
 
-      {/* Controls Container */}
+      {/* Controls */}
       <div
         className={cn(
           'absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/95 via-black/70 to-transparent px-5 pb-4 pt-16 transition-all duration-300',
@@ -386,8 +403,19 @@ export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introS
         {/* Progress Bar */}
         <div className="relative mb-4 group/progress">
           <div className="h-1.5 bg-white/20 rounded-full overflow-hidden relative cursor-pointer hover:h-2 transition-all">
-            <div className="h-full bg-white/30 absolute left-0 top-0 rounded-full" style={{ width: `${buffered}%` }} />
-            <Slider value={[progress]} onValueChange={handleSeek} max={100} step={0.1} className="absolute inset-0" />
+            {/* Buffered */}
+            <div
+              className="h-full bg-white/30 absolute left-0 top-0 rounded-full"
+              style={{ width: `${buffered}%` }}
+            />
+            {/* Progress */}
+            <Slider
+              value={[progress]}
+              onValueChange={handleSeek}
+              max={100}
+              step={0.1}
+              className="absolute inset-0"
+            />
           </div>
         </div>
 
@@ -395,23 +423,60 @@ export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introS
         <div className="flex items-center justify-between gap-3">
           {/* Left Controls */}
           <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" className="text-white hover:bg-white/15 h-10 w-10 rounded-full" onClick={togglePlay}>
+            {/* Play/Pause */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-white hover:bg-white/15 h-10 w-10 rounded-full transition-all hover:scale-105"
+              onClick={togglePlay}
+            >
               {isPlaying ? <Pause className="w-5 h-5" fill="currentColor" /> : <Play className="w-5 h-5 ml-0.5" fill="currentColor" />}
             </Button>
-            <Button variant="ghost" size="icon" className="text-white hover:bg-white/15 h-10 w-10 rounded-full" onClick={() => skip(-10)} title="Voltar 10s">
+
+            {/* Skip Back */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-white hover:bg-white/15 h-10 w-10 rounded-full transition-all hover:scale-105"
+              onClick={() => skip(-10)}
+              title="Voltar 10s"
+            >
               <Rewind className="w-5 h-5" />
             </Button>
-            <Button variant="ghost" size="icon" className="text-white hover:bg-white/15 h-10 w-10 rounded-full" onClick={() => skip(10)} title="Avançar 10s">
+
+            {/* Skip Forward */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-white hover:bg-white/15 h-10 w-10 rounded-full transition-all hover:scale-105"
+              onClick={() => skip(10)}
+              title="Avançar 10s"
+            >
               <FastForward className="w-5 h-5" />
             </Button>
+
+            {/* Volume */}
             <div className="flex items-center gap-1 group/volume ml-1">
-              <Button variant="ghost" size="icon" className="text-white hover:bg-white/15 h-10 w-10 rounded-full" onClick={toggleMute}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-white hover:bg-white/15 h-10 w-10 rounded-full transition-all"
+                onClick={toggleMute}
+              >
                 <VolumeIcon className="w-5 h-5" />
               </Button>
               <div className="w-0 overflow-hidden group-hover/volume:w-24 transition-all duration-300">
-                <Slider value={[isMuted ? 0 : volume * 100]} onValueChange={handleVolumeChange} max={100} step={1} className="w-24" />
+                <Slider
+                  value={[isMuted ? 0 : volume * 100]}
+                  onValueChange={handleVolumeChange}
+                  max={100}
+                  step={1}
+                  className="w-24"
+                />
               </div>
             </div>
+
+            {/* Time Display */}
             <span className="text-sm text-white/80 ml-3 tabular-nums font-medium">
               {formatTime(currentTime)} <span className="text-white/50">/</span> {formatTime(duration)}
             </span>
@@ -419,16 +484,31 @@ export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introS
 
           {/* Right Controls */}
           <div className="flex items-center gap-1">
+            {/* Settings */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="text-white hover:bg-white/15 h-10 w-10 rounded-full" title="Configurações">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-white hover:bg-white/15 h-10 w-10 rounded-full transition-all hover:scale-105"
+                  title="Configurações"
+                >
                   <Settings className="w-5 h-5" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="bg-black/90 backdrop-blur-xl border-white/10 min-w-[160px] rounded-xl">
-                <div className="px-3 py-2 text-xs font-semibold text-white/60 uppercase tracking-wider">Velocidade</div>
+                <div className="px-3 py-2 text-xs font-semibold text-white/60 uppercase tracking-wider">
+                  Velocidade
+                </div>
                 {[0.5, 0.75, 1, 1.25, 1.5, 2].map((speed) => (
-                  <DropdownMenuItem key={speed} onClick={() => changePlaybackSpeed(speed)} className={cn('text-white/90 focus:bg-white/15 focus:text-white rounded-lg mx-1', playbackSpeed === speed && 'bg-primary/20 text-primary')}>
+                  <DropdownMenuItem
+                    key={speed}
+                    onClick={() => changePlaybackSpeed(speed)}
+                    className={cn(
+                      'text-white/90 focus:bg-white/15 focus:text-white rounded-lg mx-1',
+                      playbackSpeed === speed && 'bg-primary/20 text-primary'
+                    )}
+                  >
                     {speed === 1 ? 'Normal' : `${speed}x`}
                     {playbackSpeed === speed && <span className="ml-auto text-primary">✓</span>}
                   </DropdownMenuItem>
@@ -436,24 +516,33 @@ export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introS
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <Button variant="ghost" size="icon" className={cn('text-white hover:bg-white/15 h-10 w-10 rounded-full', isPiP && 'text-primary bg-primary/20')} onClick={togglePiP} title="Picture-in-Picture">
-              <PictureInPicture2 className="w-5 h-5" />
-            </Button>
-
-            {/* BOTÃO ESTICAR ADICIONADO AQUI */}
+            {/* Picture-in-Picture Mode */}
             <Button
               variant="ghost"
               size="icon"
               className={cn(
-                "text-white hover:bg-white/15 h-10 w-10 rounded-full transition-all hover:scale-105",
-                isStretched && "text-primary bg-primary/20"
+                'text-white hover:bg-white/15 h-10 w-10 rounded-full transition-all hover:scale-105',
+                isPiP && 'text-primary bg-primary/20'
               )}
-              onClick={toggleStretch}
-              title={isStretched ? "Restaurar proporção" : "Esticar vídeo"}
+              onClick={togglePiP}
+              title="Picture-in-Picture"
             >
-              <Expand className="w-5 h-5" />
+              <PictureInPicture2 className="w-5 h-5" />
             </Button>
+            <Button
+  variant="ghost"
+  size="icon"
+  className={cn(
+    "text-white hover:bg-white/15 h-10 w-10 rounded-full transition-all hover:scale-105",
+    isStretched && "text-primary bg-primary/20"
+  )}
+  onClick={toggleStretch}
+  title={isStretched ? "Restaurar proporção" : "Esticar vídeo"}
+>
+  <Expand className="w-5 h-5" />
+</Button>
 
+            {/* Fullscreen */}
             <Button
               variant="ghost"
               size="icon"
@@ -461,7 +550,11 @@ export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introS
               onClick={toggleFullscreen}
               title={isFullscreen ? 'Sair da tela cheia' : 'Tela cheia'}
             >
-              {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
+              {isFullscreen ? (
+                <Minimize className="w-5 h-5" />
+              ) : (
+                <Maximize className="w-5 h-5" />
+              )}
             </Button>
           </div>
         </div>
