@@ -13,26 +13,17 @@ import {
   FastForward,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-} from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
 
 interface VideoPlayerProps {
   src: string
   poster?: string
-  introStartTime?: number | null; // Time in seconds when intro starts
-introEndTime?: number | null; // Time in seconds when intro ends
 }
 
-export function VideoPlayer({ src, poster, title, subtitleUrl, nextLabel, onNextClick, introStartTime, introEndTime }: VideoPlayerProps) {
+export function VideoPlayer({ src, poster }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const timelineRef = useRef<HTMLDivElement>(null)
-  const hideTimer = useRef<NodeJS.Timeout | null>(null)
 
   const [playing, setPlaying] = useState(false)
   const [current, setCurrent] = useState(0)
@@ -42,67 +33,6 @@ export function VideoPlayer({ src, poster, title, subtitleUrl, nextLabel, onNext
   const [fullscreen, setFullscreen] = useState(false)
   const [fill, setFill] = useState(false)
   const [dragging, setDragging] = useState(false)
-  const [showControls, setShowControls] = useState(true)
-  const [speed, setSpeed] = useState(1)
-  // Show skip intro button during the intro period
-  useEffect(() => {
-    const hasIntro = introStartTime != null && introEndTime != null;
-    if (hasIntro && currentTime >= introStartTime && currentTime < introEndTime) {
-      setShowSkipIntro(true);
-    } else {
-      setShowSkipIntro(false);
-    }
-  }, [currentTime, introStartTime, introEndTime]);
-    // Show next button when video is 90% complete or has less than 30 seconds remaining
-  useEffect(() => {
-    if (onNextClick && duration > 0) {
-      const timeRemaining = duration - currentTime;
-      const percentComplete = (currentTime / duration) * 100;
-      setShowNextButton(percentComplete >= 90 || timeRemaining <= 30);
-    } else {
-      setShowNextButton(false);
-    }
-  }, [currentTime, duration, onNextClick]);
-
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    const handleTimeUpdate = () => {
-      setCurrentTime(video.currentTime);
-      setProgress((video.currentTime / video.duration) * 100);
-    };
-
-    const handleLoadedMetadata = () => {
-      setDuration(video.duration);
-    };
-
-    const handleProgress = () => {
-      if (video.buffered.length > 0) {
-        setBuffered((video.buffered.end(video.buffered.length - 1) / video.duration) * 100);
-      }
-    };
-
-    const handlePlay = () => setIsPlaying(true);
-    const handlePause = () => setIsPlaying(false);
-    const handleEnded = () => setIsPlaying(false);
-
-    video.addEventListener('timeupdate', handleTimeUpdate);
-    video.addEventListener('loadedmetadata', handleLoadedMetadata);
-    video.addEventListener('progress', handleProgress);
-    video.addEventListener('play', handlePlay);
-    video.addEventListener('pause', handlePause);
-    video.addEventListener('ended', handleEnded);
-
-    return () => {
-      video.removeEventListener('timeupdate', handleTimeUpdate);
-      video.removeEventListener('loadedmetadata', handleLoadedMetadata);
-      video.removeEventListener('progress', handleProgress);
-      video.removeEventListener('play', handlePlay);
-      video.removeEventListener('pause', handlePause);
-      video.removeEventListener('ended', handleEnded);
-    };
-  }, []);
 
   /* ---------------- PLAY STATE REAL ---------------- */
   useEffect(() => {
@@ -121,7 +51,7 @@ export function VideoPlayer({ src, poster, title, subtitleUrl, nextLabel, onNext
     }
   }, [])
 
-  /* ---------------- TIME ---------------- */
+  /* ---------------- TIME UPDATE ---------------- */
   useEffect(() => {
     const v = videoRef.current
     if (!v) return
@@ -145,24 +75,9 @@ export function VideoPlayer({ src, poster, title, subtitleUrl, nextLabel, onNext
     return () => document.removeEventListener("fullscreenchange", f)
   }, [])
 
-  /* ---------------- AUTO HIDE CONTROLS ---------------- */
-  const resetHideTimer = () => {
-    setShowControls(true)
-    if (hideTimer.current) clearTimeout(hideTimer.current)
-
-    hideTimer.current = setTimeout(() => {
-      if (playing && !dragging) setShowControls(false)
-    }, 4000)
-  }
-
-  useEffect(() => {
-    resetHideTimer()
-  }, [playing])
-
-  /* ---------------- KEYBOARD ---------------- */
+  /* ---------------- KEYBOARD SHORTCUTS ---------------- */
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
-      resetHideTimer()
       if (!videoRef.current) return
 
       switch (e.key.toLowerCase()) {
@@ -215,16 +130,6 @@ export function VideoPlayer({ src, poster, title, subtitleUrl, nextLabel, onNext
       : videoRef.current.requestPictureInPicture()
   }
 
-  const seek = (e: React.MouseEvent) => {
-    if (!timelineRef.current || !videoRef.current) return
-    const rect = timelineRef.current.getBoundingClientRect()
-    const percent = Math.min(
-      1,
-      Math.max(0, (e.clientX - rect.left) / rect.width)
-    )
-    videoRef.current.currentTime = percent * duration
-  }
-
   const format = (t: number) => {
     const h = Math.floor(t / 3600)
     const m = Math.floor((t % 3600) / 60)
@@ -236,23 +141,27 @@ export function VideoPlayer({ src, poster, title, subtitleUrl, nextLabel, onNext
       : `${m}:${s.toString().padStart(2, "0")}`
   }
 
+  const seek = (e: React.MouseEvent) => {
+    if (!timelineRef.current || !videoRef.current) return
+    const rect = timelineRef.current.getBoundingClientRect()
+    const percent = (e.clientX - rect.left) / rect.width
+    videoRef.current.currentTime = percent * duration
+  }
+
+  const VolumeIcon = muted || volume === 0 ? VolumeX : Volume2
+
   useEffect(() => {
     if (videoRef.current) {
       videoRef.current.volume = volume
       videoRef.current.muted = muted
-      videoRef.current.playbackRate = speed
     }
-  }, [volume, muted, speed])
-
-  const VolumeIcon = muted || volume === 0 ? VolumeX : Volume2
+  }, [volume, muted])
 
   return (
     <div
       ref={containerRef}
       className="relative bg-black rounded-xl overflow-hidden"
       style={{ width: 830, height: 560 }}
-      onMouseMove={resetHideTimer}
-      onTouchStart={resetHideTimer}
     >
       {/* VIDEO */}
       <video
@@ -268,12 +177,7 @@ export function VideoPlayer({ src, poster, title, subtitleUrl, nextLabel, onNext
       />
 
       {/* CONTROLS */}
-      <div
-        className={cn(
-          "absolute bottom-0 w-full px-4 pb-3 bg-gradient-to-t from-black/90 via-black/60 to-transparent transition-opacity duration-300",
-          !showControls && "opacity-0 pointer-events-none"
-        )}
-      >
+      <div className="absolute bottom-0 w-full px-4 pb-3 bg-gradient-to-t from-black/90 via-black/60 to-transparent">
         {/* TIMELINE */}
         <div
           ref={timelineRef}
@@ -331,16 +235,6 @@ export function VideoPlayer({ src, poster, title, subtitleUrl, nextLabel, onNext
               <VolumeIcon />
             </Button>
 
-            <input
-              type="range"
-              min={0}
-              max={1}
-              step={0.01}
-              value={muted ? 0 : volume}
-              onChange={e => setVolume(Number(e.target.value))}
-              className="w-24 accent-red-600"
-            />
-
             <span className="text-sm">
               {format(current)} / {format(duration)}
             </span>
@@ -348,27 +242,6 @@ export function VideoPlayer({ src, poster, title, subtitleUrl, nextLabel, onNext
 
           {/* RIGHT */}
           <div className="flex items-center gap-1">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button size="icon" variant="ghost">
-                  <Settings />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {[0.5, 1, 1.25, 1.5, 2].map(v => (
-                  <DropdownMenuItem
-                    key={v}
-                    onClick={() => setSpeed(v)}
-                    className={cn(
-                      speed === v && "text-red-500 font-semibold"
-                    )}
-                  >
-                    {v}x
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-
             <Button size="icon" variant="ghost" onClick={togglePiP}>
               <PictureInPicture2 />
             </Button>
