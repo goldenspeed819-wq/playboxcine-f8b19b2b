@@ -24,6 +24,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 
@@ -99,16 +100,18 @@ export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introS
     const handleLoadedMetadata = () => {
       setDuration(video.duration);
       setIsLoading(false);
+      setVideoError(null);
     };
 
     const handleProgress = () => {
-      if (video.buffered.length > 0 && video.duration > 0) {
+      if (video.buffered.length > 0) {
         setBuffered((video.buffered.end(video.buffered.length - 1) / video.duration) * 100);
       }
     };
 
     const handlePlay = () => setIsPlaying(true);
     const handlePause = () => setIsPlaying(false);
+    const handleEnded = () => setIsPlaying(false);
     const handleLeavePiP = () => setIsPiP(false);
     const handleEnterPiP = () => setIsPiP(true);
     const handleCanPlay = () => {
@@ -117,7 +120,17 @@ export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introS
     };
     const handleWaiting = () => setIsLoading(true);
     const handleError = () => {
-      setVideoError("Erro ao carregar vídeo");
+      const error = video.error;
+      let errorMessage = 'Erro ao carregar o vídeo';
+      if (error) {
+        switch (error.code) {
+          case 1: errorMessage = 'Carregamento interrompido'; break;
+          case 2: errorMessage = 'Erro de rede'; break;
+          case 3: errorMessage = 'Formato não suportado'; break;
+          case 4: errorMessage = 'Vídeo não encontrado'; break;
+        }
+      }
+      setVideoError(errorMessage);
       setIsLoading(false);
     };
 
@@ -126,6 +139,7 @@ export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introS
     video.addEventListener('progress', handleProgress);
     video.addEventListener('play', handlePlay);
     video.addEventListener('pause', handlePause);
+    video.addEventListener('ended', handleEnded);
     video.addEventListener('leavepictureinpicture', handleLeavePiP);
     video.addEventListener('enterpictureinpicture', handleEnterPiP);
     video.addEventListener('canplay', handleCanPlay);
@@ -138,6 +152,7 @@ export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introS
       video.removeEventListener('progress', handleProgress);
       video.removeEventListener('play', handlePlay);
       video.removeEventListener('pause', handlePause);
+      video.removeEventListener('ended', handleEnded);
       video.removeEventListener('leavepictureinpicture', handleLeavePiP);
       video.removeEventListener('enterpictureinpicture', handleEnterPiP);
       video.removeEventListener('canplay', handleCanPlay);
@@ -162,7 +177,7 @@ export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introS
 
   const togglePlay = () => {
     if (!videoRef.current) return;
-    if (isPlaying) videoRef.current.pause(); else videoRef.current.play();
+    isPlaying ? videoRef.current.pause() : videoRef.current.play();
   };
 
   const handleSeek = (value: number[]) => {
@@ -187,7 +202,8 @@ export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introS
 
   const toggleFullscreen = () => {
     if (!containerRef.current) return;
-    if (!isFullscreen) containerRef.current.requestFullscreen?.(); else document.exitFullscreen?.();
+    if (!isFullscreen) containerRef.current.requestFullscreen?.();
+    else document.exitFullscreen?.();
   };
 
   const togglePiP = async () => {
@@ -202,7 +218,7 @@ export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introS
 
   const skip = (seconds: number) => {
     if (!videoRef.current) return;
-    videoRef.current.currentTime += seconds;
+    videoRef.current.currentTime = Math.max(0, Math.min(videoRef.current.currentTime + seconds, duration));
   };
 
   const skipIntro = () => {
@@ -218,9 +234,11 @@ export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introS
 
   const formatTime = (time: number) => {
     if (!isFinite(time) || isNaN(time)) return '0:00';
-    const mins = Math.floor(time / 60);
-    const secs = Math.floor(time % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+    const hours = Math.floor(time / 3600);
+    const minutes = Math.floor((time % 3600) / 60);
+    const seconds = Math.floor(time % 60);
+    if (hours > 0) return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
   const VolumeIcon = isMuted || volume === 0 ? VolumeX : volume < 0.5 ? Volume1 : Volume2;
@@ -230,79 +248,79 @@ export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introS
   return (
     <div
       ref={containerRef}
-      className="video-player-container group relative rounded-xl overflow-hidden bg-black w-full aspect-video"
+      className="video-player-container group relative rounded-xl overflow-hidden bg-black aspect-video w-full"
       onMouseMove={handleMouseMove}
+      onMouseLeave={() => isPlaying && setShowControls(false)}
     >
       <video
         ref={videoRef}
         src={src}
+        poster={poster || undefined}
         className={cn(
-          "w-full h-full transition-all duration-300",
+          "w-full h-full bg-black transition-all duration-300",
           isStretched ? "object-fill" : "object-contain"
         )}
         onClick={togglePlay}
         playsInline
       />
 
+      {/* Loading & Error Overlays */}
+      {isLoading && !videoError && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/60">
+          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+        </div>
+      )}
+
       {/* Controls Overlay */}
       <div className={cn(
-        "absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40 transition-opacity duration-300 flex flex-col justify-end p-4",
-        showControls ? "opacity-100" : "opacity-0 pointer-events-none"
+        'absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent flex flex-col justify-end px-5 pb-4 pt-16 transition-all duration-300',
+        showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'
       )}>
-        {/* Progress */}
-        <div className="mb-4">
+        {/* Progress Bar */}
+        <div className="relative mb-4 group/progress">
           <Slider value={[progress]} onValueChange={handleSeek} max={100} step={0.1} />
         </div>
 
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="text-white" onClick={togglePlay}>
-              {isPlaying ? <Pause /> : <Play />}
+        <div className="flex items-center justify-between gap-3">
+          {/* Left Side */}
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="icon" className="text-white h-10 w-10" onClick={togglePlay}>
+              {isPlaying ? <Pause fill="currentColor" /> : <Play fill="currentColor" />}
             </Button>
-            <Button variant="ghost" size="icon" className="text-white" onClick={() => skip(-10)}><Rewind /></Button>
-            <Button variant="ghost" size="icon" className="text-white" onClick={() => skip(10)}><FastForward /></Button>
-            <Button variant="ghost" size="icon" className="text-white" onClick={toggleMute}><VolumeIcon /></Button>
-            <span className="text-white text-sm">{formatTime(currentTime)} / {formatTime(duration)}</span>
+            <Button variant="ghost" size="icon" className="text-white h-10 w-10" onClick={() => skip(-10)}><Rewind /></Button>
+            <Button variant="ghost" size="icon" className="text-white h-10 w-10" onClick={() => skip(10)}><FastForward /></Button>
+            <Button variant="ghost" size="icon" className="text-white h-10 w-10" onClick={toggleMute}><VolumeIcon /></Button>
+            <span className="text-sm text-white/80 ml-3">{formatTime(currentTime)} / {formatTime(duration)}</span>
           </div>
 
-          <div className="flex items-center gap-1">
+          {/* Right Side */}
+          <div className="flex items-center gap-1 shrink-0">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="text-white"><Settings /></Button>
+                <Button variant="ghost" size="icon" className="text-white h-10 w-10"><Settings /></Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="bg-black text-white border-white/20">
-                {[0.5, 1, 1.5, 2].map(speed => (
-                  <DropdownMenuItem key={speed} onClick={() => changePlaybackSpeed(speed)}>
-                    {speed}x {playbackSpeed === speed && "✓"}
+              <DropdownMenuContent align="end" className="bg-black/90 text-white border-white/10">
+                <div className="px-3 py-2 text-xs font-semibold text-white/60 uppercase">Velocidade</div>
+                {[0.5, 0.75, 1, 1.25, 1.5, 2].map((speed) => (
+                  <DropdownMenuItem key={speed} onClick={() => changePlaybackSpeed(speed)} className={cn(playbackSpeed === speed && 'text-primary')}>
+                    {speed === 1 ? 'Normal' : `${speed}x`}
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <Button variant="ghost" size="icon" className={cn("text-white", isPiP && "text-primary")} onClick={togglePiP}>
-              <PictureInPicture2 />
+            <Button variant="ghost" size="icon" className={cn("text-white h-10 w-10", isPiP && "text-primary")} onClick={togglePiP}><PictureInPicture2 /></Button>
+            
+            <Button variant="ghost" size="icon" className={cn("text-white h-10 w-10", isStretched && "text-primary bg-primary/20")} onClick={toggleStretch}>
+              <Expand className="w-5 h-5" />
             </Button>
 
-            {/* BOTÃO ESTICAR CORRIGIDO */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className={cn("text-white", isStretched && "text-primary")}
-              onClick={toggleStretch}
-            >
-              <Expand />
-            </Button>
-
-            <Button variant="ghost" size="icon" className="text-white" onClick={toggleFullscreen}>
-              {isFullscreen ? <Minimize /> : <Maximize /> }
+            <Button variant="ghost" size="icon" className="text-white h-10 w-10" onClick={toggleFullscreen}>
+              {isFullscreen ? <Minimize /> : <Maximize />}
             </Button>
           </div>
         </div>
       </div>
-
-      {showSkipIntro && (
-        <Button className="absolute bottom-20 right-4" onClick={skipIntro}>Pular Abertura</Button>
-      )}
     </div>
   );
 }
