@@ -45,6 +45,7 @@ export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introS
   const [progress, setProgress] = useState(0);
   const [buffered, setBuffered] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [isTheater, setIsTheater] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
@@ -198,6 +199,9 @@ export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introS
       video.play();
     }
   };
+const toggleTheaterMode = () => {
+  setIsTheater((prev) => !prev);
+};
 
   const handleSeek = (value: number[]) => {
     const video = videoRef.current;
@@ -303,11 +307,17 @@ export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introS
   }
 
   return (
-    <div
-      ref={containerRef}
-      className="video-player-container group relative rounded-xl overflow-hidden bg-black"
-      onMouseMove={handleMouseMove}
-      onMouseLeave={() => isPlaying && setShowControls(false)}
+   <div
+  ref={containerRef}
+  className={cn(
+    'video-player-container group relative overflow-hidden bg-black transition-all duration-300',
+    isTheater
+      ? 'w-full h-[85vh] rounded-none'
+      : 'w-[830px] h-[560px] rounded-xl mx-auto'
+  )}
+>
+
+   
     >
       {/* Video Element */}
       <video
@@ -524,6 +534,22 @@ export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introS
             >
               <PictureInPicture2 className="w-5 h-5" />
             </Button>
+
+            {/* Theater Mode (Esticar tela) */}
+<Button
+  variant="ghost"
+  size="icon"
+  className="text-white hover:bg-white/15 h-10 w-10 rounded-full transition-all hover:scale-105"
+  onClick={toggleTheaterMode}
+  title={isTheater ? 'Modo normal' : 'Esticar tela'}
+>
+  {isTheater ? (
+    <Minimize className="w-5 h-5" />
+  ) : (
+    <Maximize className="w-5 h-5" />
+  )}
+</Button>
+
 
             {/* Fullscreen */}
             <Button
