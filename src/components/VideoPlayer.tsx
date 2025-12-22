@@ -128,9 +128,23 @@ export function VideoPlayer({ src, poster, title }: VideoPlayerProps) {
 };
 
 
-  const VolumeIcon =
-    isMuted || volume === 0 ? VolumeX : volume < 0.5 ? Volume1 : Volume2;
+  const handleVolumeChange = (value: number[]) => {
+    const video = videoRef.current;
+    if (!video) return;
 
+    const newVolume = value[0] / 100;
+    video.volume = newVolume;
+    setVolume(newVolume);
+    setIsMuted(newVolume === 0);
+  };
+
+  const toggleMute = () => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    video.muted = !isMuted;
+    setIsMuted(!isMuted);
+  };
   if (!src) {
     return (
       <div className="flex items-center justify-center h-64 bg-black text-white/60 rounded-xl">
