@@ -10,8 +10,16 @@ import {
   Crop,
   Settings,
 } from "lucide-react"
+
 import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu"
+
 import { cn } from "@/lib/utils"
 
 interface VideoPlayerProps {
@@ -40,6 +48,8 @@ export function VideoPlayer({ src, poster }: VideoPlayerProps) {
   const [previewX, setPreviewX] = useState(0)
   const [dragging, setDragging] = useState(false)
 
+  const [playbackRate, setPlaybackRate] = useState(1)
+
   /* ▶️ PLAY */
   const togglePlay = () => {
     if (!videoRef.current) return
@@ -55,7 +65,7 @@ export function VideoPlayer({ src, poster }: VideoPlayerProps) {
     videoRef.current.muted = muted
   }, [volume, muted])
 
-  /* ⏱️ TIME UPDATE */
+  /* ⏱️ TIME */
   useEffect(() => {
     const v = videoRef.current
     if (!v) return
@@ -75,31 +85,7 @@ export function VideoPlayer({ src, poster }: VideoPlayerProps) {
     }
   }, [])
 
-  /* 🧭 FULLSCREEN */
-  const toggleFullscreen = () => {
-    if (!containerRef.current) return
-    !document.fullscreenElement
-      ? containerRef.current.requestFullscreen()
-      : document.exitFullscreen()
-  }
-
-  useEffect(() => {
-    const fn = () => setFullscreen(!!document.fullscreenElement)
-    document.addEventListener("fullscreenchange", fn)
-    return () => document.removeEventListener("fullscreenchange", fn)
-  }, [])
-
-  /* 🖼️ BIG PICTURE */
-  const togglePiP = async () => {
-    if (!videoRef.current) return
-    if (document.pictureInPictureElement) {
-      await document.exitPictureInPicture()
-    } else if (document.pictureInPictureEnabled) {
-      await videoRef.current.requestPictureInPicture()
-    }
-  }
-
-  /* ⏱️ FORMATADOR COM HORAS */
+  /* ⏱️ FORMATADOR */
   const formatTime = (t: number) => {
     if (!isFinite(t)) return "0:00"
     const h = Math.floor(t / 3600)
@@ -114,7 +100,31 @@ export function VideoPlayer({ src, poster }: VideoPlayerProps) {
     return `${m}:${s.toString().padStart(2, "0")}`
   }
 
-  /* 📌 POSIÇÃO NA TIMELINE */
+  /* 🧭 FULLSCREEN */
+  const toggleFullscreen = () => {
+    if (!containerRef.current) return
+    !document.fullscreenElement
+      ? containerRef.current.requestFullscreen()
+      : document.exitFullscreen()
+  }
+
+  useEffect(() => {
+    const fn = () => setFullscreen(!!document.fullscreenElement)
+    document.addEventListener("fullscreenchange", fn)
+    return () => document.removeEventListener("fullscreenchange", fn)
+  }, [])
+
+  /* 🖼️ PiP */
+  const togglePiP = async () => {
+    if (!videoRef.current) return
+    if (document.pictureInPictureElement) {
+      await document.exitPictureInPicture()
+    } else if (document.pictureInPictureEnabled) {
+      await videoRef.current.requestPictureInPicture()
+    }
+  }
+
+  /* 🎯 TIMELINE */
   const getTimeFromEvent = (e: React.MouseEvent) => {
     if (!timelineRef.current) return 0
     const rect = timelineRef.current.getBoundingClientRect()
@@ -122,8 +132,7 @@ export function VideoPlayer({ src, poster }: VideoPlayerProps) {
     return (x / rect.width) * duration
   }
 
-  /* 🖼️ PREVIEW */
-  const onMoveTimeline = (e: React.MouseEvent) => {
+  const handleMove = (e: React.MouseEvent) => {
     if (!previewRef.current || !videoRef.current) return
 
     const time = getTimeFromEvent(e)
@@ -139,35 +148,27 @@ export function VideoPlayer({ src, poster }: VideoPlayerProps) {
   }
 
   return (
-    <div
-      ref={containerRef}
-      className="relative w-full bg-black rounded-xl overflow-hidden"
-    >
-      {/* VIDEO */}
+    <div ref={containerRef} className="relative w-full bg-black rounded-xl overflow-hidden">
       <video
         ref={videoRef}
         src={src}
         poster={poster}
-        className={cn(
-          "w-full h-full",
-          fill ? "object-cover" : "object-contain"
-        )}
+        className={cn("w-full h-full", fill ? "object-cover" : "object-contain")}
         onPlay={() => setPlaying(true)}
         onPause={() => setPlaying(false)}
         playsInline
       />
 
-      {/* CONTROLES */}
       <div className="absolute bottom-0 w-full px-4 pb-3 pt-10 bg-gradient-to-t from-black/90 via-black/60 to-transparent">
 
         {/* TIMELINE */}
         <div
           ref={timelineRef}
           className="relative mb-3"
-          onMouseMove={onMoveTimeline}
+          onMouseMove={handleMove}
+          onMouseEnter={handleMove}
           onMouseLeave={() => {
-            setPreviewTime(null)
-            setDragging(false)
+            if (!dragging) setPreviewTime(null)
           }}
           onMouseDown={e => {
             setDragging(true)
@@ -175,17 +176,19 @@ export function VideoPlayer({ src, poster }: VideoPlayerProps) {
               videoRef.current.currentTime = getTimeFromEvent(e)
             }
           }}
-          onMouseUp={() => setDragging(false)}
+          onMouseUp={() => {
+            setDragging(false)
+            setPreviewTime(null)
+          }}
         >
-          {/* PREVIEW */}
           {previewTime !== null && (
             <div
               style={{
                 position: "absolute",
-                left: previewX - 60,
+                left: previewX - 55,
                 bottom: 22,
-                width: 120,
-                height: 68,
+                width: 110,
+                height: 62,
                 background: "black",
                 borderRadius: 6,
                 overflow: "hidden",
@@ -197,26 +200,15 @@ export function VideoPlayer({ src, poster }: VideoPlayerProps) {
                 src={src}
                 muted
                 playsInline
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "cover",
-                }}
+                style={{ width: "100%", height: "100%", objectFit: "cover" }}
               />
             </div>
           )}
 
-          <Slider
-            value={[progress]}
-            step={0.1}
-            onValueChange={v => {
-              if (!videoRef.current) return
-              videoRef.current.currentTime = (v[0] / 100) * duration
-            }}
-          />
+          <Slider value={[progress]} step={0.1} />
         </div>
 
-        {/* BARRA INFERIOR */}
+        {/* CONTROLES */}
         <div className="flex items-center justify-between text-white">
 
           {/* ESQUERDA */}
@@ -229,11 +221,7 @@ export function VideoPlayer({ src, poster }: VideoPlayerProps) {
               {formatTime(current)} / {formatTime(duration)}
             </span>
 
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={() => setMuted(!muted)}
-            >
+            <Button size="icon" variant="ghost" onClick={() => setMuted(!muted)}>
               {muted ? <VolumeX /> : <Volume2 />}
             </Button>
 
@@ -248,9 +236,33 @@ export function VideoPlayer({ src, poster }: VideoPlayerProps) {
 
           {/* DIREITA */}
           <div className="flex items-center gap-1">
-            <Button size="icon" variant="ghost">
-              <Settings />
-            </Button>
+
+            {/* CONFIG */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="icon" variant="ghost">
+                  <Settings />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {[0.5, 1, 1.25, 1.5, 2].map(rate => (
+                  <DropdownMenuItem
+                    key={rate}
+                    onClick={() => {
+                      if (videoRef.current) {
+                        videoRef.current.playbackRate = rate
+                        setPlaybackRate(rate)
+                      }
+                    }}
+                    className={cn(
+                      playbackRate === rate && "text-red-500 font-semibold"
+                    )}
+                  >
+                    {rate}x
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             <Button size="icon" variant="ghost" onClick={togglePiP}>
               <PictureInPicture2 />
