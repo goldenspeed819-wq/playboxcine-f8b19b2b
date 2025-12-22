@@ -15,7 +15,6 @@ import {
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { Slider } from '@/components/ui/slider';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -48,24 +47,28 @@ export function VideoPlayer({ src, poster }: VideoPlayerProps) {
 
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
 
-  /* 🔥 Tela esticada (preencher sem bordas) */
-  const [isFillMode, setIsFillMode] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return false;
-    return localStorage.getItem('video-fill-mode') === 'true';
-  });
+  const [isFillMode, setIsFillMode] = useState(
+    typeof window !== 'undefined' &&
+      localStorage.getItem('video-fill-mode') === 'true'
+  );
+
+  const [hoverTime, setHoverTime] = useState<number | null>(null);
+  const [hoverX, setHoverX] = useState(0);
+  const [isScrubbing, setIsScrubbing] = useState(false);
+
+  /* ---------------- EFFECTS ---------------- */
 
   useEffect(() => {
     localStorage.setItem('video-fill-mode', String(isFillMode));
   }, [isFillMode]);
 
-  /* 🔄 Atualização de tempo */
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
 
     const update = () => {
       setCurrentTime(video.currentTime);
-      setProgress((video.currentTime / video.duration) * 100 || 0);
+      setProgress((video.currentTime / video.duration) * 100);
     };
 
     const loaded = () => {
@@ -82,12 +85,13 @@ export function VideoPlayer({ src, poster }: VideoPlayerProps) {
     };
   }, [src]);
 
-  /* 🖥 Fullscreen */
   useEffect(() => {
     const fs = () => setIsFullscreen(!!document.fullscreenElement);
     document.addEventListener('fullscreenchange', fs);
     return () => document.removeEventListener('fullscreenchange', fs);
   }, []);
+
+  /* ---------------- FUNÇÕES ---------------- */
 
   const togglePlay = () => {
     if (!videoRef.current) return;
@@ -104,51 +108,49 @@ export function VideoPlayer({ src, poster }: VideoPlayerProps) {
 
   const togglePiP = async () => {
     if (!videoRef.current) return;
-    if (document.pictureInPictureElement) {
-      await document.exitPictureInPicture();
-      setIsPiP(false);
-    } else if (document.pictureInPictureEnabled) {
-      await videoRef.current.requestPictureInPicture();
-      setIsPiP(true);
-    }
+    document.pictureInPictureElement
+      ? document.exitPictureInPicture()
+      : videoRef.current.requestPictureInPicture();
+    setIsPiP(!isPiP);
   };
 
-  const toggleFillMode = () => setIsFillMode(v => !v);
+  const toggleFillMode = () => setIsFillMode(prev => !prev);
 
-  /* ⏱ Tempo correto (horas após 59 min) */
-  const formatTime = (time: number) => {
-    if (!Number.isFinite(time)) return '0:00';
+  const getTimeFromEvent = (
+    e: React.MouseEvent | React.TouchEvent,
+    element: HTMLDivElement
+  ) => {
+    const rect = element.getBoundingClientRect();
+    const clientX =
+      'touches' in e ? e.touches[0].clientX : e.clientX;
+    const x = Math.min(Math.max(clientX - rect.left, 0), rect.width);
+    return { time: (x / rect.width) * duration, x };
+  };
 
-    const hours = Math.floor(time / 3600);
-    const minutes = Math.floor((time % 3600) / 60);
-    const seconds = Math.floor(time % 60);
-
-    if (hours > 0) {
-      return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds
-        .toString()
-        .padStart(2, '0')}`;
-    }
-
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  const formatTime = (t: number) => {
+    if (!isFinite(t)) return '0:00';
+    const h = Math.floor(t / 3600);
+    const m = Math.floor((t % 3600) / 60);
+    const s = Math.floor(t % 60);
+    return h > 0
+      ? `${h}:${m.toString().padStart(2, '0')}:${s
+          .toString()
+          .padStart(2, '0')}`
+      : `${m}:${s.toString().padStart(2, '0')}`;
   };
 
   const VolumeIcon =
     isMuted || volume === 0 ? VolumeX : volume < 0.5 ? Volume1 : Volume2;
 
-  if (!src) {
-    return (
-      <div className="flex items-center justify-center h-64 bg-black text-white/60 rounded-xl">
-        Nenhum vídeo disponível
-      </div>
-    );
-  }
+  if (!src) return null;
+
+  /* ---------------- RENDER ---------------- */
 
   return (
     <div
       ref={containerRef}
-      className="relative w-full max-h-[70vh] bg-black overflow-hidden rounded-xl"
+      className="relative w-full aspect-video bg-black rounded-xl overflow-hidden"
     >
-      {/* VIDEO */}
       <video
         ref={videoRef}
         src={src}
@@ -161,128 +163,130 @@ export function VideoPlayer({ src, poster }: VideoPlayerProps) {
         playsInline
       />
 
-      {/* LOADING */}
-      {isLoading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/60">
-          <div className="w-10 h-10 border-4 border-white border-t-transparent rounded-full animate-spin" />
+      {/* TIMELINE */}
+      <div className="absolute bottom-20 left-4 right-4">
+        <div
+          className="relative h-1.5 bg-white/30 rounded cursor-pointer"
+          onMouseDown={e => {
+            setIsScrubbing(true);
+            const { time } = getTimeFromEvent(e, e.currentTarget);
+            videoRef.current!.currentTime = time;
+          }}
+          onMouseMove={e => {
+            const { time, x } = getTimeFromEvent(e, e.currentTarget);
+            setHoverTime(time);
+            setHoverX(x);
+            if (isScrubbing) videoRef.current!.currentTime = time;
+          }}
+          onMouseUp={() => setIsScrubbing(false)}
+          onMouseLeave={() => {
+            setHoverTime(null);
+            setIsScrubbing(false);
+          }}
+        >
+          <div
+            className="absolute h-full bg-red-500 rounded"
+            style={{ width: `${progress}%` }}
+          />
+
+          {/* PREVIEW PEQUENO */}
+          {hoverTime !== null && (
+            <>
+              <div
+                className="absolute -top-7 px-2 py-0.5 text-xs bg-black text-white rounded"
+                style={{ left: hoverX, transform: 'translateX(-50%)' }}
+              >
+                {formatTime(hoverTime)}
+              </div>
+              <div
+                className="absolute top-[-4px] bottom-[-4px] w-[1.5px] bg-white"
+                style={{ left: hoverX }}
+              />
+            </>
+          )}
         </div>
-      )}
+      </div>
 
       {/* CONTROLES */}
-      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent px-4 pb-3 pt-12">
-        {/* PROGRESSO */}
-        <Slider
-          value={[progress]}
-          max={100}
-          step={0.1}
-          onValueChange={v => {
-            if (!videoRef.current) return;
-            videoRef.current.currentTime = (v[0] / 100) * duration;
-          }}
-        />
+      <div className="absolute bottom-0 left-0 right-0 flex items-center justify-between px-4 py-3 bg-gradient-to-t from-black/90">
+        <div className="flex items-center gap-2 text-white">
+          <Button size="icon" variant="ghost" onClick={togglePlay}>
+            {isPlaying ? <Pause /> : <Play />}
+          </Button>
 
-        <div className="flex items-center justify-between mt-3">
-          {/* ESQUERDA */}
-          <div className="flex items-center gap-3 text-white">
-            <Button size="icon" variant="ghost" onClick={togglePlay}>
-              {isPlaying ? <Pause /> : <Play />}
-            </Button>
+          <Button size="icon" variant="ghost" onClick={() => (videoRef.current!.currentTime -= 10)}>
+            <Rewind />
+          </Button>
 
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={() => (videoRef.current!.currentTime -= 10)}
-            >
-              <Rewind />
-            </Button>
+          <Button size="icon" variant="ghost" onClick={() => (videoRef.current!.currentTime += 10)}>
+            <FastForward />
+          </Button>
 
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={() => (videoRef.current!.currentTime += 10)}
-            >
-              <FastForward />
-            </Button>
+          <Button size="icon" variant="ghost" onClick={() => setIsMuted(!isMuted)}>
+            <VolumeIcon />
+          </Button>
 
-            <span className="text-sm text-white/80 min-w-[110px]">
-              {formatTime(currentTime)} / {formatTime(duration)}
-            </span>
+          <input
+            type="range"
+            min={0}
+            max={1}
+            step={0.01}
+            value={isMuted ? 0 : volume}
+            onChange={e => {
+              const v = Number(e.target.value);
+              setVolume(v);
+              videoRef.current!.volume = v;
+              setIsMuted(v === 0);
+            }}
+            className="w-20"
+          />
 
-            {/* VOLUME */}
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={() => setIsMuted(v => !v)}
-            >
-              <VolumeIcon />
-            </Button>
+          <span className="text-sm">
+            {formatTime(currentTime)} / {formatTime(duration)}
+          </span>
+        </div>
 
-            <div className="w-24">
-              <Slider
-                value={[isMuted ? 0 : volume * 100]}
-                max={100}
-                step={1}
-                onValueChange={v => {
-                  if (!videoRef.current) return;
-                  const vol = v[0] / 100;
-                  setVolume(vol);
-                  videoRef.current.volume = vol;
-                  setIsMuted(vol === 0);
-                }}
-              />
-            </div>
-          </div>
+        <div className="flex items-center gap-1 text-white">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="icon" variant="ghost">
+                <Settings />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {[0.5, 1, 1.25, 1.5, 2].map(speed => (
+                <DropdownMenuItem
+                  key={speed}
+                  className={cn(
+                    playbackSpeed === speed && 'text-red-500 font-bold'
+                  )}
+                  onClick={() => {
+                    videoRef.current!.playbackRate = speed;
+                    setPlaybackSpeed(speed);
+                  }}
+                >
+                  {speed}x
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
 
-          {/* DIREITA */}
-          <div className="flex items-center gap-1 text-white">
-            {/* VELOCIDADE */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button size="icon" variant="ghost">
-                  <Settings />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {[0.5, 1, 1.25, 1.5, 2].map(speed => (
-                  <DropdownMenuItem
-                    key={speed}
-                    onClick={() => {
-                      if (!videoRef.current) return;
-                      videoRef.current.playbackRate = speed;
-                      setPlaybackSpeed(speed);
-                    }}
-                    className={cn(
-                      playbackSpeed === speed &&
-                        'text-red-500 bg-red-500/15 font-semibold'
-                    )}
-                  >
-                    {speed}x
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+          <Button size="icon" variant="ghost" onClick={togglePiP}>
+            <PictureInPicture2 />
+          </Button>
 
-            {/* PiP */}
-            <Button size="icon" variant="ghost" onClick={togglePiP}>
-              <PictureInPicture2 />
-            </Button>
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={toggleFillMode}
+            className={cn(isFillMode && 'text-red-500')}
+          >
+            <Crop />
+          </Button>
 
-            {/* TELA ESTICADA */}
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={toggleFillMode}
-              title="Tela Esticada"
-              className={cn(isFillMode && 'text-primary bg-primary/20')}
-            >
-              <Crop />
-            </Button>
-
-            {/* FULLSCREEN */}
-            <Button size="icon" variant="ghost" onClick={toggleFullscreen}>
-              {isFullscreen ? <Minimize /> : <Maximize />}
-            </Button>
-          </div>
+          <Button size="icon" variant="ghost" onClick={toggleFullscreen}>
+            {isFullscreen ? <Minimize /> : <Maximize />}
+          </Button>
         </div>
       </div>
     </div>
