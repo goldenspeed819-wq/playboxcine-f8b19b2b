@@ -47,6 +47,7 @@ export function VideoPlayer({ src, poster }: VideoPlayerProps) {
   const [showPreview, setShowPreview] = useState(false);
   const [hoverTime, setHoverTime] = useState(0);
   const [hoverX, setHoverX] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -74,30 +75,6 @@ export function VideoPlayer({ src, poster }: VideoPlayerProps) {
     return () => document.removeEventListener('fullscreenchange', fs);
   }, []);
 
-  const togglePlay = () => {
-    if (!videoRef.current) return;
-    isPlaying ? videoRef.current.pause() : videoRef.current.play();
-    setIsPlaying(!isPlaying);
-  };
-
-  const toggleFullscreen = () => {
-    if (!containerRef.current) return;
-    !isFullscreen
-      ? containerRef.current.requestFullscreen()
-      : document.exitFullscreen();
-  };
-
-  const togglePiP = async () => {
-    if (!videoRef.current) return;
-    if (document.pictureInPictureElement) {
-      await document.exitPictureInPicture();
-      setIsPiP(false);
-    } else {
-      await videoRef.current.requestPictureInPicture();
-      setIsPiP(true);
-    }
-  };
-
   const formatTime = (t: number) => {
     if (!isFinite(t)) return '0:00';
     const h = Math.floor(t / 3600);
@@ -110,7 +87,26 @@ export function VideoPlayer({ src, poster }: VideoPlayerProps) {
       : `${m}:${s.toString().padStart(2, '0')}`;
   };
 
-  const VolumeIcon = isMuted || volume === 0 ? VolumeX : Volume2;
+  const seekWithPointer = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!videoRef.current) return;
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const percent = Math.min(
+      Math.max((e.clientX - rect.left) / rect.width, 0),
+      1
+    );
+
+    const time = percent * duration;
+
+    videoRef.current.currentTime = time;
+    setProgress(percent * 100);
+    setHoverTime(time);
+    setHoverX(e.clientX - rect.left);
+
+    if (previewRef.current) {
+      previewRef.current.currentTime = time;
+    }
+  };
 
   if (!src) return null;
 
@@ -128,7 +124,13 @@ export function VideoPlayer({ src, poster }: VideoPlayerProps) {
           'w-full h-full',
           isFillMode ? 'object-cover' : 'object-contain'
         )}
-        onClick={togglePlay}
+        onClick={() => {
+          if (!videoRef.current) return;
+          isPlaying
+            ? videoRef.current.pause()
+            : videoRef.current.play();
+          setIsPlaying(!isPlaying);
+        }}
         playsInline
       />
 
@@ -137,28 +139,29 @@ export function VideoPlayer({ src, poster }: VideoPlayerProps) {
         {/* TIMELINE */}
         <div
           className="relative"
-          onMouseEnter={() => setShowPreview(true)}
-          onMouseLeave={() => setShowPreview(false)}
-          onTouchStart={() => setShowPreview(true)}
-          onTouchEnd={() => setShowPreview(false)}
+          onPointerDown={e => {
+            setIsDragging(true);
+            setShowPreview(true);
+            seekWithPointer(e);
+          }}
+          onPointerMove={e => {
+            if (!isDragging) return;
+            seekWithPointer(e);
+          }}
+          onPointerUp={() => {
+            setIsDragging(false);
+            setShowPreview(false);
+          }}
+          onPointerLeave={() => {
+            setIsDragging(false);
+            setShowPreview(false);
+          }}
         >
           <Slider
             value={[progress]}
             max={100}
             step={0.1}
-            onValueChange={v => {
-              if (!videoRef.current) return;
-              videoRef.current.currentTime = (v[0] / 100) * duration;
-            }}
-            onPointerMove={e => {
-              const rect = e.currentTarget.getBoundingClientRect();
-              const percent = (e.clientX - rect.left) / rect.width;
-              const time = percent * duration;
-              setHoverTime(time);
-              setHoverX(e.clientX - rect.left);
-              if (previewRef.current)
-                previewRef.current.currentTime = time;
-            }}
+            onValueChange={() => {}}
             className="
               [&_.range]:bg-red-500
               [&_.track]:bg-neutral-700
@@ -166,18 +169,20 @@ export function VideoPlayer({ src, poster }: VideoPlayerProps) {
             "
           />
 
+          {/* PREVIEW — TAMANHO CONTROLADO */}
           {showPreview && (
             <div
-              className="absolute -top-24 pointer-events-none"
-              style={{ left: hoverX - 60 }}
+              className="absolute -top-20 pointer-events-none"
+              style={{ left: hoverX - 56 }}
             >
               <video
                 ref={previewRef}
                 src={src}
                 muted
-                className="w-28 h-16 object-cover rounded-md border border-white/20"
+                preload="metadata"
+                className="w-[112px] h-[64px] object-cover rounded-md border border-white/20"
               />
-              <div className="text-xs text-white text-center mt-1">
+              <div className="text-[11px] text-white text-center mt-1">
                 {formatTime(hoverTime)}
               </div>
             </div>
@@ -188,7 +193,7 @@ export function VideoPlayer({ src, poster }: VideoPlayerProps) {
         <div className="flex items-center justify-between mt-3 text-white">
           {/* ESQUERDA */}
           <div className="flex items-center gap-2">
-            <Button size="icon" variant="ghost" onClick={togglePlay}>
+            <Button size="icon" variant="ghost">
               {isPlaying ? <Pause /> : <Play />}
             </Button>
 
@@ -208,7 +213,8 @@ export function VideoPlayer({ src, poster }: VideoPlayerProps) {
               <FastForward />
             </Button>
 
-            <VolumeIcon />
+            {isMuted || volume === 0 ? <VolumeX /> : <Volume2 />}
+
             <Slider
               value={[volume * 100]}
               max={100}
@@ -259,7 +265,7 @@ export function VideoPlayer({ src, poster }: VideoPlayerProps) {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <Button size="icon" variant="ghost" onClick={togglePiP}>
+            <Button size="icon" variant="ghost">
               <PictureInPicture2 />
             </Button>
 
@@ -272,7 +278,7 @@ export function VideoPlayer({ src, poster }: VideoPlayerProps) {
               <Crop />
             </Button>
 
-            <Button size="icon" variant="ghost" onClick={toggleFullscreen}>
+            <Button size="icon" variant="ghost">
               {isFullscreen ? <Minimize /> : <Maximize />}
             </Button>
           </div>
