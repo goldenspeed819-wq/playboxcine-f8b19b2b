@@ -142,7 +142,7 @@ export function VideoPlayer({ src, poster }: { src: string; poster?: string }) {
     <div
       ref={containerRef}
       className="relative bg-black rounded-xl overflow-hidden"
-      style={{ width: 640, height: 400 }}
+      style={{ width: 970, height: 400 }}
     >
       <video
         ref={videoRef}
