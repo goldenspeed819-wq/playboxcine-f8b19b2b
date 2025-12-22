@@ -1,178 +1,192 @@
-import { useEffect, useRef, useState } from "react";
+import { useState, useRef, useEffect } from 'react';
 import {
   Play,
   Pause,
+  Volume2,
+  VolumeX,
+  Volume1,
   Maximize,
   Minimize,
   Settings,
+  SkipBack,
+  SkipForward,
+  ChevronRight,
   PictureInPicture2,
-  Volume2,
-  VolumeX,
-  RotateCcw,
-  RotateCw,
+  Rewind,
+  FastForward,
+  AlertCircle,
   RectangleHorizontal,
-} from "lucide-react";
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Slider } from '@/components/ui/slider';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { cn } from '@/lib/utils';
 
-export default function VideoPlayer() {
+interface VideoPlayerProps {
+  src: string | null;
+  poster?: string | null;
+  title?: string;
+  subtitleUrl?: string | null;
+  nextLabel?: string;
+  onNextClick?: () => void;
+  introStartTime?: number | null;
+  introEndTime?: number | null;
+}
+
+export function VideoPlayer({
+  src,
+  poster,
+  title,
+  nextLabel,
+  onNextClick,
+  introStartTime,
+  introEndTime,
+}: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const [isTheater, setIsTheater] = useState(false);
-  const [showControls, setShowControls] = useState(true);
+  const [progress, setProgress] = useState(0);
+  const [buffered, setBuffered] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isPiP, setIsPiP] = useState(false);
+  const [showControls, setShowControls] = useState(true);
+  const [playbackSpeed, setPlaybackSpeed] = useState(1);
+  const [videoError, setVideoError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // ⏱ esconder controles após 4s
+  /* ✅ ESTICAR TELA */
+  const [isStretched, setIsStretched] = useState(false);
+  const toggleStretch = () => {
+    setIsStretched(prev => !prev);
+  };
+
   useEffect(() => {
-    if (!showControls) return;
-    const timer = setTimeout(() => setShowControls(false), 4000);
-    return () => clearTimeout(timer);
-  }, [showControls]);
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
 
-  // ▶️ Play / Pause
   const togglePlay = () => {
-    if (!videoRef.current) return;
-    if (videoRef.current.paused) {
-      videoRef.current.play();
-      setIsPlaying(true);
-    } else {
-      videoRef.current.pause();
-      setIsPlaying(false);
-    }
+    const video = videoRef.current;
+    if (!video) return;
+    isPlaying ? video.pause() : video.play();
   };
 
-  // ⛶ Fullscreen
   const toggleFullscreen = () => {
-    if (!containerRef.current) return;
-    if (!document.fullscreenElement) {
-      containerRef.current.requestFullscreen();
-      setIsFullscreen(true);
-    } else {
-      document.exitFullscreen();
-      setIsFullscreen(false);
-    }
+    const container = containerRef.current;
+    if (!container) return;
+    !isFullscreen ? container.requestFullscreen() : document.exitFullscreen();
   };
 
-  // ▭ Esticar tela (modo cinema)
-  const toggleTheaterMode = () => {
-    setIsTheater((prev) => !prev);
-  };
-
-  // 📺 Picture in Picture
   const togglePiP = async () => {
-    if (!videoRef.current) return;
+    const video = videoRef.current;
+    if (!video) return;
     if (document.pictureInPictureElement) {
       await document.exitPictureInPicture();
-    } else {
-      await videoRef.current.requestPictureInPicture();
+    } else if (document.pictureInPictureEnabled) {
+      await video.requestPictureInPicture();
     }
   };
 
-  // 🔊 Volume
-  const toggleMute = () => {
-    if (!videoRef.current) return;
-    videoRef.current.muted = !isMuted;
-    setIsMuted(!isMuted);
+  const formatTime = (time: number) => {
+    if (!isFinite(time)) return '0:00';
+    const h = Math.floor(time / 3600);
+    const m = Math.floor((time % 3600) / 60);
+    const s = Math.floor(time % 60);
+    return h > 0
+      ? `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
+      : `${m}:${s.toString().padStart(2, '0')}`;
   };
+
+  if (!src) return null;
 
   return (
     <div
       ref={containerRef}
-      className={`relative bg-black select-none mx-auto ${
-        isTheater ? "w-full max-w-[1200px]" : "w-[830px]"
-      }`}
-      onMouseMove={() => setShowControls(true)}
+      className="relative bg-black rounded-xl overflow-hidden"
     >
+      {/* VIDEO */}
       <video
         ref={videoRef}
-        width={830}
-        height={560}
-        className="w-full h-auto"
-        src="/video.mp4"
+        src={src}
+        poster={poster || undefined}
+        className={cn(
+          'w-full h-full bg-black',
+          isStretched ? 'object-cover' : 'object-contain'
+        )}
         onClick={togglePlay}
+        playsInline
       />
 
       {/* CONTROLES */}
-      {showControls && (
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 flex items-center justify-between">
-          {/* ESQUERDA */}
-          <div className="flex items-center gap-3">
-            <button onClick={togglePlay}>
-              {isPlaying ? (
-                <Pause className="w-6 h-6 text-white animate-pulse" />
-              ) : (
-                <Play className="w-6 h-6 text-white animate-pulse" />
-              )}
-            </button>
-
-            <button
-              onClick={() =>
-                videoRef.current &&
-                (videoRef.current.currentTime -= 10)
-              }
-            >
-              <RotateCcw className="w-5 h-5 text-white" />
-            </button>
-
-            <button
-              onClick={() =>
-                videoRef.current &&
-                (videoRef.current.currentTime += 10)
-              }
-            >
-              <RotateCw className="w-5 h-5 text-white" />
-            </button>
-
-            <button onClick={toggleMute}>
-              {isMuted ? (
-                <VolumeX className="w-5 h-5 text-white" />
-              ) : (
-                <Volume2 className="w-5 h-5 text-white" />
-              )}
-            </button>
-
-            <input
-              type="range"
-              min={0}
-              max={1}
-              step={0.01}
-              value={volume}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                setVolume(v);
-                if (videoRef.current) videoRef.current.volume = v;
-              }}
-            />
+      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 px-4 pb-4 pt-14">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Button size="icon" variant="ghost" onClick={togglePlay}>
+              {isPlaying ? <Pause /> : <Play />}
+            </Button>
+            <span className="text-sm text-white/80">
+              {formatTime(currentTime)} / {formatTime(duration)}
+            </span>
           </div>
 
-          {/* DIREITA */}
-          <div className="flex items-center gap-3">
-            <button title="Configurações">
-              <Settings className="w-5 h-5 text-white" />
-            </button>
+          <div className="flex items-center gap-1">
+            {/* CONFIG */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="icon" variant="ghost">
+                  <Settings />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {[0.5, 1, 1.25, 1.5, 2].map(speed => (
+                  <DropdownMenuItem key={speed} onClick={() => {
+                    if (videoRef.current) {
+                      videoRef.current.playbackRate = speed;
+                      setPlaybackSpeed(speed);
+                    }
+                  }}>
+                    {speed}x
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
 
-            <button onClick={togglePiP} title="Modo Picture-in-Picture">
-              <PictureInPicture2 className="w-5 h-5 text-white" />
-            </button>
+            {/* PiP */}
+            <Button size="icon" variant="ghost" onClick={togglePiP}>
+              <PictureInPicture2 />
+            </Button>
 
-            {/* BOTÃO ESTICAR TELA */}
-            <button onClick={toggleTheaterMode} title="Esticar tela">
-              <RectangleHorizontal className="w-5 h-5 text-white" />
-            </button>
+            {/* 🔥 ESTICAR TELA */}
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={toggleStretch}
+              title="Esticar tela"
+              className={cn(isStretched && 'text-primary bg-primary/20')}
+            >
+              <RectangleHorizontal />
+            </Button>
 
             {/* FULLSCREEN */}
-            <button onClick={toggleFullscreen} title="Tela cheia">
-              {isFullscreen ? (
-                <Minimize className="w-5 h-5 text-white" />
-              ) : (
-                <Maximize className="w-5 h-5 text-white" />
-              )}
-            </button>
+            <Button size="icon" variant="ghost" onClick={toggleFullscreen}>
+              {isFullscreen ? <Minimize /> : <Maximize />}
+            </Button>
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }
