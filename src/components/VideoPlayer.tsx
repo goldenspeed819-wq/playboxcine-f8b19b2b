@@ -8,11 +8,10 @@ import {
   Maximize,
   Minimize,
   Settings,
-  ChevronRight,
   PictureInPicture2,
   Rewind,
   FastForward,
-  AlertCircle,
+  Crop,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -45,7 +44,7 @@ export function VideoPlayer({ src, poster, title }: VideoPlayerProps) {
   const [isPiP, setIsPiP] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  /* 🔥 PREFILL (SEM BORDAS) — SALVO */
+  /* 🔥 PREENCHER TELA (SEM BORDAS) — preferência salva */
   const [isFillMode, setIsFillMode] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
     return localStorage.getItem('video-fill-mode') === 'true';
@@ -59,7 +58,7 @@ export function VideoPlayer({ src, poster, title }: VideoPlayerProps) {
     const video = videoRef.current;
     if (!video) return;
 
-    const timeUpdate = () => {
+    const update = () => {
       setCurrentTime(video.currentTime);
       setProgress((video.currentTime / video.duration) * 100);
     };
@@ -69,19 +68,19 @@ export function VideoPlayer({ src, poster, title }: VideoPlayerProps) {
       setIsLoading(false);
     };
 
-    video.addEventListener('timeupdate', timeUpdate);
+    video.addEventListener('timeupdate', update);
     video.addEventListener('loadedmetadata', loaded);
 
     return () => {
-      video.removeEventListener('timeupdate', timeUpdate);
+      video.removeEventListener('timeupdate', update);
       video.removeEventListener('loadedmetadata', loaded);
     };
   }, [src]);
 
   useEffect(() => {
-    const onFs = () => setIsFullscreen(!!document.fullscreenElement);
-    document.addEventListener('fullscreenchange', onFs);
-    return () => document.removeEventListener('fullscreenchange', onFs);
+    const fs = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', fs);
+    return () => document.removeEventListener('fullscreenchange', fs);
   }, []);
 
   const togglePlay = () => {
@@ -229,10 +228,10 @@ export function VideoPlayer({ src, poster, title }: VideoPlayerProps) {
               size="icon"
               variant="ghost"
               onClick={toggleFillMode}
-              title="Preencher tela"
-              className={isFillMode ? 'text-primary' : ''}
+              title={isFillMode ? 'Ajustar à proporção original' : 'Preencher a tela'}
+              className={cn(isFillMode && 'text-primary bg-primary/20')}
             >
-              {isFillMode ? <Minimize /> : <Maximize />}
+              <Crop className="w-5 h-5" />
             </Button>
 
             {/* FULLSCREEN */}
