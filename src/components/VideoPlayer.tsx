@@ -13,6 +13,12 @@ import {
   FastForward,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
 
 interface VideoPlayerProps {
@@ -24,6 +30,7 @@ export function VideoPlayer({ src, poster }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const timelineRef = useRef<HTMLDivElement>(null)
+  const hideTimer = useRef<NodeJS.Timeout | null>(null)
 
   const [playing, setPlaying] = useState(false)
   const [current, setCurrent] = useState(0)
@@ -33,6 +40,8 @@ export function VideoPlayer({ src, poster }: VideoPlayerProps) {
   const [fullscreen, setFullscreen] = useState(false)
   const [fill, setFill] = useState(false)
   const [dragging, setDragging] = useState(false)
+  const [showControls, setShowControls] = useState(true)
+  const [speed, setSpeed] = useState(1)
 
   /* ---------------- PLAY STATE REAL ---------------- */
   useEffect(() => {
@@ -51,7 +60,7 @@ export function VideoPlayer({ src, poster }: VideoPlayerProps) {
     }
   }, [])
 
-  /* ---------------- TIME UPDATE ---------------- */
+  /* ---------------- TIME ---------------- */
   useEffect(() => {
     const v = videoRef.current
     if (!v) return
@@ -75,9 +84,24 @@ export function VideoPlayer({ src, poster }: VideoPlayerProps) {
     return () => document.removeEventListener("fullscreenchange", f)
   }, [])
 
-  /* ---------------- KEYBOARD SHORTCUTS ---------------- */
+  /* ---------------- AUTO HIDE CONTROLS ---------------- */
+  const resetHideTimer = () => {
+    setShowControls(true)
+    if (hideTimer.current) clearTimeout(hideTimer.current)
+
+    hideTimer.current = setTimeout(() => {
+      if (playing && !dragging) setShowControls(false)
+    }, 4000)
+  }
+
+  useEffect(() => {
+    resetHideTimer()
+  }, [playing])
+
+  /* ---------------- KEYBOARD ---------------- */
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
+      resetHideTimer()
       if (!videoRef.current) return
 
       switch (e.key.toLowerCase()) {
@@ -130,6 +154,16 @@ export function VideoPlayer({ src, poster }: VideoPlayerProps) {
       : videoRef.current.requestPictureInPicture()
   }
 
+  const seek = (e: React.MouseEvent) => {
+    if (!timelineRef.current || !videoRef.current) return
+    const rect = timelineRef.current.getBoundingClientRect()
+    const percent = Math.min(
+      1,
+      Math.max(0, (e.clientX - rect.left) / rect.width)
+    )
+    videoRef.current.currentTime = percent * duration
+  }
+
   const format = (t: number) => {
     const h = Math.floor(t / 3600)
     const m = Math.floor((t % 3600) / 60)
@@ -141,27 +175,23 @@ export function VideoPlayer({ src, poster }: VideoPlayerProps) {
       : `${m}:${s.toString().padStart(2, "0")}`
   }
 
-  const seek = (e: React.MouseEvent) => {
-    if (!timelineRef.current || !videoRef.current) return
-    const rect = timelineRef.current.getBoundingClientRect()
-    const percent = (e.clientX - rect.left) / rect.width
-    videoRef.current.currentTime = percent * duration
-  }
-
-  const VolumeIcon = muted || volume === 0 ? VolumeX : Volume2
-
   useEffect(() => {
     if (videoRef.current) {
       videoRef.current.volume = volume
       videoRef.current.muted = muted
+      videoRef.current.playbackRate = speed
     }
-  }, [volume, muted])
+  }, [volume, muted, speed])
+
+  const VolumeIcon = muted || volume === 0 ? VolumeX : Volume2
 
   return (
     <div
       ref={containerRef}
       className="relative bg-black rounded-xl overflow-hidden"
       style={{ width: 830, height: 560 }}
+      onMouseMove={resetHideTimer}
+      onTouchStart={resetHideTimer}
     >
       {/* VIDEO */}
       <video
@@ -177,7 +207,12 @@ export function VideoPlayer({ src, poster }: VideoPlayerProps) {
       />
 
       {/* CONTROLS */}
-      <div className="absolute bottom-0 w-full px-4 pb-3 bg-gradient-to-t from-black/90 via-black/60 to-transparent">
+      <div
+        className={cn(
+          "absolute bottom-0 w-full px-4 pb-3 bg-gradient-to-t from-black/90 via-black/60 to-transparent transition-opacity duration-300",
+          !showControls && "opacity-0 pointer-events-none"
+        )}
+      >
         {/* TIMELINE */}
         <div
           ref={timelineRef}
@@ -235,6 +270,16 @@ export function VideoPlayer({ src, poster }: VideoPlayerProps) {
               <VolumeIcon />
             </Button>
 
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.01}
+              value={muted ? 0 : volume}
+              onChange={e => setVolume(Number(e.target.value))}
+              className="w-24 accent-red-600"
+            />
+
             <span className="text-sm">
               {format(current)} / {format(duration)}
             </span>
@@ -242,6 +287,27 @@ export function VideoPlayer({ src, poster }: VideoPlayerProps) {
 
           {/* RIGHT */}
           <div className="flex items-center gap-1">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="icon" variant="ghost">
+                  <Settings />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {[0.5, 1, 1.25, 1.5, 2].map(v => (
+                  <DropdownMenuItem
+                    key={v}
+                    onClick={() => setSpeed(v)}
+                    className={cn(
+                      speed === v && "text-red-500 font-semibold"
+                    )}
+                  >
+                    {v}x
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             <Button size="icon" variant="ghost" onClick={togglePiP}>
               <PictureInPicture2 />
             </Button>
