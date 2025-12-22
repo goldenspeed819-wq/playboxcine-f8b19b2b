@@ -8,14 +8,11 @@ import {
   Maximize,
   Minimize,
   Settings,
-  SkipBack,
-  SkipForward,
   ChevronRight,
   PictureInPicture2,
   Rewind,
   FastForward,
   AlertCircle,
-  RectangleHorizontal,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
@@ -31,7 +28,6 @@ interface VideoPlayerProps {
   src: string | null;
   poster?: string | null;
   title?: string;
-  subtitleUrl?: string | null;
   nextLabel?: string;
   onNextClick?: () => void;
   introStartTime?: number | null;
@@ -60,128 +56,216 @@ export function VideoPlayer({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isPiP, setIsPiP] = useState(false);
   const [showControls, setShowControls] = useState(true);
+  const [showNextButton, setShowNextButton] = useState(false);
+  const [showSkipIntro, setShowSkipIntro] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [videoError, setVideoError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  /* ✅ ESTICAR TELA */
+  /** 🔴 ÚNICA ADIÇÃO */
   const [isStretched, setIsStretched] = useState(false);
+
+  const controlsTimeoutRef = useRef<NodeJS.Timeout>();
+
+  useEffect(() => {
+    setVideoError(null);
+    setIsLoading(true);
+    setIsPlaying(false);
+    setProgress(0);
+    setCurrentTime(0);
+    setDuration(0);
+  }, [src]);
+
+  useEffect(() => {
+    if (introStartTime != null && introEndTime != null) {
+      setShowSkipIntro(currentTime >= introStartTime && currentTime < introEndTime);
+    }
+  }, [currentTime, introStartTime, introEndTime]);
+
+  useEffect(() => {
+    if (onNextClick && duration > 0) {
+      const percent = (currentTime / duration) * 100;
+      setShowNextButton(percent >= 90 || duration - currentTime <= 30);
+    }
+  }, [currentTime, duration, onNextClick]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const onTime = () => {
+      setCurrentTime(video.currentTime);
+      setProgress((video.currentTime / video.duration) * 100);
+    };
+
+    const onLoaded = () => {
+      setDuration(video.duration);
+      setIsLoading(false);
+    };
+
+    const onProgress = () => {
+      if (video.buffered.length > 0) {
+        setBuffered((video.buffered.end(0) / video.duration) * 100);
+      }
+    };
+
+    video.addEventListener('timeupdate', onTime);
+    video.addEventListener('loadedmetadata', onLoaded);
+    video.addEventListener('progress', onProgress);
+
+    return () => {
+      video.removeEventListener('timeupdate', onTime);
+      video.removeEventListener('loadedmetadata', onLoaded);
+      video.removeEventListener('progress', onProgress);
+    };
+  }, [src]);
+
+  useEffect(() => {
+    const onFs = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', onFs);
+    return () => document.removeEventListener('fullscreenchange', onFs);
+  }, []);
+
+  const togglePlay = () => {
+    const v = videoRef.current;
+    if (!v) return;
+    isPlaying ? v.pause() : v.play();
+  };
+
+  const handleSeek = (v: number[]) => {
+    if (!videoRef.current) return;
+    const t = (v[0] / 100) * duration;
+    videoRef.current.currentTime = t;
+    setProgress(v[0]);
+  };
+
+  const handleVolumeChange = (v: number[]) => {
+    if (!videoRef.current) return;
+    const vol = v[0] / 100;
+    videoRef.current.volume = vol;
+    setVolume(vol);
+    setIsMuted(vol === 0);
+  };
+
+  const toggleMute = () => {
+    if (!videoRef.current) return;
+    videoRef.current.muted = !isMuted;
+    setIsMuted(!isMuted);
+  };
+
+  const toggleFullscreen = () => {
+    if (!containerRef.current) return;
+    !isFullscreen
+      ? containerRef.current.requestFullscreen()
+      : document.exitFullscreen();
+  };
+
+  const togglePiP = async () => {
+    if (!videoRef.current) return;
+    document.pictureInPictureElement
+      ? document.exitPictureInPicture()
+      : videoRef.current.requestPictureInPicture();
+  };
+
+  /** 🔴 FUNÇÃO DO BOTÃO ESTICAR */
   const toggleStretch = () => {
     setIsStretched(prev => !prev);
   };
 
-  useEffect(() => {
-    const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
-    };
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
-  }, []);
+  const formatTime = (t: number) =>
+    `${Math.floor(t / 60)}:${Math.floor(t % 60)
+      .toString()
+      .padStart(2, '0')}`;
 
-  const togglePlay = () => {
-    const video = videoRef.current;
-    if (!video) return;
-    isPlaying ? video.pause() : video.play();
-  };
-
-  const toggleFullscreen = () => {
-    const container = containerRef.current;
-    if (!container) return;
-    !isFullscreen ? container.requestFullscreen() : document.exitFullscreen();
-  };
-
-  const togglePiP = async () => {
-    const video = videoRef.current;
-    if (!video) return;
-    if (document.pictureInPictureElement) {
-      await document.exitPictureInPicture();
-    } else if (document.pictureInPictureEnabled) {
-      await video.requestPictureInPicture();
-    }
-  };
-
-  const formatTime = (time: number) => {
-    if (!isFinite(time)) return '0:00';
-    const h = Math.floor(time / 3600);
-    const m = Math.floor((time % 3600) / 60);
-    const s = Math.floor(time % 60);
-    return h > 0
-      ? `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
-      : `${m}:${s.toString().padStart(2, '0')}`;
-  };
+  const VolumeIcon =
+    isMuted || volume === 0 ? VolumeX : volume < 0.5 ? Volume1 : Volume2;
 
   if (!src) return null;
 
   return (
     <div
       ref={containerRef}
-      className="relative bg-black rounded-xl overflow-hidden"
+      className="relative bg-black overflow-hidden rounded-xl"
+      onMouseMove={() => setShowControls(true)}
     >
-      {/* VIDEO */}
       <video
         ref={videoRef}
         src={src}
         poster={poster || undefined}
-        className={cn(
-          'w-full h-full bg-black',
-          isStretched ? 'object-cover' : 'object-contain'
-        )}
         onClick={togglePlay}
         playsInline
+        className="w-full h-full bg-black"
+        style={{ objectFit: isStretched ? 'cover' : 'contain' }}
       />
 
-      {/* CONTROLES */}
-      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 px-4 pb-4 pt-14">
-        <div className="flex items-center justify-between">
+      <div
+        className={cn(
+          'absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black',
+          !showControls && 'opacity-0 pointer-events-none'
+        )}
+      >
+        <Slider value={[progress]} onValueChange={handleSeek} />
+
+        <div className="flex justify-between items-center mt-3">
           <div className="flex items-center gap-2">
-            <Button size="icon" variant="ghost" onClick={togglePlay}>
+            <Button onClick={togglePlay} size="icon" variant="ghost">
               {isPlaying ? <Pause /> : <Play />}
             </Button>
-            <span className="text-sm text-white/80">
+
+            <Button onClick={() => toggleMute()} size="icon" variant="ghost">
+              <VolumeIcon />
+            </Button>
+
+            <Slider
+              value={[volume * 100]}
+              onValueChange={handleVolumeChange}
+              className="w-24"
+            />
+
+            <span className="text-white text-sm">
               {formatTime(currentTime)} / {formatTime(duration)}
             </span>
           </div>
 
-          <div className="flex items-center gap-1">
-            {/* CONFIG */}
+          <div className="flex items-center gap-2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button size="icon" variant="ghost">
                   <Settings />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {[0.5, 1, 1.25, 1.5, 2].map(speed => (
-                  <DropdownMenuItem key={speed} onClick={() => {
-                    if (videoRef.current) {
-                      videoRef.current.playbackRate = speed;
-                      setPlaybackSpeed(speed);
-                    }
-                  }}>
-                    {speed}x
+              <DropdownMenuContent>
+                {[0.5, 1, 1.5, 2].map(s => (
+                  <DropdownMenuItem
+                    key={s}
+                    onClick={() => {
+                      if (videoRef.current) {
+                        videoRef.current.playbackRate = s;
+                        setPlaybackSpeed(s);
+                      }
+                    }}
+                  >
+                    {s}x
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* PiP */}
-            <Button size="icon" variant="ghost" onClick={togglePiP}>
+            <Button onClick={togglePiP} size="icon" variant="ghost">
               <PictureInPicture2 />
             </Button>
 
-            {/* 🔥 ESTICAR TELA */}
+            {/* 🔴 BOTÃO ESTICAR TELA (ÚNICO ADICIONADO) */}
             <Button
+              onClick={toggleStretch}
               size="icon"
               variant="ghost"
-              onClick={toggleStretch}
               title="Esticar tela"
-              className={cn(isStretched && 'text-primary bg-primary/20')}
             >
-              <RectangleHorizontal />
+              <Minimize />
             </Button>
 
-            {/* FULLSCREEN */}
-            <Button size="icon" variant="ghost" onClick={toggleFullscreen}>
+            <Button onClick={toggleFullscreen} size="icon" variant="ghost">
               {isFullscreen ? <Minimize /> : <Maximize />}
             </Button>
           </div>
