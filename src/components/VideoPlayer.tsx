@@ -483,82 +483,62 @@ const toggleStretch = () => {
           </div>
 
           {/* Right Controls */}
-          <div className="flex items-center gap-1">
-            {/* Settings */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-white hover:bg-white/15 h-10 w-10 rounded-full transition-all hover:scale-105"
-                  title="Configurações"
-                >
-                  <Settings className="w-5 h-5" />
-                </Button>
-              </DropdownMenuTrigger>
+<div className="flex items-center gap-1 shrink-0"> {/* Adicionei shrink-0 para não espremer os botões */}
+  
+  {/* Settings */}
+  <DropdownMenu>
+    <DropdownMenuTrigger asChild>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="text-white hover:bg-white/15 h-10 w-10 rounded-full transition-all hover:scale-105"
+        title="Configurações"
+      >
+        <Settings className="w-5 h-5" />
+      </Button>
+      </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="bg-black/90 backdrop-blur-xl border-white/10 min-w-[160px] rounded-xl">
                 <div className="px-3 py-2 text-xs font-semibold text-white/60 uppercase tracking-wider">
                   Velocidade
                 </div>
                 {[0.5, 0.75, 1, 1.25, 1.5, 2].map((speed) => (
                   <DropdownMenuItem
-                    key={speed}
-                    onClick={() => changePlaybackSpeed(speed)}
-                    className={cn(
-                      'text-white/90 focus:bg-white/15 focus:text-white rounded-lg mx-1',
-                      playbackSpeed === speed && 'bg-primary/20 text-primary'
-                    )}
-                  >
-                    {speed === 1 ? 'Normal' : `${speed}x`}
-                    {playbackSpeed === speed && <span className="ml-auto text-primary">✓</span>}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+  {/* Picture-in-Picture */}
+  <Button
+    variant="ghost"
+    size="icon"
+    className={cn(
+      'text-white hover:bg-white/15 h-10 w-10 rounded-full transition-all hover:scale-105',
+      isPiP && 'text-primary bg-primary/20'
+    )}
+    onClick={togglePiP}
+    title="Picture-in-Picture"
+  >
+    <PictureInPicture2 className="w-5 h-5" />
+  </Button>
 
-            {/* Picture-in-Picture Mode */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className={cn(
-                'text-white hover:bg-white/15 h-10 w-10 rounded-full transition-all hover:scale-105',
-                isPiP && 'text-primary bg-primary/20'
-              )}
-              onClick={togglePiP}
-              title="Picture-in-Picture"
-            >
-              <PictureInPicture2 className="w-5 h-5" />
-            </Button>
-            <Button
-  variant="ghost"
-  size="icon"
-  className={cn(
-    "text-white hover:bg-white/15 h-10 w-10 rounded-full transition-all hover:scale-105",
-    isStretched && "text-primary bg-primary/20"
-  )}
-  onClick={toggleStretch}
-  title={isStretched ? "Restaurar proporção" : "Esticar vídeo"}
->
-  <Expand className="w-5 h-5" />
-</Button>
+  {/* BOTÃO ESTICAR - Verifique se o ícone Expand está importado no topo! */}
+  <Button
+    variant="ghost"
+    size="icon"
+    className={cn(
+      "text-white hover:bg-white/15 h-10 w-10 rounded-full transition-all hover:scale-105",
+      isStretched && "text-primary bg-primary/20"
+    )}
+    onClick={toggleStretch}
+    title={isStretched ? "Restaurar proporção" : "Esticar vídeo"}
+  >
+    <Expand className="w-5 h-5" />
+  </button>
 
-            {/* Fullscreen */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-white hover:bg-white/15 h-10 w-10 rounded-full transition-all hover:scale-105"
-              onClick={toggleFullscreen}
-              title={isFullscreen ? 'Sair da tela cheia' : 'Tela cheia'}
-            >
-              {isFullscreen ? (
-                <Minimize className="w-5 h-5" />
-              ) : (
-                <Maximize className="w-5 h-5" />
-              )}
-            </Button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+  {/* Fullscreen */}
+  <Button
+    variant="ghost"
+    size="icon"
+    className="text-white hover:bg-white/15 h-10 w-10 rounded-full transition-all hover:scale-105"
+    onClick={toggleFullscreen}
+    title={isFullscreen ? 'Sair da tela cheia' : 'Tela cheia'}
+  >
+    {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
+  </Button>
+</div>
