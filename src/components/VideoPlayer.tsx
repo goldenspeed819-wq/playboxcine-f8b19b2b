@@ -318,7 +318,7 @@ const toggleStretch = () => {
   ref={videoRef}
   src={src}
   poster={poster || undefined}
-  className={cn(  "w-full h-full bg-black transition-all duration-300",
+  className={cn(  "w-full h-420 bg-black transition-all duration-300",
     isStretched ? "object-fill" : "object-contain"
   )}
   onClick={togglePlay}
