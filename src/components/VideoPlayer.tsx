@@ -502,7 +502,8 @@ const toggleStretch = () => {
   Velocidade
   </div>
   {[0.5, 0.75, 1, 1.25, 1.5, 2].map((speed) => (
-  <DropdownMenuItem
+  <DropdownMenuItem></DropdownMenuItem>
+    
   {/* Picture-in-Picture */}
   <Button
     variant="ghost"
