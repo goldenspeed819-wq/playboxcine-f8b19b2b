@@ -15,7 +15,7 @@ import {
   Rewind,
   FastForward,
   AlertCircle,
-  Expand,
+  RectangleHorizontal,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
@@ -545,7 +545,7 @@ export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introS
               onClick={toggleStretch}
               title={isStretched ? 'Ajustar à tela' : 'Preencher tela'}
             >
-              <Expand className="w-5 h-5" />
+              <RectangleHorizontal className="w-5 h-5" />
             </Button>
 
             {/* Fullscreen */}
