@@ -8,15 +8,24 @@ import {
   Maximize,
   Minimize,
   Settings,
+  SkipBack,
+  SkipForward,
   ChevronRight,
   PictureInPicture2,
   Rewind,
   FastForward,
   AlertCircle,
-  RectangleHorizontal,
-  Square,
-  X,
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Slider } from '@/components/ui/slider';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu';
+import { cn } from '@/lib/utils';
 
 interface VideoPlayerProps {
   src: string | null;
@@ -32,9 +41,6 @@ interface VideoPlayerProps {
 export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introStartTime, introEndTime }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const progressRef = useRef<HTMLDivElement>(null);
-  const previewVideoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [buffered, setBuffered] = useState(0);
@@ -44,22 +50,15 @@ export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introS
   const [isMuted, setIsMuted] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isPiP, setIsPiP] = useState(false);
-  const [isStretched, setIsStretched] = useState(false);
   const [showControls, setShowControls] = useState(true);
   const [showNextButton, setShowNextButton] = useState(false);
   const [showSkipIntro, setShowSkipIntro] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
-  const [showSpeedMenu, setShowSpeedMenu] = useState(false);
-  const [showVolumeSlider, setShowVolumeSlider] = useState(false);
   const [videoError, setVideoError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [previewTime, setPreviewTime] = useState(0);
-  const [previewPosition, setPreviewPosition] = useState(0);
-  const [showPreview, setShowPreview] = useState(false);
-  const [previewImage, setPreviewImage] = useState<string | null>(null);
   const controlsTimeoutRef = useRef<NodeJS.Timeout>();
-  const previewTimeoutRef = useRef<NodeJS.Timeout>();
 
+  // Reset states when src changes
   useEffect(() => {
     setVideoError(null);
     setIsLoading(true);
@@ -192,6 +191,7 @@ export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introS
   const togglePlay = () => {
     const video = videoRef.current;
     if (!video) return;
+
     if (isPlaying) {
       video.pause();
     } else {
@@ -199,70 +199,29 @@ export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introS
     }
   };
 
-  const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
+  const handleSeek = (value: number[]) => {
     const video = videoRef.current;
     if (!video) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const percent = (e.clientX - rect.left) / rect.width;
-    const newTime = percent * duration;
+
+    const newTime = (value[0] / 100) * duration;
     video.currentTime = newTime;
-    setProgress(percent * 100);
+    setProgress(value[0]);
   };
 
-  const handleProgressHover = (e: React.MouseEvent<HTMLDivElement>) => {
-    const previewVideo = previewVideoRef.current;
-    const canvas = canvasRef.current;
-    const progressBar = progressRef.current;
-    if (!previewVideo || !canvas || !progressBar || !duration) return;
-
-    const rect = progressBar.getBoundingClientRect();
-    const percent = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-    const time = percent * duration;
-    
-    setPreviewTime(time);
-    setPreviewPosition(e.clientX - rect.left);
-    setShowPreview(true);
-
-    if (previewTimeoutRef.current) {
-      clearTimeout(previewTimeoutRef.current);
-    }
-    
-    previewTimeoutRef.current = setTimeout(() => {
-      previewVideo.currentTime = time;
-    }, 50);
-  };
-
-  const handleProgressLeave = () => {
-    setShowPreview(false);
-  };
-
-  const capturePreviewFrame = () => {
-    const previewVideo = previewVideoRef.current;
-    const canvas = canvasRef.current;
-    if (!previewVideo || !canvas) return;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    canvas.width = 160;
-    canvas.height = 90;
-    ctx.drawImage(previewVideo, 0, 0, 160, 90);
-    setPreviewImage(canvas.toDataURL());
-  };
-
-  const handleVolumeChange = (e: React.MouseEvent<HTMLDivElement>) => {
+  const handleVolumeChange = (value: number[]) => {
     const video = videoRef.current;
     if (!video) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const percent = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-    video.volume = percent;
-    setVolume(percent);
-    setIsMuted(percent === 0);
+
+    const newVolume = value[0] / 100;
+    video.volume = newVolume;
+    setVolume(newVolume);
+    setIsMuted(newVolume === 0);
   };
 
   const toggleMute = () => {
     const video = videoRef.current;
     if (!video) return;
+
     video.muted = !isMuted;
     setIsMuted(!isMuted);
   };
@@ -270,6 +229,7 @@ export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introS
   const toggleFullscreen = () => {
     const container = containerRef.current;
     if (!container) return;
+
     if (!isFullscreen) {
       container.requestFullscreen?.();
     } else {
@@ -277,13 +237,10 @@ export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introS
     }
   };
 
-  const toggleStretch = () => {
-    setIsStretched(!isStretched);
-  };
-
   const togglePiP = async () => {
     const video = videoRef.current;
     if (!video) return;
+
     try {
       if (document.pictureInPictureElement) {
         await document.exitPictureInPicture();
@@ -312,7 +269,6 @@ export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introS
     if (!video) return;
     video.playbackRate = speed;
     setPlaybackSpeed(speed);
-    setShowSpeedMenu(false);
   };
 
   const formatTime = (time: number) => {
@@ -320,6 +276,7 @@ export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introS
     const hours = Math.floor(time / 3600);
     const minutes = Math.floor((time % 3600) / 60);
     const seconds = Math.floor(time % 60);
+
     if (hours > 0) {
       return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     }
@@ -334,39 +291,12 @@ export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introS
 
   const VolumeIcon = getVolumeIcon();
 
-  const buttonStyle: React.CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 40,
-    height: 40,
-    borderRadius: '50%',
-    border: 'none',
-    background: 'transparent',
-    color: 'white',
-    cursor: 'pointer',
-    transition: 'all 0.2s',
-  };
-
-  const activeButtonStyle: React.CSSProperties = {
-    ...buttonStyle,
-    background: 'rgba(99, 102, 241, 0.3)',
-    color: '#818cf8',
-  };
-
   if (!src) {
     return (
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'rgba(0,0,0,0.9)',
-        borderRadius: 12,
-        aspectRatio: '16/9',
-      }}>
-        <div style={{ textAlign: 'center' }}>
-          <Play style={{ width: 64, height: 64, color: '#666', marginBottom: 16 }} />
-          <p style={{ color: '#666' }}>Nenhum vídeo disponível</p>
+      <div className="video-player-container flex items-center justify-center bg-black/90 rounded-xl">
+        <div className="text-center">
+          <Play className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+          <p className="text-muted-foreground">Nenhum vídeo disponível</p>
         </div>
       </div>
     );
@@ -375,454 +305,240 @@ export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introS
   return (
     <div
       ref={containerRef}
-      style={{
-        position: 'relative',
-        borderRadius: 12,
-        overflow: 'hidden',
-        background: '#000',
-        aspectRatio: '16/9',
-      }}
+      className="video-player-container group relative rounded-xl overflow-hidden bg-black"
       onMouseMove={handleMouseMove}
       onMouseLeave={() => isPlaying && setShowControls(false)}
     >
+      {/* Video Element */}
       <video
         ref={videoRef}
         src={src}
         poster={poster || undefined}
-        style={{
-          width: '100%',
-          height: '100%',
-          background: '#000',
-          objectFit: isStretched ? 'cover' : 'contain',
-          transition: 'object-fit 0.3s',
-        }}
+        className="w-full h-full object-contain bg-black"
         onClick={togglePlay}
         playsInline
       />
 
-      {/* Hidden video and canvas for preview thumbnail */}
-      <video
-        ref={previewVideoRef}
-        src={src}
-        muted
-        preload="metadata"
-        style={{ display: 'none' }}
-        onSeeked={capturePreviewFrame}
-      />
-      <canvas ref={canvasRef} style={{ display: 'none' }} />
-
+      {/* Loading Indicator */}
       {isLoading && !videoError && (
-        <div style={{
-          position: 'absolute',
-          inset: 0,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: 'rgba(0,0,0,0.6)',
-        }}>
-          <div style={{
-            width: 48,
-            height: 48,
-            border: '4px solid #6366f1',
-            borderTopColor: 'transparent',
-            borderRadius: '50%',
-            animation: 'spin 1s linear infinite',
-          }} />
-          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        <div className="absolute inset-0 flex items-center justify-center bg-black/60">
+          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
         </div>
       )}
 
+      {/* Error State */}
       {videoError && (
-        <div style={{
-          position: 'absolute',
-          inset: 0,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: 'rgba(0,0,0,0.8)',
-        }}>
-          <div style={{ textAlign: 'center', padding: 24 }}>
-            <div style={{
-              width: 64,
-              height: 64,
-              borderRadius: '50%',
-              background: 'rgba(239,68,68,0.2)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              margin: '0 auto 16px',
-            }}>
-              <AlertCircle style={{ width: 32, height: 32, color: '#ef4444' }} />
+        <div className="absolute inset-0 flex items-center justify-center bg-black/80">
+          <div className="text-center p-6">
+            <div className="w-16 h-16 rounded-full bg-destructive/20 flex items-center justify-center mx-auto mb-4">
+              <AlertCircle className="w-8 h-8 text-destructive" />
             </div>
-            <p style={{ color: '#ef4444', fontWeight: 500, marginBottom: 8 }}>{videoError}</p>
-            <p style={{ color: '#666', fontSize: 14 }}>Verifique se o vídeo está em formato compatível (MP4, WebM)</p>
+            <p className="text-destructive font-medium mb-2">{videoError}</p>
+            <p className="text-muted-foreground text-sm">Verifique se o vídeo está em formato compatível (MP4, WebM)</p>
           </div>
         </div>
       )}
 
+      {/* Center Play Button Overlay */}
       {!isPlaying && !videoError && !isLoading && (
-        <div style={{
-          position: 'absolute',
-          inset: 0,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: 'rgba(0,0,0,0.4)',
-          backdropFilter: 'blur(4px)',
-        }}>
+        <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <button
             onClick={togglePlay}
-            style={{
-              width: 80,
-              height: 80,
-              borderRadius: '50%',
-              background: 'rgba(99, 102, 241, 0.9)',
-              border: 'none',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 25px 50px -12px rgba(99, 102, 241, 0.3)',
-              transition: 'all 0.3s',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'scale(1.1)';
-              e.currentTarget.style.background = '#6366f1';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'scale(1)';
-              e.currentTarget.style.background = 'rgba(99, 102, 241, 0.9)';
-            }}
+            className="w-20 h-20 rounded-full bg-primary/90 hover:bg-primary hover:scale-110 flex items-center justify-center transition-all duration-300 shadow-2xl shadow-primary/30"
           >
-            <Play style={{ width: 36, height: 36, color: 'white', marginLeft: 4 }} fill="white" />
+            <Play className="w-9 h-9 text-primary-foreground ml-1" fill="currentColor" />
           </button>
         </div>
       )}
 
+      {/* Skip Intro Button */}
       {showSkipIntro && isPlaying && (
-        <div style={{ position: 'absolute', bottom: 112, right: 24, zIndex: 10 }}>
-          <button
+        <div className="absolute bottom-28 right-6 animate-fade-in z-10">
+          <Button
             onClick={skipIntro}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              padding: '12px 24px',
-              background: 'rgba(255,255,255,0.15)',
-              backdropFilter: 'blur(12px)',
-              border: '1px solid rgba(255,255,255,0.2)',
-              borderRadius: 9999,
-              color: 'white',
-              cursor: 'pointer',
-              fontSize: 14,
-              fontWeight: 500,
-            }}
+            className="gap-2 bg-white/15 hover:bg-white/25 backdrop-blur-md border border-white/20 text-white shadow-xl rounded-full px-6"
+            size="lg"
           >
             Pular Abertura
-            <ChevronRight style={{ width: 20, height: 20 }} />
-          </button>
+            <ChevronRight className="w-5 h-5" />
+          </Button>
         </div>
       )}
 
+      {/* Next Episode/Part Button */}
       {showNextButton && nextLabel && onNextClick && (
-        <div style={{ position: 'absolute', bottom: 112, right: 24, zIndex: 10 }}>
-          <button
+        <div className="absolute bottom-28 right-6 animate-fade-in z-10">
+          <Button
             onClick={onNextClick}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              padding: '12px 24px',
-              background: '#6366f1',
-              border: 'none',
-              borderRadius: 9999,
-              color: 'white',
-              cursor: 'pointer',
-              fontSize: 14,
-              fontWeight: 500,
-            }}
+            className="gap-2 bg-primary hover:bg-primary/90 shadow-xl rounded-full px-6"
+            size="lg"
           >
             {nextLabel}
-            <ChevronRight style={{ width: 20, height: 20 }} />
-          </button>
+            <ChevronRight className="w-5 h-5" />
+          </Button>
         </div>
       )}
 
+      {/* Title - Top */}
       {title && showControls && (
-        <div style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          padding: 20,
-          background: 'linear-gradient(to bottom, rgba(0,0,0,0.8), rgba(0,0,0,0.4), transparent)',
-          transition: 'opacity 0.3s',
-        }}>
-          <h3 style={{ fontWeight: 700, fontSize: 18, color: 'white', textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
+        <div className="absolute top-0 left-0 right-0 p-5 bg-gradient-to-b from-black/80 via-black/40 to-transparent transition-opacity duration-300">
+          <h3 className="font-display font-bold text-lg text-white drop-shadow-lg">
             {title}
           </h3>
         </div>
       )}
 
+      {/* Controls */}
       <div
-        style={{
-          position: 'absolute',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          background: 'linear-gradient(to top, rgba(0,0,0,0.95), rgba(0,0,0,0.7), transparent)',
-          padding: '64px 20px 16px',
-          transition: 'all 0.3s',
-          opacity: showControls ? 1 : 0,
-          transform: showControls ? 'translateY(0)' : 'translateY(8px)',
-          pointerEvents: showControls ? 'auto' : 'none',
-        }}
+        className={cn(
+          'absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/95 via-black/70 to-transparent px-5 pb-4 pt-16 transition-all duration-300',
+          showControls ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'
+        )}
       >
-        <div
-          ref={progressRef}
-          onClick={handleSeek}
-          onMouseMove={handleProgressHover}
-          onMouseLeave={handleProgressLeave}
-          style={{
-            position: 'relative',
-            height: 6,
-            background: 'rgba(255,255,255,0.2)',
-            borderRadius: 9999,
-            cursor: 'pointer',
-            marginBottom: 16,
-          }}
-        >
-          {/* Preview thumbnail */}
-          {showPreview && (
+        {/* Progress Bar */}
+        <div className="relative mb-4 group/progress">
+          <div className="h-1.5 bg-white/20 rounded-full overflow-hidden relative cursor-pointer hover:h-2 transition-all">
+            {/* Buffered */}
             <div
-              style={{
-                position: 'absolute',
-                bottom: 20,
-                left: Math.max(80, Math.min(previewPosition, (progressRef.current?.offsetWidth || 0) - 80)),
-                transform: 'translateX(-50%)',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                pointerEvents: 'none',
-                zIndex: 10,
-              }}
-            >
-              <div
-                style={{
-                  width: 160,
-                  height: 90,
-                  borderRadius: 8,
-                  overflow: 'hidden',
-                  background: '#000',
-                  border: '2px solid rgba(255,255,255,0.3)',
-                  boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
-                }}
-              >
-                {previewImage ? (
-                  <img src={previewImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                ) : (
-                  <div style={{ width: '100%', height: '100%', background: '#1a1a1a' }} />
-                )}
-              </div>
-              <div
-                style={{
-                  marginTop: 6,
-                  padding: '4px 10px',
-                  background: 'rgba(0,0,0,0.9)',
-                  borderRadius: 4,
-                  fontSize: 13,
-                  fontWeight: 600,
-                  color: 'white',
-                  fontVariantNumeric: 'tabular-nums',
-                }}
-              >
-                {formatTime(previewTime)}
-              </div>
-            </div>
-          )}
-
-          <div
-            style={{
-              position: 'absolute',
-              left: 0,
-              top: 0,
-              height: '100%',
-              background: 'rgba(255,255,255,0.3)',
-              borderRadius: 9999,
-              width: `${buffered}%`,
-            }}
-          />
-          <div
-            style={{
-              position: 'absolute',
-              left: 0,
-              top: 0,
-              height: '100%',
-              background: '#6366f1',
-              borderRadius: 9999,
-              width: `${progress}%`,
-            }}
-          />
-          <div
-            style={{
-              position: 'absolute',
-              top: '50%',
-              transform: 'translate(-50%, -50%)',
-              left: `${progress}%`,
-              width: 14,
-              height: 14,
-              background: 'white',
-              borderRadius: '50%',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
-            }}
-          />
+              className="h-full bg-white/30 absolute left-0 top-0 rounded-full"
+              style={{ width: `${buffered}%` }}
+            />
+            {/* Progress */}
+            <Slider
+              value={[progress]}
+              onValueChange={handleSeek}
+              max={100}
+              step={0.1}
+              className="absolute inset-0"
+            />
+          </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <button style={buttonStyle} onClick={togglePlay}>
-              {isPlaying ? <Pause style={{ width: 20, height: 20 }} fill="white" /> : <Play style={{ width: 20, height: 20, marginLeft: 2 }} fill="white" />}
-            </button>
-
-            <button style={buttonStyle} onClick={() => skip(-10)} title="Voltar 10s">
-              <Rewind style={{ width: 20, height: 20 }} />
-            </button>
-
-            <button style={buttonStyle} onClick={() => skip(10)} title="Avançar 10s">
-              <FastForward style={{ width: 20, height: 20 }} />
-            </button>
-
-            <div
-              style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 4 }}
-              onMouseEnter={() => setShowVolumeSlider(true)}
-              onMouseLeave={() => setShowVolumeSlider(false)}
+        {/* Controls Row */}
+        <div className="flex items-center justify-between gap-3">
+          {/* Left Controls */}
+          <div className="flex items-center gap-1">
+            {/* Play/Pause */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-white hover:bg-white/15 h-10 w-10 rounded-full transition-all hover:scale-105"
+              onClick={togglePlay}
             >
-              <button style={buttonStyle} onClick={toggleMute}>
-                <VolumeIcon style={{ width: 20, height: 20 }} />
-              </button>
-              <div
-                style={{
-                  width: showVolumeSlider ? 96 : 0,
-                  overflow: 'hidden',
-                  transition: 'width 0.3s',
-                }}
+              {isPlaying ? <Pause className="w-5 h-5" fill="currentColor" /> : <Play className="w-5 h-5 ml-0.5" fill="currentColor" />}
+            </Button>
+
+            {/* Skip Back */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-white hover:bg-white/15 h-10 w-10 rounded-full transition-all hover:scale-105"
+              onClick={() => skip(-10)}
+              title="Voltar 10s"
+            >
+              <Rewind className="w-5 h-5" />
+            </Button>
+
+            {/* Skip Forward */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-white hover:bg-white/15 h-10 w-10 rounded-full transition-all hover:scale-105"
+              onClick={() => skip(10)}
+              title="Avançar 10s"
+            >
+              <FastForward className="w-5 h-5" />
+            </Button>
+
+            {/* Volume */}
+            <div className="flex items-center gap-1 group/volume ml-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-white hover:bg-white/15 h-10 w-10 rounded-full transition-all"
+                onClick={toggleMute}
               >
-                <div
-                  onClick={handleVolumeChange}
-                  style={{
-                    width: 96,
-                    height: 4,
-                    background: 'rgba(255,255,255,0.3)',
-                    borderRadius: 9999,
-                    cursor: 'pointer',
-                    position: 'relative',
-                  }}
-                >
-                  <div
-                    style={{
-                      position: 'absolute',
-                      left: 0,
-                      top: 0,
-                      height: '100%',
-                      background: 'white',
-                      borderRadius: 9999,
-                      width: `${(isMuted ? 0 : volume) * 100}%`,
-                    }}
-                  />
-                </div>
+                <VolumeIcon className="w-5 h-5" />
+              </Button>
+              <div className="w-0 overflow-hidden group-hover/volume:w-24 transition-all duration-300">
+                <Slider
+                  value={[isMuted ? 0 : volume * 100]}
+                  onValueChange={handleVolumeChange}
+                  max={100}
+                  step={1}
+                  className="w-24"
+                />
               </div>
             </div>
 
-            <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.8)', marginLeft: 12, fontVariantNumeric: 'tabular-nums', fontWeight: 500 }}>
-              {formatTime(currentTime)} <span style={{ color: 'rgba(255,255,255,0.5)' }}>/</span> {formatTime(duration)}
+            {/* Time Display */}
+            <span className="text-sm text-white/80 ml-3 tabular-nums font-medium">
+              {formatTime(currentTime)} <span className="text-white/50">/</span> {formatTime(duration)}
             </span>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4, position: 'relative' }}>
-            <div style={{ position: 'relative' }}>
-              <button
-                style={buttonStyle}
-                onClick={() => setShowSpeedMenu(!showSpeedMenu)}
-                title="Configurações"
-              >
-                <Settings style={{ width: 20, height: 20 }} />
-              </button>
-              {showSpeedMenu && (
-                <div
-                  style={{
-                    position: 'absolute',
-                    bottom: 48,
-                    right: 0,
-                    background: 'rgba(0,0,0,0.9)',
-                    backdropFilter: 'blur(16px)',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    borderRadius: 12,
-                    padding: 8,
-                    minWidth: 140,
-                    zIndex: 50,
-                  }}
+          {/* Right Controls */}
+          <div className="flex items-center gap-1">
+            {/* Settings */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-white hover:bg-white/15 h-10 w-10 rounded-full transition-all hover:scale-105"
+                  title="Configurações"
                 >
-                  <div style={{ padding: '8px 12px', fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: 1 }}>
-                    Velocidade
-                  </div>
-                  {[0.5, 0.75, 1, 1.25, 1.5, 2].map((speed) => (
-                    <button
-                      key={speed}
-                      onClick={() => changePlaybackSpeed(speed)}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        width: '100%',
-                        padding: '8px 12px',
-                        background: playbackSpeed === speed ? 'rgba(99, 102, 241, 0.2)' : 'transparent',
-                        border: 'none',
-                        borderRadius: 8,
-                        color: playbackSpeed === speed ? '#818cf8' : 'rgba(255,255,255,0.9)',
-                        cursor: 'pointer',
-                        fontSize: 14,
-                        textAlign: 'left',
-                      }}
-                    >
-                      {speed === 1 ? 'Normal' : `${speed}x`}
-                      {playbackSpeed === speed && <span style={{ color: '#818cf8' }}>✓</span>}
-                    </button>
-                  ))}
+                  <Settings className="w-5 h-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-black/90 backdrop-blur-xl border-white/10 min-w-[160px] rounded-xl">
+                <div className="px-3 py-2 text-xs font-semibold text-white/60 uppercase tracking-wider">
+                  Velocidade
                 </div>
-              )}
-            </div>
+                {[0.5, 0.75, 1, 1.25, 1.5, 2].map((speed) => (
+                  <DropdownMenuItem
+                    key={speed}
+                    onClick={() => changePlaybackSpeed(speed)}
+                    className={cn(
+                      'text-white/90 focus:bg-white/15 focus:text-white rounded-lg mx-1',
+                      playbackSpeed === speed && 'bg-primary/20 text-primary'
+                    )}
+                  >
+                    {speed === 1 ? 'Normal' : `${speed}x`}
+                    {playbackSpeed === speed && <span className="ml-auto text-primary">✓</span>}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
 
-            <button
-              style={isPiP ? activeButtonStyle : buttonStyle}
+            {/* Picture-in-Picture Mode */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn(
+                'text-white hover:bg-white/15 h-10 w-10 rounded-full transition-all hover:scale-105',
+                isPiP && 'text-primary bg-primary/20'
+              )}
               onClick={togglePiP}
               title="Picture-in-Picture"
             >
-              <PictureInPicture2 style={{ width: 20, height: 20 }} />
-            </button>
+              <PictureInPicture2 className="w-5 h-5" />
+            </Button>
 
-            <button
-              style={isStretched ? activeButtonStyle : buttonStyle}
-              onClick={toggleStretch}
-              title={isStretched ? 'Ajustar à tela' : 'Preencher tela'}
-            >
-              {isStretched ? (
-                <Square style={{ width: 20, height: 20 }} />
-              ) : (
-                <RectangleHorizontal style={{ width: 20, height: 20 }} />
-              )}
-            </button>
-
-            <button
-              style={buttonStyle}
+            {/* Fullscreen */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-white hover:bg-white/15 h-10 w-10 rounded-full transition-all hover:scale-105"
               onClick={toggleFullscreen}
               title={isFullscreen ? 'Sair da tela cheia' : 'Tela cheia'}
             >
               {isFullscreen ? (
-                <Minimize style={{ width: 20, height: 20 }} />
+                <Minimize className="w-5 h-5" />
               ) : (
-                <Maximize style={{ width: 20, height: 20 }} />
+                <Maximize className="w-5 h-5" />
               )}
-            </button>
+            </Button>
           </div>
         </div>
       </div>
