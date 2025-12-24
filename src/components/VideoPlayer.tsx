@@ -32,6 +32,9 @@ interface VideoPlayerProps {
 export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introStartTime, introEndTime }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const progressRef = useRef<HTMLDivElement>(null);
+  const previewVideoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [buffered, setBuffered] = useState(0);
@@ -50,7 +53,12 @@ export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introS
   const [showVolumeSlider, setShowVolumeSlider] = useState(false);
   const [videoError, setVideoError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [previewTime, setPreviewTime] = useState(0);
+  const [previewPosition, setPreviewPosition] = useState(0);
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
   const controlsTimeoutRef = useRef<NodeJS.Timeout>();
+  const previewTimeoutRef = useRef<NodeJS.Timeout>();
 
   useEffect(() => {
     setVideoError(null);
@@ -199,6 +207,47 @@ export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introS
     const newTime = percent * duration;
     video.currentTime = newTime;
     setProgress(percent * 100);
+  };
+
+  const handleProgressHover = (e: React.MouseEvent<HTMLDivElement>) => {
+    const previewVideo = previewVideoRef.current;
+    const canvas = canvasRef.current;
+    const progressBar = progressRef.current;
+    if (!previewVideo || !canvas || !progressBar || !duration) return;
+
+    const rect = progressBar.getBoundingClientRect();
+    const percent = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    const time = percent * duration;
+    
+    setPreviewTime(time);
+    setPreviewPosition(e.clientX - rect.left);
+    setShowPreview(true);
+
+    if (previewTimeoutRef.current) {
+      clearTimeout(previewTimeoutRef.current);
+    }
+    
+    previewTimeoutRef.current = setTimeout(() => {
+      previewVideo.currentTime = time;
+    }, 50);
+  };
+
+  const handleProgressLeave = () => {
+    setShowPreview(false);
+  };
+
+  const capturePreviewFrame = () => {
+    const previewVideo = previewVideoRef.current;
+    const canvas = canvasRef.current;
+    if (!previewVideo || !canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    canvas.width = 160;
+    canvas.height = 90;
+    ctx.drawImage(previewVideo, 0, 0, 160, 90);
+    setPreviewImage(canvas.toDataURL());
   };
 
   const handleVolumeChange = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -350,6 +399,17 @@ export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introS
         onClick={togglePlay}
         playsInline
       />
+
+      {/* Hidden video and canvas for preview thumbnail */}
+      <video
+        ref={previewVideoRef}
+        src={src}
+        muted
+        preload="metadata"
+        style={{ display: 'none' }}
+        onSeeked={capturePreviewFrame}
+      />
+      <canvas ref={canvasRef} style={{ display: 'none' }} />
 
       {isLoading && !videoError && (
         <div style={{
@@ -519,7 +579,10 @@ export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introS
         }}
       >
         <div
+          ref={progressRef}
           onClick={handleSeek}
+          onMouseMove={handleProgressHover}
+          onMouseLeave={handleProgressLeave}
           style={{
             position: 'relative',
             height: 6,
@@ -529,6 +592,55 @@ export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introS
             marginBottom: 16,
           }}
         >
+          {/* Preview thumbnail */}
+          {showPreview && (
+            <div
+              style={{
+                position: 'absolute',
+                bottom: 20,
+                left: Math.max(80, Math.min(previewPosition, (progressRef.current?.offsetWidth || 0) - 80)),
+                transform: 'translateX(-50%)',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                pointerEvents: 'none',
+                zIndex: 10,
+              }}
+            >
+              <div
+                style={{
+                  width: 160,
+                  height: 90,
+                  borderRadius: 8,
+                  overflow: 'hidden',
+                  background: '#000',
+                  border: '2px solid rgba(255,255,255,0.3)',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+                }}
+              >
+                {previewImage ? (
+                  <img src={previewImage} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  <div style={{ width: '100%', height: '100%', background: '#1a1a1a' }} />
+                )}
+              </div>
+              <div
+                style={{
+                  marginTop: 6,
+                  padding: '4px 10px',
+                  background: 'rgba(0,0,0,0.9)',
+                  borderRadius: 4,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: 'white',
+                  fontVariantNumeric: 'tabular-nums',
+                }}
+              >
+                {formatTime(previewTime)}
+              </div>
+            </div>
+          )}
+
           <div
             style={{
               position: 'absolute',
