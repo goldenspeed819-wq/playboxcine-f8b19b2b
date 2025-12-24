@@ -8,13 +8,14 @@ import {
   Maximize,
   Minimize,
   Settings,
+  SkipBack,
+  SkipForward,
   ChevronRight,
   PictureInPicture2,
   Rewind,
   FastForward,
   AlertCircle,
-  Scan,
-  RectangleHorizontal,
+  Expand,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
@@ -23,6 +24,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 
@@ -319,7 +321,7 @@ export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introS
         src={src}
         poster={poster || undefined}
         className={cn(
-          "w-full h-full bg-black transition-all duration-300",
+          "w-full h-full bg-black",
           isStretched ? "object-cover" : "object-contain"
         )}
         onClick={togglePlay}
@@ -532,7 +534,7 @@ export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introS
               <PictureInPicture2 className="w-5 h-5" />
             </Button>
 
-            {/* Stretch/Fill Mode */}
+            {/* Stretch/Fill */}
             <Button
               variant="ghost"
               size="icon"
@@ -541,13 +543,9 @@ export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introS
                 isStretched && 'text-primary bg-primary/20'
               )}
               onClick={toggleStretch}
-              title={isStretched ? 'Ajustar ao tamanho' : 'Preencher tela'}
+              title={isStretched ? 'Ajustar à tela' : 'Preencher tela'}
             >
-              {isStretched ? (
-                <RectangleHorizontal className="w-5 h-5" />
-              ) : (
-                <Scan className="w-5 h-5" />
-              )}
+              <Expand className="w-5 h-5" />
             </Button>
 
             {/* Fullscreen */}
