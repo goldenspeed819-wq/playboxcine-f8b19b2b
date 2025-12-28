@@ -29,6 +29,7 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
+import { useSubtitleStyles } from '@/hooks/useSubtitleStyles';
 
 interface SubtitleTrack {
   id: string;
@@ -50,6 +51,7 @@ interface VideoPlayerProps {
 export function VideoPlayer({ src, poster, title, subtitles = [], nextLabel, onNextClick, introStartTime, introEndTime }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const { getSubtitleCSS } = useSubtitleStyles();
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [buffered, setBuffered] = useState(0);
@@ -68,6 +70,24 @@ export function VideoPlayer({ src, poster, title, subtitles = [], nextLabel, onN
   const [isLoading, setIsLoading] = useState(true);
   const [activeSubtitle, setActiveSubtitle] = useState<string | null>(null);
   const controlsTimeoutRef = useRef<NodeJS.Timeout>();
+
+  // Inject subtitle styles
+  useEffect(() => {
+    const styleId = 'subtitle-custom-styles';
+    let styleElement = document.getElementById(styleId) as HTMLStyleElement;
+    
+    if (!styleElement) {
+      styleElement = document.createElement('style');
+      styleElement.id = styleId;
+      document.head.appendChild(styleElement);
+    }
+    
+    styleElement.textContent = getSubtitleCSS();
+    
+    return () => {
+      // Cleanup only if component unmounts completely
+    };
+  }, [getSubtitleCSS]);
 
   // Reset states when src changes
   useEffect(() => {

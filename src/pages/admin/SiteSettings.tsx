@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { Upload, Link, Trash2, Save, Image } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
+import { SubtitleSettings } from '@/components/admin/SubtitleSettings';
 
 const SiteSettings = () => {
   const [backgroundUrl, setBackgroundUrl] = useState('');
@@ -313,6 +314,9 @@ const SiteSettings = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Subtitle Settings */}
+      <SubtitleSettings />
     </div>
   );
 };
