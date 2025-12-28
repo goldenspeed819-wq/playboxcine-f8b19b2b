@@ -16,6 +16,8 @@ import {
   FastForward,
   AlertCircle,
   RectangleHorizontal,
+  Subtitles,
+  MessageSquareOff,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
@@ -28,18 +30,24 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 
+interface SubtitleTrack {
+  id: string;
+  language: string;
+  subtitle_url: string;
+}
+
 interface VideoPlayerProps {
   src: string | null;
   poster?: string | null;
   title?: string;
-  subtitleUrl?: string | null;
+  subtitles?: SubtitleTrack[];
   nextLabel?: string;
   onNextClick?: () => void;
   introStartTime?: number | null;
   introEndTime?: number | null;
 }
 
-export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introStartTime, introEndTime }: VideoPlayerProps) {
+export function VideoPlayer({ src, poster, title, subtitles = [], nextLabel, onNextClick, introStartTime, introEndTime }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -58,6 +66,7 @@ export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introS
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [videoError, setVideoError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [activeSubtitle, setActiveSubtitle] = useState<string | null>(null);
   const controlsTimeoutRef = useRef<NodeJS.Timeout>();
 
   // Reset states when src changes
@@ -326,7 +335,19 @@ export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introS
         )}
         onClick={togglePlay}
         playsInline
-      />
+        crossOrigin="anonymous"
+      >
+        {subtitles.map((sub) => (
+          <track
+            key={sub.id}
+            kind="subtitles"
+            label={sub.language}
+            src={sub.subtitle_url}
+            srcLang={sub.language.toLowerCase().slice(0, 2)}
+            default={activeSubtitle === sub.id}
+          />
+        ))}
+      </video>
 
       {/* Loading Indicator */}
       {isLoading && !videoError && (
@@ -488,6 +509,71 @@ export function VideoPlayer({ src, poster, title, nextLabel, onNextClick, introS
 
           {/* Right Controls */}
           <div className="flex items-center gap-1">
+            {/* Subtitles */}
+            {subtitles.length > 0 && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className={cn(
+                      'text-white hover:bg-white/15 h-10 w-10 rounded-full transition-all hover:scale-105',
+                      activeSubtitle && 'text-primary bg-primary/20'
+                    )}
+                    title="Legendas"
+                  >
+                    <Subtitles className="w-5 h-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="bg-black/90 backdrop-blur-xl border-white/10 min-w-[160px] rounded-xl">
+                  <div className="px-3 py-2 text-xs font-semibold text-white/60 uppercase tracking-wider">
+                    Legendas
+                  </div>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setActiveSubtitle(null);
+                      const video = videoRef.current;
+                      if (video) {
+                        for (let i = 0; i < video.textTracks.length; i++) {
+                          video.textTracks[i].mode = 'hidden';
+                        }
+                      }
+                    }}
+                    className={cn(
+                      'text-white/90 focus:bg-white/15 focus:text-white rounded-lg mx-1',
+                      !activeSubtitle && 'bg-primary/20 text-primary'
+                    )}
+                  >
+                    <MessageSquareOff className="w-4 h-4 mr-2" />
+                    Desativado
+                    {!activeSubtitle && <span className="ml-auto text-primary">✓</span>}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator className="bg-white/10" />
+                  {subtitles.map((sub) => (
+                    <DropdownMenuItem
+                      key={sub.id}
+                      onClick={() => {
+                        setActiveSubtitle(sub.id);
+                        const video = videoRef.current;
+                        if (video) {
+                          for (let i = 0; i < video.textTracks.length; i++) {
+                            video.textTracks[i].mode = video.textTracks[i].label === sub.language ? 'showing' : 'hidden';
+                          }
+                        }
+                      }}
+                      className={cn(
+                        'text-white/90 focus:bg-white/15 focus:text-white rounded-lg mx-1',
+                        activeSubtitle === sub.id && 'bg-primary/20 text-primary'
+                      )}
+                    >
+                      {sub.language}
+                      {activeSubtitle === sub.id && <span className="ml-auto text-primary">✓</span>}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+
             {/* Settings */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

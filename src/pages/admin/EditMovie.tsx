@@ -16,6 +16,7 @@ import {
 import { VideoUpload } from '@/components/admin/VideoUpload';
 import { ThumbnailUpload } from '@/components/admin/ThumbnailUpload';
 import { CoverUpload } from '@/components/admin/CoverUpload';
+import { SubtitleUpload } from '@/components/admin/SubtitleUpload';
 import { PageLoader } from '@/components/LoadingSpinner';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -28,6 +29,7 @@ const EditMovie = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [subtitles, setSubtitles] = useState<Array<{ id: string; language: string; subtitle_url: string }>>([]);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -44,7 +46,10 @@ const EditMovie = () => {
   });
 
   useEffect(() => {
-    if (id) fetchMovie();
+    if (id) {
+      fetchMovie();
+      fetchSubtitles();
+    }
   }, [id]);
 
   const fetchMovie = async () => {
@@ -79,6 +84,15 @@ const EditMovie = () => {
       is_release: data.is_release || false,
     });
     setIsLoading(false);
+  };
+
+  const fetchSubtitles = async () => {
+    if (!id) return;
+    const { data } = await supabase
+      .from('subtitles')
+      .select('id, language, subtitle_url')
+      .eq('movie_id', id);
+    if (data) setSubtitles(data);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -294,6 +308,14 @@ const EditMovie = () => {
               <VideoUpload
                 onUploadComplete={(url) => setFormData({ ...formData, video_url_part2: url })}
                 currentUrl={formData.video_url_part2}
+              />
+            </div>
+            {/* Subtitles Section */}
+            <div className="p-6 bg-card rounded-2xl border border-border">
+              <SubtitleUpload
+                movieId={id}
+                existingSubtitles={subtitles}
+                onSubtitleChange={fetchSubtitles}
               />
             </div>
           </div>

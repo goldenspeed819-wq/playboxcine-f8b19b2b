@@ -16,6 +16,7 @@ import {
 import { VideoUpload } from '@/components/admin/VideoUpload';
 import { ThumbnailUpload } from '@/components/admin/ThumbnailUpload';
 import { CoverUpload } from '@/components/admin/CoverUpload';
+import { SubtitleUpload } from '@/components/admin/SubtitleUpload';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -25,6 +26,8 @@ const ratings = ['Livre', '10', '12', '14', '16', '18'];
 const AddMovie = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
+  const [savedMovieId, setSavedMovieId] = useState<string | null>(null);
+  const [subtitles, setSubtitles] = useState<Array<{ id: string; language: string; subtitle_url: string }>>([]);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -54,7 +57,7 @@ const AddMovie = () => {
 
     setIsLoading(true);
 
-    const { error } = await supabase.from('movies').insert({
+    const { data, error } = await supabase.from('movies').insert({
       title: formData.title,
       description: formData.description || null,
       thumbnail: formData.thumbnail || null,
@@ -67,7 +70,7 @@ const AddMovie = () => {
       rating: formData.rating || 'Livre',
       is_featured: formData.is_featured,
       is_release: formData.is_release,
-    });
+    }).select().single();
 
     if (error) {
       toast({
@@ -77,14 +80,23 @@ const AddMovie = () => {
       });
       console.error(error);
     } else {
+      setSavedMovieId(data.id);
       toast({
         title: 'Sucesso!',
-        description: 'Filme adicionado com sucesso.',
+        description: 'Filme adicionado com sucesso. Agora você pode adicionar legendas.',
       });
-      navigate('/admin/movies');
     }
 
     setIsLoading(false);
+  };
+
+  const fetchSubtitles = async () => {
+    if (!savedMovieId) return;
+    const { data } = await supabase
+      .from('subtitles')
+      .select('id, language, subtitle_url')
+      .eq('movie_id', savedMovieId);
+    if (data) setSubtitles(data);
   };
 
   return (
@@ -246,6 +258,17 @@ const AddMovie = () => {
                 onUploadComplete={(url) => setFormData({ ...formData, video_url_part2: url })}
               />
             </div>
+
+            {/* Subtitles Section */}
+            {savedMovieId && (
+              <div className="p-6 bg-card rounded-2xl border border-border">
+                <SubtitleUpload
+                  movieId={savedMovieId}
+                  existingSubtitles={subtitles}
+                  onSubtitleChange={fetchSubtitles}
+                />
+              </div>
+            )}
           </div>
 
           <div className="space-y-6">
@@ -263,8 +286,19 @@ const AddMovie = () => {
               disabled={isLoading}
             >
               <Save className="w-4 h-4" />
-              {isLoading ? 'Salvando...' : 'Salvar Filme'}
+              {isLoading ? 'Salvando...' : savedMovieId ? 'Atualizar Filme' : 'Salvar Filme'}
             </Button>
+
+            {savedMovieId && (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={() => navigate('/admin/movies')}
+              >
+                Ir para Lista de Filmes
+              </Button>
+            )}
           </div>
         </div>
       </form>

@@ -12,6 +12,12 @@ import { Series, Episode } from '@/types/database';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 
+interface SubtitleTrack {
+  id: string;
+  language: string;
+  subtitle_url: string;
+}
+
 const SeriesDetail = () => {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
@@ -21,6 +27,7 @@ const SeriesDetail = () => {
   const [selectedSeason, setSelectedSeason] = useState<number>(1);
   const [isLoading, setIsLoading] = useState(true);
   const [watchedEpisodes, setWatchedEpisodes] = useState<Set<string>>(new Set());
+  const [episodeSubtitles, setEpisodeSubtitles] = useState<SubtitleTrack[]>([]);
 
   useEffect(() => {
     if (id) {
@@ -33,6 +40,12 @@ const SeriesDetail = () => {
       fetchWatchedEpisodes();
     }
   }, [user, episodes]);
+
+  useEffect(() => {
+    if (selectedEpisode) {
+      fetchEpisodeSubtitles(selectedEpisode.id);
+    }
+  }, [selectedEpisode]);
 
   const fetchSeriesAndEpisodes = async () => {
     const [seriesRes, episodesRes] = await Promise.all([
