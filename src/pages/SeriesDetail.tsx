@@ -94,6 +94,14 @@ const SeriesDetail = () => {
     setWatchedEpisodes(new Set(data?.map(w => w.episode_id) || []));
   };
 
+  const fetchEpisodeSubtitles = async (episodeId: string) => {
+    const { data } = await supabase
+      .from('subtitles')
+      .select('id, language, subtitle_url')
+      .eq('episode_id', episodeId);
+    setEpisodeSubtitles(data || []);
+  };
+
   const markAsWatched = async (episodeId: string) => {
     if (!user) return;
 
@@ -232,6 +240,7 @@ const SeriesDetail = () => {
                     ? `${series.title} - T${selectedEpisode.season}E${selectedEpisode.episode}`
                     : series.title
                 }
+                subtitles={episodeSubtitles}
                 nextLabel={nextEpisode ? `Próximo: T${nextEpisode.season}E${nextEpisode.episode}` : undefined}
                 onNextClick={nextEpisode ? handleNextEpisode : undefined}
                 introStartTime={selectedEpisode?.intro_start}
