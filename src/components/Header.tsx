@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Search, Menu, X, MoreVertical, LogOut, Settings } from 'lucide-react';
+import { Search, Menu, X, MoreVertical, LogOut, Settings, Home, Film, Popcorn, Tv } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -58,10 +58,10 @@ export function Header() {
   };
 
   const navLinks = [
-    { href: '/browse', label: 'Início' },
-    { href: '/movies', label: 'Filmes' },
-    { href: '/series', label: 'Séries' },
-    { href: '/live', label: 'Ao Vivo' },
+    { href: '/browse', label: 'INÍCIO', icon: Home },
+    { href: '/movies', label: 'FILMES', icon: Film },
+    { href: '/series', label: 'SÉRIES', icon: Popcorn },
+    { href: '/live', label: 'AO VIVO', icon: Tv },
   ];
 
   return (
@@ -76,33 +76,46 @@ export function Header() {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16 md:h-20">
           {/* Logo */}
-          <Link to="/browse" className="flex items-center group">
-            <img 
-              src={logo} 
-              alt="PlayBox Cine" 
-              className="h-10 md:h-12 w-auto object-contain"
-            />
+          <Link to="/browse" className="flex items-center gap-3 group">
+            <div className="relative">
+              <div className="absolute inset-0 bg-primary/20 rounded-full blur-md group-hover:bg-primary/30 transition-colors" />
+              <img 
+                src={logo} 
+                alt="PlayBox Cine" 
+                className="h-10 w-10 md:h-12 md:w-12 rounded-full object-cover ring-2 ring-primary/50 group-hover:ring-primary transition-all relative z-10"
+              />
+            </div>
+            <span className="hidden sm:block font-display text-lg md:text-xl font-bold text-foreground group-hover:text-primary transition-colors">
+              PlayBox<span className="text-primary">Cine</span>
+            </span>
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-8">
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                to={link.href}
-                className={cn(
-                  'font-body font-semibold text-sm uppercase tracking-wider transition-colors relative',
-                  location.pathname === link.href
-                    ? 'text-primary'
-                    : 'text-muted-foreground hover:text-foreground'
-                )}
-              >
-                {link.label}
-                {location.pathname === link.href && (
-                  <span className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary rounded-full" />
-                )}
-              </Link>
-            ))}
+          <nav className="hidden md:flex items-center gap-6 lg:gap-8">
+            {navLinks.map((link) => {
+              const Icon = link.icon;
+              return (
+                <Link
+                  key={link.href}
+                  to={link.href}
+                  className={cn(
+                    'flex items-center gap-2 font-body font-semibold text-sm tracking-wider transition-all relative group',
+                    location.pathname === link.href
+                      ? 'text-primary'
+                      : 'text-muted-foreground hover:text-foreground'
+                  )}
+                >
+                  <Icon className={cn(
+                    'w-4 h-4 transition-transform group-hover:scale-110',
+                    location.pathname === link.href && 'text-primary'
+                  )} />
+                  <span>{link.label}</span>
+                  {location.pathname === link.href && (
+                    <span className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary rounded-full" />
+                  )}
+                </Link>
+              );
+            })}
           </nav>
 
           {/* Search & Actions */}
@@ -205,21 +218,25 @@ export function Header() {
           )}
         >
           <nav className="flex flex-col gap-2">
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                to={link.href}
-                onClick={() => setIsMenuOpen(false)}
-                className={cn(
-                  'font-body font-semibold py-2 px-4 rounded-lg transition-colors',
-                  location.pathname === link.href
-                    ? 'bg-primary/20 text-primary'
-                    : 'text-muted-foreground hover:bg-secondary'
-                )}
-              >
-                {link.label}
-              </Link>
-            ))}
+            {navLinks.map((link) => {
+              const Icon = link.icon;
+              return (
+                <Link
+                  key={link.href}
+                  to={link.href}
+                  onClick={() => setIsMenuOpen(false)}
+                  className={cn(
+                    'flex items-center gap-3 font-body font-semibold py-2.5 px-4 rounded-lg transition-colors',
+                    location.pathname === link.href
+                      ? 'bg-primary/20 text-primary'
+                      : 'text-muted-foreground hover:bg-secondary'
+                  )}
+                >
+                  <Icon className="w-4 h-4" />
+                  <span>{link.label}</span>
+                </Link>
+              );
+            })}
           </nav>
         </div>
       </div>
