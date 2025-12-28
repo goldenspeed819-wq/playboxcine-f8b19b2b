@@ -10,15 +10,23 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { Movie } from '@/types/database';
 
+interface SubtitleTrack {
+  id: string;
+  language: string;
+  subtitle_url: string;
+}
+
 const MovieDetail = () => {
   const { id } = useParams<{ id: string }>();
   const [movie, setMovie] = useState<Movie & { video_url_part2?: string | null } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [currentPart, setCurrentPart] = useState<1 | 2>(1);
+  const [subtitles, setSubtitles] = useState<SubtitleTrack[]>([]);
 
   useEffect(() => {
     if (id) {
       fetchMovie();
+      fetchSubtitles();
     }
   }, [id]);
 
@@ -35,6 +43,17 @@ const MovieDetail = () => {
       setMovie(data as any);
     }
     setIsLoading(false);
+  };
+
+  const fetchSubtitles = async () => {
+    const { data, error } = await supabase
+      .from('subtitles')
+      .select('id, language, subtitle_url')
+      .eq('movie_id', id);
+
+    if (!error && data) {
+      setSubtitles(data);
+    }
   };
 
   const hasPart2 = movie?.video_url_part2;
@@ -127,6 +146,7 @@ const MovieDetail = () => {
                 src={currentVideoUrl || null}
                 poster={movie.thumbnail}
                 title={hasPart2 ? `${movie.title} - Parte ${currentPart}` : movie.title}
+                subtitles={subtitles}
                 nextLabel={currentPart === 1 && hasPart2 ? 'Parte 2' : undefined}
                 onNextClick={currentPart === 1 && hasPart2 ? handleNextPart : undefined}
               />

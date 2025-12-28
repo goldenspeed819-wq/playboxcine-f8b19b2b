@@ -406,6 +406,48 @@ export type Database = {
         }
         Relationships: []
       }
+      subtitles: {
+        Row: {
+          created_at: string | null
+          episode_id: string | null
+          id: string
+          language: string
+          movie_id: string | null
+          subtitle_url: string
+        }
+        Insert: {
+          created_at?: string | null
+          episode_id?: string | null
+          id?: string
+          language?: string
+          movie_id?: string | null
+          subtitle_url: string
+        }
+        Update: {
+          created_at?: string | null
+          episode_id?: string | null
+          id?: string
+          language?: string
+          movie_id?: string | null
+          subtitle_url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subtitles_episode_id_fkey"
+            columns: ["episode_id"]
+            isOneToOne: false
+            referencedRelation: "episodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subtitles_movie_id_fkey"
+            columns: ["movie_id"]
+            isOneToOne: false
+            referencedRelation: "movies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
