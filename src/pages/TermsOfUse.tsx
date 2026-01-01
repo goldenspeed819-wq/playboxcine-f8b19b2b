@@ -36,6 +36,21 @@ const TermsOfUse = () => {
             </p>
           </div>
 
+          {/* DMCA Disclaimer */}
+          <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-6">
+            <h2 className="text-xl font-semibold text-destructive mb-3">
+              ⚖️ Aviso Legal - DMCA e Direitos Autorais
+            </h2>
+            <p className="text-foreground font-medium mb-3">
+              O PlayBox Cine é uma plataforma de indexação e organização de links. 
+              <strong> NÃO hospedamos, armazenamos ou distribuímos nenhum conteúdo audiovisual protegido por direitos autorais em nossos servidores.</strong>
+            </p>
+            <p className="text-foreground">
+              Todo o conteúdo exibido é proveniente de fontes externas de terceiros, disponíveis publicamente na internet. 
+              O PlayBox Cine atua apenas como um agregador de links, similar a um motor de busca.
+            </p>
+          </div>
+
           {/* Acceptance */}
           <section>
             <h2 className="text-xl font-semibold text-foreground mb-3">
@@ -44,30 +59,82 @@ const TermsOfUse = () => {
             <p>
               Ao acessar e usar o PlayBox Cine, você concorda em cumprir e estar sujeito a estes Termos de Uso. 
               Estes termos se aplicam a todos os visitantes, usuários e outras pessoas que acessam ou usam o serviço.
+              O uso contínuo da plataforma constitui aceitação integral destes termos.
             </p>
           </section>
 
           {/* Service Description */}
           <section>
             <h2 className="text-xl font-semibold text-foreground mb-3">
-              2. Descrição do Serviço
+              2. Natureza do Serviço
             </h2>
-            <p>
-              O PlayBox Cine é uma plataforma de streaming de conteúdo audiovisual. 
-              O serviço permite aos usuários assistir filmes, séries e conteúdos ao vivo.
+            <p className="mb-3">
+              O PlayBox Cine é um <strong>serviço de indexação e curadoria de links</strong> que organiza 
+              referências a conteúdos disponíveis em servidores de terceiros na internet pública.
+            </p>
+            <p className="mb-3">
+              <strong>O que NÃO fazemos:</strong>
             </p>
             <ul className="list-disc list-inside mt-2 space-y-1">
-              <li>Acesso a catálogo de filmes e séries</li>
-              <li>Streaming de canais ao vivo</li>
-              <li>Criação de perfis personalizados</li>
-              <li>Histórico de visualização</li>
+              <li>Não hospedamos, armazenamos ou fazemos upload de arquivos de vídeo</li>
+              <li>Não distribuímos conteúdo protegido por direitos autorais</li>
+              <li>Não fazemos streaming direto de nenhum conteúdo</li>
+              <li>Não possuímos controle sobre o conteúdo de terceiros</li>
+            </ul>
+            <p className="mt-3">
+              <strong>O que fazemos:</strong>
+            </p>
+            <ul className="list-disc list-inside mt-2 space-y-1">
+              <li>Organizamos e indexamos links disponíveis publicamente</li>
+              <li>Fornecemos uma interface para navegação e descoberta</li>
+              <li>Permitimos que usuários salvem preferências e histórico</li>
             </ul>
           </section>
 
-          {/* User Account */}
+          {/* User Responsibility */}
           <section>
             <h2 className="text-xl font-semibold text-foreground mb-3">
-              3. Conta do Usuário
+              3. Responsabilidade do Usuário
+            </h2>
+            <p className="mb-3">
+              Ao utilizar o PlayBox Cine, você reconhece e concorda que:
+            </p>
+            <ul className="list-disc list-inside mt-2 space-y-1">
+              <li>É o único responsável por verificar a legalidade do acesso ao conteúdo em sua jurisdição</li>
+              <li>Deve respeitar as leis de direitos autorais aplicáveis em seu país</li>
+              <li>O acesso a conteúdos protegidos sem autorização pode ser ilegal em algumas jurisdições</li>
+              <li>Assume total responsabilidade pelo uso que faz da plataforma</li>
+              <li>Não utilizará o serviço para fins ilegais ou não autorizados</li>
+            </ul>
+          </section>
+
+          {/* DMCA Compliance */}
+          <section>
+            <h2 className="text-xl font-semibold text-foreground mb-3">
+              4. Conformidade com DMCA
+            </h2>
+            <p className="mb-3">
+              O PlayBox Cine respeita os direitos de propriedade intelectual e está comprometido 
+              com a conformidade com o Digital Millennium Copyright Act (DMCA) e legislações similares.
+            </p>
+            <p className="mb-3">
+              <strong>Procedimento de Notificação:</strong>
+            </p>
+            <ul className="list-disc list-inside mt-2 space-y-1">
+              <li>Se você é detentor de direitos autorais ou seu representante legal</li>
+              <li>E acredita que algum link indexado viola seus direitos</li>
+              <li>Entre em contato conosco através dos canais disponíveis</li>
+              <li>Fornecendo: identificação do material, prova de titularidade e dados de contato</li>
+            </ul>
+            <p className="mt-3">
+              Após verificação, removeremos prontamente qualquer link que viole direitos de terceiros.
+            </p>
+          </section>
+
+          {/* Account */}
+          <section>
+            <h2 className="text-xl font-semibold text-foreground mb-3">
+              5. Conta do Usuário
             </h2>
             <p>
               Para utilizar nossos serviços, você deve:
@@ -83,7 +150,7 @@ const TermsOfUse = () => {
           {/* Prohibited Use */}
           <section>
             <h2 className="text-xl font-semibold text-foreground mb-3">
-              4. Uso Proibido
+              6. Uso Proibido
             </h2>
             <p>
               É estritamente proibido:
@@ -92,56 +159,81 @@ const TermsOfUse = () => {
               <li>Compartilhar sua conta com terceiros não autorizados</li>
               <li>Tentar acessar áreas restritas do sistema</li>
               <li>Usar bots, scripts ou automações não autorizadas</li>
-              <li>Redistribuir ou comercializar o conteúdo disponibilizado</li>
-              <li>Violar direitos autorais ou propriedade intelectual</li>
-              <li>Utilizar o serviço para fins ilegais</li>
+              <li>Redistribuir ou comercializar o serviço</li>
+              <li>Fazer download ou redistribuir conteúdo de terceiros</li>
+              <li>Utilizar o serviço para fins comerciais sem autorização</li>
             </ul>
           </section>
 
-          {/* Content */}
+          {/* Disclaimer */}
           <section>
             <h2 className="text-xl font-semibold text-foreground mb-3">
-              5. Conteúdo
+              7. Isenção de Responsabilidade
             </h2>
-            <p>
-              Todo o conteúdo disponível na plataforma é fornecido "como está". 
-              Não garantimos a disponibilidade contínua de qualquer conteúdo específico. 
-              O catálogo pode ser alterado a qualquer momento sem aviso prévio.
+            <p className="mb-3">
+              <strong>AVISO IMPORTANTE:</strong> O PlayBox Cine é fornecido "como está" e "conforme disponível", 
+              sem garantias de qualquer tipo, expressas ou implícitas.
             </p>
+            <p className="mb-3">
+              O PlayBox Cine NÃO se responsabiliza por:
+            </p>
+            <ul className="list-disc list-inside mt-2 space-y-1">
+              <li>Conteúdo hospedado em servidores de terceiros</li>
+              <li>Qualidade, disponibilidade ou legalidade dos links indexados</li>
+              <li>Ações tomadas por usuários com base no conteúdo acessado</li>
+              <li>Violações de direitos autorais cometidas por terceiros</li>
+              <li>Danos diretos, indiretos, incidentais ou consequenciais</li>
+              <li>Interrupções, erros ou falhas no serviço</li>
+              <li>Perda de dados ou informações do usuário</li>
+            </ul>
+          </section>
+
+          {/* Third Party Content */}
+          <section>
+            <h2 className="text-xl font-semibold text-foreground mb-3">
+              8. Conteúdo de Terceiros
+            </h2>
+            <p className="mb-3">
+              Todo o conteúdo audiovisual acessível através do PlayBox Cine é hospedado 
+              e fornecido por servidores de terceiros não afiliados a nós.
+            </p>
+            <ul className="list-disc list-inside mt-2 space-y-1">
+              <li>Não temos controle sobre esses servidores ou seu conteúdo</li>
+              <li>Não verificamos a legalidade do conteúdo de terceiros</li>
+              <li>A responsabilidade pelo conteúdo é exclusivamente dos provedores originais</li>
+              <li>Links podem ser removidos ou modificados a qualquer momento</li>
+            </ul>
           </section>
 
           {/* Limitation of Liability */}
           <section>
             <h2 className="text-xl font-semibold text-foreground mb-3">
-              6. Limitação de Responsabilidade
+              9. Limitação de Responsabilidade
             </h2>
             <p>
-              O PlayBox Cine não se responsabiliza por:
+              Em nenhuma circunstância o PlayBox Cine, seus proprietários, funcionários ou afiliados 
+              serão responsáveis por quaisquer danos, incluindo, mas não limitados a, danos por perda 
+              de lucros, dados ou outras perdas intangíveis resultantes do uso ou impossibilidade 
+              de uso do serviço.
             </p>
-            <ul className="list-disc list-inside mt-2 space-y-1">
-              <li>Interrupções no serviço</li>
-              <li>Perda de dados</li>
-              <li>Danos diretos ou indiretos causados pelo uso da plataforma</li>
-              <li>Conteúdo de terceiros ou links externos</li>
-            </ul>
           </section>
 
-          {/* Intellectual Property */}
+          {/* Indemnification */}
           <section>
             <h2 className="text-xl font-semibold text-foreground mb-3">
-              7. Propriedade Intelectual
+              10. Indenização
             </h2>
             <p>
-              Todo o conteúdo, marcas, logotipos e materiais disponíveis na plataforma são 
-              protegidos por direitos autorais e outras leis de propriedade intelectual. 
-              É proibida a reprodução sem autorização expressa.
+              Você concorda em defender, indenizar e isentar o PlayBox Cine de quaisquer reclamações, 
+              danos, custos e despesas (incluindo honorários advocatícios) decorrentes ou relacionados 
+              ao seu uso do serviço, violação destes Termos ou violação de qualquer lei ou direitos de terceiros.
             </p>
           </section>
 
           {/* Account Termination */}
           <section>
             <h2 className="text-xl font-semibold text-foreground mb-3">
-              8. Encerramento de Conta
+              11. Encerramento de Conta
             </h2>
             <p>
               Reservamo-nos o direito de suspender ou encerrar sua conta a qualquer momento, 
@@ -153,7 +245,7 @@ const TermsOfUse = () => {
           {/* Changes to Terms */}
           <section>
             <h2 className="text-xl font-semibold text-foreground mb-3">
-              9. Alterações nos Termos
+              12. Alterações nos Termos
             </h2>
             <p>
               Podemos modificar estes termos a qualquer momento. As alterações entram em vigor 
@@ -165,11 +257,22 @@ const TermsOfUse = () => {
           {/* Applicable Law */}
           <section>
             <h2 className="text-xl font-semibold text-foreground mb-3">
-              10. Lei Aplicável
+              13. Lei Aplicável e Jurisdição
             </h2>
             <p>
-              Estes termos são regidos pelas leis brasileiras. Qualquer disputa será 
-              resolvida nos tribunais competentes do Brasil.
+              Estes termos são regidos pelas leis aplicáveis na jurisdição onde o serviço opera. 
+              Qualquer disputa será resolvida nos tribunais competentes da jurisdição aplicável.
+            </p>
+          </section>
+
+          {/* Severability */}
+          <section>
+            <h2 className="text-xl font-semibold text-foreground mb-3">
+              14. Divisibilidade
+            </h2>
+            <p>
+              Se qualquer disposição destes Termos for considerada inválida ou inexequível, 
+              as demais disposições permanecerão em pleno vigor e efeito.
             </p>
           </section>
 
