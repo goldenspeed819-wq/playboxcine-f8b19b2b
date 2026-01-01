@@ -56,6 +56,42 @@ export type Database = {
           },
         ]
       }
+      banned_users: {
+        Row: {
+          banned_at: string
+          banned_by: string
+          created_at: string
+          expires_at: string | null
+          id: string
+          is_permanent: boolean | null
+          reason: string | null
+          user_code: string
+          user_id: string
+        }
+        Insert: {
+          banned_at?: string
+          banned_by: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_permanent?: boolean | null
+          reason?: string | null
+          user_code: string
+          user_id: string
+        }
+        Update: {
+          banned_at?: string
+          banned_by?: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_permanent?: boolean | null
+          reason?: string | null
+          user_code?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       blocked_ips: {
         Row: {
           blocked_at: string
@@ -516,6 +552,14 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      is_user_banned: {
+        Args: { _user_id: string }
+        Returns: {
+          expires_at: string
+          is_banned: boolean
+          reason: string
+        }[]
       }
     }
     Enums: {
