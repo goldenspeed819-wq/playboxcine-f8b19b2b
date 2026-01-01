@@ -34,6 +34,7 @@ import EditSeries from "./pages/admin/EditSeries";
 import ManageAdmins from "./pages/admin/ManageAdmins";
 import ManageAvatars from "./pages/admin/ManageAvatars";
 import ManageLiveChannels from "./pages/admin/ManageLiveChannels";
+import ManageBans from "./pages/admin/ManageBans";
 import SiteSettings from "./pages/admin/SiteSettings";
 
 const queryClient = new QueryClient();
@@ -76,6 +77,7 @@ const App = () => (
                 <Route path="avatars" element={<ManageAvatars />} />
                 <Route path="live-channels" element={<ManageLiveChannels />} />
                 <Route path="site-settings" element={<SiteSettings />} />
+                <Route path="bans" element={<ManageBans />} />
               </Route>
 
               {/* 404 */}

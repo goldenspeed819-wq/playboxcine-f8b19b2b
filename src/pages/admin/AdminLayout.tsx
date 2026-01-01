@@ -76,13 +76,18 @@ const AdminLayout = () => {
     },
   ];
 
+  const isFounder = profile?.user_code === 'User001' || profile?.user_code === 'Fundador';
+
   const singleItems = [
     { icon: LayoutDashboard, label: 'Dashboard', href: '/admin' },
     { icon: Radio, label: 'Canais ao Vivo', href: '/admin/live-channels' },
     { icon: UserCircle, label: 'Avatars', href: '/admin/avatars' },
     { icon: Settings, label: 'Configurações', href: '/admin/site-settings' },
-    ...(profile?.user_code === 'Fundador'
-      ? [{ icon: Shield, label: 'Administradores', href: '/admin/manage-admins' }]
+    ...(isFounder
+      ? [
+          { icon: Shield, label: 'Administradores', href: '/admin/manage-admins' },
+          { icon: Shield, label: 'Banimentos', href: '/admin/bans' },
+        ]
       : []),
   ];
 
