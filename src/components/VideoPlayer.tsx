@@ -46,9 +46,11 @@ interface VideoPlayerProps {
   onNextClick?: () => void;
   introStartTime?: number | null;
   introEndTime?: number | null;
+  onTimeUpdate?: (currentTime: number) => void;
+  initialTime?: number;
 }
 
-export function VideoPlayer({ src, poster, title, subtitles = [], nextLabel, onNextClick, introStartTime, introEndTime }: VideoPlayerProps) {
+export function VideoPlayer({ src, poster, title, subtitles = [], nextLabel, onNextClick, introStartTime, introEndTime, onTimeUpdate, initialTime }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const { getSubtitleCSS } = useSubtitleStyles();
@@ -125,12 +127,17 @@ export function VideoPlayer({ src, poster, title, subtitles = [], nextLabel, onN
     const handleTimeUpdate = () => {
       setCurrentTime(video.currentTime);
       setProgress((video.currentTime / video.duration) * 100);
+      onTimeUpdate?.(video.currentTime);
     };
 
     const handleLoadedMetadata = () => {
       setDuration(video.duration);
       setIsLoading(false);
       setVideoError(null);
+      // Set initial time if provided
+      if (initialTime && initialTime > 0) {
+        video.currentTime = initialTime;
+      }
     };
 
     const handleProgress = () => {
@@ -197,7 +204,7 @@ export function VideoPlayer({ src, poster, title, subtitles = [], nextLabel, onN
       video.removeEventListener('waiting', handleWaiting);
       video.removeEventListener('error', handleError);
     };
-  }, [src]);
+  }, [src, onTimeUpdate, initialTime]);
 
   useEffect(() => {
     const handleFullscreenChange = () => {
