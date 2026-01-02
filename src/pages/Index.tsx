@@ -7,6 +7,7 @@ import { ContentRow } from '@/components/ContentRow';
 import { PageLoader } from '@/components/LoadingSpinner';
 import { UpdateNotification } from '@/components/UpdateNotification';
 import { BanCheck } from '@/components/BanCheck';
+import { AdminNotificationBanner } from '@/components/AdminNotificationBanner';
 import { supabase } from '@/integrations/supabase/client';
 import { Movie, Series } from '@/types/database';
 import { useAuth } from '@/contexts/AuthContext';
@@ -94,6 +95,9 @@ const Index = () => {
       
       {/* Update Notification */}
       <UpdateNotification userId={user?.id} />
+      
+      {/* Admin Notification Banner */}
+      <AdminNotificationBanner userId={user?.id} />
       
       {/* Hero Section */}
       <HeroCarousel

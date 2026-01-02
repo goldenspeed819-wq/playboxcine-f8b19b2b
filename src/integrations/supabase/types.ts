@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_notifications: {
+        Row: {
+          created_at: string
+          created_by: string
+          expires_at: string | null
+          id: string
+          message: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          expires_at?: string | null
+          id?: string
+          message: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          expires_at?: string | null
+          id?: string
+          message?: string
+          title?: string
+        }
+        Relationships: []
+      }
       avatars: {
         Row: {
           character_name: string | null
@@ -160,6 +187,35 @@ export type Database = {
             columns: ["movie_id"]
             isOneToOne: false
             referencedRelation: "movies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dismissed_notifications: {
+        Row: {
+          dismissed_at: string
+          id: string
+          notification_id: string
+          user_id: string
+        }
+        Insert: {
+          dismissed_at?: string
+          id?: string
+          notification_id: string
+          user_id: string
+        }
+        Update: {
+          dismissed_at?: string
+          id?: string
+          notification_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dismissed_notifications_notification_id_fkey"
+            columns: ["notification_id"]
+            isOneToOne: false
+            referencedRelation: "admin_notifications"
             referencedColumns: ["id"]
           },
         ]
@@ -536,6 +592,41 @@ export type Database = {
             columns: ["episode_id"]
             isOneToOne: false
             referencedRelation: "episodes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      watched_movies: {
+        Row: {
+          completed: boolean | null
+          id: string
+          movie_id: string
+          progress_seconds: number | null
+          user_id: string
+          watched_at: string
+        }
+        Insert: {
+          completed?: boolean | null
+          id?: string
+          movie_id: string
+          progress_seconds?: number | null
+          user_id: string
+          watched_at?: string
+        }
+        Update: {
+          completed?: boolean | null
+          id?: string
+          movie_id?: string
+          progress_seconds?: number | null
+          user_id?: string
+          watched_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "watched_movies_movie_id_fkey"
+            columns: ["movie_id"]
+            isOneToOne: false
+            referencedRelation: "movies"
             referencedColumns: ["id"]
           },
         ]

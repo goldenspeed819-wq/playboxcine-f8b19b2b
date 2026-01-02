@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Calendar, Clock, Tag } from 'lucide-react';
 import { Header } from '@/components/Header';
@@ -6,9 +6,11 @@ import { Footer } from '@/components/Footer';
 import { VideoPlayer } from '@/components/VideoPlayer';
 import { CommentSection } from '@/components/CommentSection';
 import { PageLoader } from '@/components/LoadingSpinner';
+import { ContinueWatchingDialog } from '@/components/ContinueWatchingDialog';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { Movie } from '@/types/database';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface SubtitleTrack {
   id: string;
@@ -18,17 +20,25 @@ interface SubtitleTrack {
 
 const MovieDetail = () => {
   const { id } = useParams<{ id: string }>();
+  const { user } = useAuth();
   const [movie, setMovie] = useState<Movie & { video_url_part2?: string | null } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [currentPart, setCurrentPart] = useState<1 | 2>(1);
   const [subtitles, setSubtitles] = useState<SubtitleTrack[]>([]);
+  const [savedProgress, setSavedProgress] = useState<number>(0);
+  const [showContinueDialog, setShowContinueDialog] = useState(false);
+  const [initialTime, setInitialTime] = useState<number>(0);
+  const lastSavedTimeRef = useRef<number>(0);
 
   useEffect(() => {
     if (id) {
       fetchMovie();
       fetchSubtitles();
+      if (user) {
+        fetchWatchProgress();
+      }
     }
-  }, [id]);
+  }, [id, user]);
 
   const fetchMovie = async () => {
     const { data, error } = await supabase
@@ -56,12 +66,56 @@ const MovieDetail = () => {
     }
   };
 
+  const fetchWatchProgress = async () => {
+    if (!user || !id) return;
+
+    const { data, error } = await supabase
+      .from('watched_movies')
+      .select('progress_seconds, completed')
+      .eq('user_id', user.id)
+      .eq('movie_id', id)
+      .maybeSingle();
+
+    if (!error && data && data.progress_seconds && data.progress_seconds > 30 && !data.completed) {
+      setSavedProgress(data.progress_seconds);
+      setShowContinueDialog(true);
+    }
+  };
+
+  const saveWatchProgress = useCallback(async (currentTime: number) => {
+    if (!user || !id) return;
+    
+    // Only save every 10 seconds to avoid too many requests
+    if (Math.abs(currentTime - lastSavedTimeRef.current) < 10) return;
+    lastSavedTimeRef.current = currentTime;
+
+    await supabase
+      .from('watched_movies')
+      .upsert({
+        user_id: user.id,
+        movie_id: id,
+        progress_seconds: Math.floor(currentTime),
+        completed: false,
+      }, { onConflict: 'user_id,movie_id' });
+  }, [user, id]);
+
+  const handleContinue = () => {
+    setInitialTime(savedProgress);
+    setShowContinueDialog(false);
+  };
+
+  const handleRestart = () => {
+    setInitialTime(0);
+    setShowContinueDialog(false);
+  };
+
   const hasPart2 = movie?.video_url_part2;
   const currentVideoUrl = currentPart === 1 ? movie?.video_url : movie?.video_url_part2;
 
   const handleNextPart = () => {
     if (currentPart === 1 && hasPart2) {
       setCurrentPart(2);
+      setInitialTime(0);
     }
   };
 
@@ -89,6 +143,15 @@ const MovieDetail = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
+
+      {/* Continue Watching Dialog */}
+      <ContinueWatchingDialog
+        open={showContinueDialog}
+        onOpenChange={setShowContinueDialog}
+        progressSeconds={savedProgress}
+        onContinue={handleContinue}
+        onRestart={handleRestart}
+      />
 
       {/* Hero Background */}
       <div className="relative h-[50vh] overflow-hidden">
@@ -126,14 +189,14 @@ const MovieDetail = () => {
                 <div className="flex gap-2 mb-4">
                   <Button
                     variant={currentPart === 1 ? 'default' : 'outline'}
-                    onClick={() => setCurrentPart(1)}
+                    onClick={() => { setCurrentPart(1); setInitialTime(0); }}
                     size="sm"
                   >
                     Parte 1
                   </Button>
                   <Button
                     variant={currentPart === 2 ? 'default' : 'outline'}
-                    onClick={() => setCurrentPart(2)}
+                    onClick={() => { setCurrentPart(2); setInitialTime(0); }}
                     size="sm"
                   >
                     Parte 2
@@ -149,6 +212,8 @@ const MovieDetail = () => {
                 subtitles={subtitles}
                 nextLabel={currentPart === 1 && hasPart2 ? 'Parte 2' : undefined}
                 onNextClick={currentPart === 1 && hasPart2 ? handleNextPart : undefined}
+                onTimeUpdate={saveWatchProgress}
+                initialTime={initialTime}
               />
 
               {/* Movie Info */}

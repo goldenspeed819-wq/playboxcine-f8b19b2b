@@ -15,6 +15,7 @@ import {
   Settings,
   ChevronDown,
   Home,
+  Bell,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
@@ -87,6 +88,7 @@ const AdminLayout = () => {
       ? [
           { icon: Shield, label: 'Administradores', href: '/admin/manage-admins' },
           { icon: Shield, label: 'Banimentos', href: '/admin/bans' },
+          { icon: Bell, label: 'Notificações', href: '/admin/notifications' },
         ]
       : []),
   ];

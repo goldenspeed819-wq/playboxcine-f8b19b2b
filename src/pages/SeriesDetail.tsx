@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Calendar, Tag, Play, CheckCircle2 } from 'lucide-react';
 import { Header } from '@/components/Header';
@@ -6,6 +6,7 @@ import { Footer } from '@/components/Footer';
 import { VideoPlayer } from '@/components/VideoPlayer';
 import { CommentSection } from '@/components/CommentSection';
 import { PageLoader } from '@/components/LoadingSpinner';
+import { ContinueWatchingDialog } from '@/components/ContinueWatchingDialog';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { Series, Episode } from '@/types/database';
@@ -18,6 +19,12 @@ interface SubtitleTrack {
   subtitle_url: string;
 }
 
+interface EpisodeProgress {
+  episode_id: string;
+  progress_seconds: number;
+  completed: boolean;
+}
+
 const SeriesDetail = () => {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
@@ -28,6 +35,11 @@ const SeriesDetail = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [watchedEpisodes, setWatchedEpisodes] = useState<Set<string>>(new Set());
   const [episodeSubtitles, setEpisodeSubtitles] = useState<SubtitleTrack[]>([]);
+  const [episodeProgress, setEpisodeProgress] = useState<Map<string, EpisodeProgress>>(new Map());
+  const [showContinueDialog, setShowContinueDialog] = useState(false);
+  const [savedProgress, setSavedProgress] = useState<number>(0);
+  const [initialTime, setInitialTime] = useState<number>(0);
+  const lastSavedTimeRef = useRef<number>(0);
 
   useEffect(() => {
     if (id) {
@@ -36,7 +48,7 @@ const SeriesDetail = () => {
   }, [id]);
 
   useEffect(() => {
-    if (user) {
+    if (user && episodes.length > 0) {
       fetchWatchedEpisodes();
     }
   }, [user, episodes]);
@@ -44,8 +56,16 @@ const SeriesDetail = () => {
   useEffect(() => {
     if (selectedEpisode) {
       fetchEpisodeSubtitles(selectedEpisode.id);
+      // Check for saved progress when selecting an episode
+      const progress = episodeProgress.get(selectedEpisode.id);
+      if (progress && progress.progress_seconds > 30 && !progress.completed) {
+        setSavedProgress(progress.progress_seconds);
+        setShowContinueDialog(true);
+      } else {
+        setInitialTime(0);
+      }
     }
-  }, [selectedEpisode]);
+  }, [selectedEpisode, episodeProgress]);
 
   const fetchSeriesAndEpisodes = async () => {
     const [seriesRes, episodesRes] = await Promise.all([
@@ -82,7 +102,7 @@ const SeriesDetail = () => {
     const episodeIds = episodes.map(e => e.id);
     const { data, error } = await supabase
       .from('watched_episodes')
-      .select('episode_id')
+      .select('episode_id, progress_seconds, completed')
       .eq('user_id', user.id)
       .in('episode_id', episodeIds);
 
@@ -91,7 +111,22 @@ const SeriesDetail = () => {
       return;
     }
 
-    setWatchedEpisodes(new Set(data?.map(w => w.episode_id) || []));
+    const watchedSet = new Set<string>();
+    const progressMap = new Map<string, EpisodeProgress>();
+    
+    data?.forEach(w => {
+      if (w.completed) {
+        watchedSet.add(w.episode_id);
+      }
+      progressMap.set(w.episode_id, {
+        episode_id: w.episode_id,
+        progress_seconds: w.progress_seconds || 0,
+        completed: w.completed || false,
+      });
+    });
+
+    setWatchedEpisodes(watchedSet);
+    setEpisodeProgress(progressMap);
   };
 
   const fetchEpisodeSubtitles = async (episodeId: string) => {
@@ -101,6 +136,23 @@ const SeriesDetail = () => {
       .eq('episode_id', episodeId);
     setEpisodeSubtitles(data || []);
   };
+
+  const saveWatchProgress = useCallback(async (currentTime: number) => {
+    if (!user || !selectedEpisode) return;
+    
+    // Only save every 10 seconds to avoid too many requests
+    if (Math.abs(currentTime - lastSavedTimeRef.current) < 10) return;
+    lastSavedTimeRef.current = currentTime;
+
+    await supabase
+      .from('watched_episodes')
+      .upsert({
+        user_id: user.id,
+        episode_id: selectedEpisode.id,
+        progress_seconds: Math.floor(currentTime),
+        completed: false,
+      }, { onConflict: 'user_id,episode_id' });
+  }, [user, selectedEpisode]);
 
   const markAsWatched = async (episodeId: string) => {
     if (!user) return;
@@ -147,11 +199,26 @@ const SeriesDetail = () => {
   };
 
   const handleEpisodeSelect = (episode: Episode) => {
+    if (episode.id === selectedEpisode?.id) return;
+    
+    lastSavedTimeRef.current = 0;
+    setInitialTime(0);
     setSelectedEpisode(episode);
+    
     // Mark as watched when starting to play
     if (user && !watchedEpisodes.has(episode.id)) {
       markAsWatched(episode.id);
     }
+  };
+
+  const handleContinue = () => {
+    setInitialTime(savedProgress);
+    setShowContinueDialog(false);
+  };
+
+  const handleRestart = () => {
+    setInitialTime(0);
+    setShowContinueDialog(false);
   };
 
   if (isLoading) {
@@ -200,6 +267,15 @@ const SeriesDetail = () => {
     <div className="min-h-screen bg-background">
       <Header />
 
+      {/* Continue Watching Dialog */}
+      <ContinueWatchingDialog
+        open={showContinueDialog}
+        onOpenChange={setShowContinueDialog}
+        progressSeconds={savedProgress}
+        onContinue={handleContinue}
+        onRestart={handleRestart}
+      />
+
       {/* Hero Background */}
       <div className="relative h-[50vh] overflow-hidden">
         {series.thumbnail ? (
@@ -245,6 +321,8 @@ const SeriesDetail = () => {
                 onNextClick={nextEpisode ? handleNextEpisode : undefined}
                 introStartTime={selectedEpisode?.intro_start}
                 introEndTime={selectedEpisode?.intro_end}
+                onTimeUpdate={saveWatchProgress}
+                initialTime={initialTime}
               />
 
               {/* Series Info */}
@@ -333,6 +411,9 @@ const SeriesDetail = () => {
                   <div className="space-y-2">
                     {seasonEpisodes.map((episode) => {
                       const isWatched = watchedEpisodes.has(episode.id);
+                      const progress = episodeProgress.get(episode.id);
+                      const hasProgress = progress && progress.progress_seconds > 0 && !progress.completed;
+                      
                       return (
                         <button
                           key={episode.id}
@@ -355,6 +436,15 @@ const SeriesDetail = () => {
                               />
                             ) : (
                               <div className="w-full h-full bg-gradient-to-br from-muted to-secondary" />
+                            )}
+                            {/* Progress bar */}
+                            {hasProgress && (
+                              <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/50">
+                                <div 
+                                  className="h-full bg-primary"
+                                  style={{ width: `${Math.min((progress.progress_seconds / 1800) * 100, 100)}%` }}
+                                />
+                              </div>
                             )}
                             {/* Watched overlay */}
                             {isWatched && (
@@ -382,6 +472,9 @@ const SeriesDetail = () => {
                               Ep. {episode.episode}: {episode.title || `Episódio ${episode.episode}`}
                               {isWatched && (
                                 <span className="text-xs text-green-500 font-normal">Assistido</span>
+                              )}
+                              {hasProgress && !isWatched && (
+                                <span className="text-xs text-primary font-normal">Continuar</span>
                               )}
                             </h4>
                             {episode.duration && (

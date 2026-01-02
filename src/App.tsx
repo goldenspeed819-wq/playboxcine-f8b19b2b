@@ -35,6 +35,7 @@ import ManageAdmins from "./pages/admin/ManageAdmins";
 import ManageAvatars from "./pages/admin/ManageAvatars";
 import ManageLiveChannels from "./pages/admin/ManageLiveChannels";
 import ManageBans from "./pages/admin/ManageBans";
+import ManageNotifications from "./pages/admin/ManageNotifications";
 import SiteSettings from "./pages/admin/SiteSettings";
 
 const queryClient = new QueryClient();
@@ -78,6 +79,7 @@ const App = () => (
                 <Route path="live-channels" element={<ManageLiveChannels />} />
                 <Route path="site-settings" element={<SiteSettings />} />
                 <Route path="bans" element={<ManageBans />} />
+                <Route path="notifications" element={<ManageNotifications />} />
               </Route>
 
               {/* 404 */}
