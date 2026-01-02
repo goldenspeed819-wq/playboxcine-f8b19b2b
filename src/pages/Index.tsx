@@ -1,10 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { HeroCarousel } from '@/components/HeroCarousel';
 import { ContentRow } from '@/components/ContentRow';
 import { PageLoader } from '@/components/LoadingSpinner';
+import { UpdateNotification } from '@/components/UpdateNotification';
+import { BanCheck } from '@/components/BanCheck';
 import { supabase } from '@/integrations/supabase/client';
 import { Movie, Series } from '@/types/database';
 import { useAuth } from '@/contexts/AuthContext';
@@ -13,8 +15,14 @@ const Index = () => {
   const [movies, setMovies] = useState<Movie[]>([]);
   const [series, setSeries] = useState<Series[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const { user, profile, isLoading: authLoading } = useAuth();
+  const [isBanned, setIsBanned] = useState(false);
+  const { user, profile, isLoading: authLoading, signOut } = useAuth();
   const navigate = useNavigate();
+
+  const handleBanned = useCallback(() => {
+    setIsBanned(true);
+    signOut();
+  }, [signOut]);
 
   useEffect(() => {
     if (!authLoading) {
@@ -73,9 +81,19 @@ const Index = () => {
   // Fallback for hero carousel
   const allContent = [...movies, ...series].slice(0, 5);
 
+  if (isBanned) {
+    return <BanCheck userId={user?.id} onBanned={handleBanned} />;
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
+      
+      {/* Ban Check */}
+      <BanCheck userId={user?.id} onBanned={handleBanned} />
+      
+      {/* Update Notification */}
+      <UpdateNotification userId={user?.id} />
       
       {/* Hero Section */}
       <HeroCarousel
