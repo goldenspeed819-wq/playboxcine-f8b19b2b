@@ -76,9 +76,12 @@ const MovieDetail = () => {
       .eq('movie_id', id)
       .maybeSingle();
 
-    if (!error && data && data.progress_seconds && data.progress_seconds > 30 && !data.completed) {
-      setSavedProgress(data.progress_seconds);
-      setShowContinueDialog(true);
+    if (!error && data) {
+      // Only show dialog if not completed and has progress > 30s
+      if (data.progress_seconds && data.progress_seconds > 30 && !data.completed) {
+        setSavedProgress(data.progress_seconds);
+        setShowContinueDialog(true);
+      }
     }
   };
 

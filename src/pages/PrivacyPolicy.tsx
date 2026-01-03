@@ -1,20 +1,8 @@
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
-import { useAuth } from '@/contexts/AuthContext';
-import { Navigate, Link } from 'react-router-dom';
-import { PageLoader } from '@/components/LoadingSpinner';
+import { Link } from 'react-router-dom';
 
 const PrivacyPolicy = () => {
-  const { user, isLoading: authLoading } = useAuth();
-
-  if (authLoading) {
-    return <PageLoader />;
-  }
-
-  if (!user) {
-    return <Navigate to="/auth" replace />;
-  }
-
   return (
     <div className="min-h-screen bg-background">
       <Header />
