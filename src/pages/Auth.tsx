@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff, AlertCircle, User } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+import { Mail, Lock, Eye, EyeOff, AlertCircle, User, FileText, Shield, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 
@@ -15,6 +16,7 @@ const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [switchingAccount, setSwitchingAccount] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const { signIn, signUp, user, profile, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
 
@@ -61,6 +63,13 @@ const Auth = () => {
           navigate('/');
         }
       } else {
+        // Check if terms are accepted for signup
+        if (!acceptedTerms) {
+          setError('Você precisa aceitar os Termos de Uso e Política de Privacidade.');
+          setIsLoading(false);
+          return;
+        }
+        
         const { error } = await signUp(email, password);
         if (error) {
           if (error.message.includes('already registered')) {
@@ -182,10 +191,51 @@ const Auth = () => {
             </div>
           </div>
 
+          {/* Terms and Privacy for signup */}
+          {!isLogin && (
+            <div className="p-4 bg-card rounded-xl border border-border space-y-3">
+              <div className="flex items-start gap-3">
+                <Checkbox
+                  id="terms"
+                  checked={acceptedTerms}
+                  onCheckedChange={(checked) => setAcceptedTerms(checked as boolean)}
+                  className="mt-1"
+                />
+                <label htmlFor="terms" className="text-sm text-muted-foreground leading-relaxed cursor-pointer">
+                  Li e aceito os{' '}
+                  <Link 
+                    to="/terms" 
+                    target="_blank"
+                    className="text-primary hover:underline inline-flex items-center gap-1"
+                  >
+                    <FileText className="w-3 h-3" />
+                    Termos de Uso
+                  </Link>
+                  {' '}e a{' '}
+                  <Link 
+                    to="/privacy" 
+                    target="_blank"
+                    className="text-primary hover:underline inline-flex items-center gap-1"
+                  >
+                    <Shield className="w-3 h-3" />
+                    Política de Privacidade
+                  </Link>
+                </label>
+              </div>
+              
+              {acceptedTerms && (
+                <div className="flex items-center gap-2 text-green-500 text-sm">
+                  <Check className="w-4 h-4" />
+                  Termos aceitos
+                </div>
+              )}
+            </div>
+          )}
+
           <Button
             type="submit"
             className="w-full h-12 font-semibold neon-glow"
-            disabled={isLoading}
+            disabled={isLoading || (!isLogin && !acceptedTerms)}
           >
             {isLoading ? 'Aguarde...' : isLogin ? 'Entrar' : 'Criar Conta'}
           </Button>

@@ -56,13 +56,15 @@ const SeriesDetail = () => {
   useEffect(() => {
     if (selectedEpisode) {
       fetchEpisodeSubtitles(selectedEpisode.id);
-      // Check for saved progress when selecting an episode
+      // Check for saved progress when selecting an episode - only if not completed
       const progress = episodeProgress.get(selectedEpisode.id);
       if (progress && progress.progress_seconds > 30 && !progress.completed) {
         setSavedProgress(progress.progress_seconds);
         setShowContinueDialog(true);
       } else {
+        // If completed or no progress, start from beginning
         setInitialTime(0);
+        setShowContinueDialog(false);
       }
     }
   }, [selectedEpisode, episodeProgress]);

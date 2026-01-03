@@ -8,6 +8,7 @@ import { PageLoader } from '@/components/LoadingSpinner';
 import { UpdateNotification } from '@/components/UpdateNotification';
 import { BanCheck } from '@/components/BanCheck';
 import { AdminNotificationBanner } from '@/components/AdminNotificationBanner';
+import { ContinueWatchingRow } from '@/components/ContinueWatchingRow';
 import { supabase } from '@/integrations/supabase/client';
 import { Movie, Series } from '@/types/database';
 import { useAuth } from '@/contexts/AuthContext';
@@ -108,6 +109,9 @@ const Index = () => {
       {/* Content Sections */}
       <main className="relative z-10 -mt-32 pb-10">
         <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-transparent to-background pointer-events-none" />
+        
+        {/* Continue Watching */}
+        <ContinueWatchingRow />
         
         {releases.length > 0 && (
           <ContentRow title="Lançamentos" items={releases} type="mixed" />
