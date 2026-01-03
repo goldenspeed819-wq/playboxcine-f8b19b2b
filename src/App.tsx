@@ -21,6 +21,7 @@ import NotFound from "./pages/NotFound";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfUse from "./pages/TermsOfUse";
 import Settings from "./pages/Settings";
+import WatchHistory from "./pages/WatchHistory";
 
 // Admin Pages
 import AdminLayout from "./pages/admin/AdminLayout";
@@ -64,6 +65,7 @@ const App = () => (
               <Route path="/privacy" element={<PrivacyPolicy />} />
               <Route path="/terms" element={<TermsOfUse />} />
               <Route path="/settings" element={<Settings />} />
+              <Route path="/history" element={<WatchHistory />} />
               
               {/* Admin Routes */}
               <Route path="/admin" element={<AdminLayout />}>

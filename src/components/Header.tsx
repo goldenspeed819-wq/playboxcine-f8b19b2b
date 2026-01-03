@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Search, Menu, X, MoreVertical, LogOut, Settings, Home, Film, Popcorn, Tv } from 'lucide-react';
+import { Search, Menu, X, MoreVertical, LogOut, Settings, Home, Film, Popcorn, Tv, History } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -178,6 +178,15 @@ export function Header() {
               )}
               {profile && (
                 <>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => navigate('/history')}
+                    className="text-muted-foreground hover:text-foreground hover:bg-secondary/50 h-8 w-8 rounded-full"
+                    title="Histórico"
+                  >
+                    <History className="w-4 h-4" />
+                  </Button>
                   <Button
                     variant="ghost"
                     size="icon"
