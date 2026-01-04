@@ -9,9 +9,11 @@ import { UpdateNotification } from '@/components/UpdateNotification';
 import { BanCheck } from '@/components/BanCheck';
 import { AdminNotificationBanner } from '@/components/AdminNotificationBanner';
 import { ContinueWatchingRow } from '@/components/ContinueWatchingRow';
+import { TVModeIndicator } from '@/components/TVModeIndicator';
 import { supabase } from '@/integrations/supabase/client';
 import { Movie, Series } from '@/types/database';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTVMode } from '@/contexts/TVModeContext';
 
 const Index = () => {
   const [movies, setMovies] = useState<Movie[]>([]);
@@ -19,7 +21,12 @@ const Index = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isBanned, setIsBanned] = useState(false);
   const { user, profile, isLoading: authLoading, signOut } = useAuth();
+  const { isTVMode } = useTVMode();
   const navigate = useNavigate();
+
+  // TV Navigation state
+  const [focusedRow, setFocusedRow] = useState(0);
+  const [focusedItem, setFocusedItem] = useState(0);
 
   const handleBanned = useCallback(() => {
     setIsBanned(true);
@@ -60,6 +67,62 @@ const Index = () => {
     }
   };
 
+  // Build rows data
+  const featuredMovies = movies.filter((m) => m.is_featured);
+  const featuredSeries = series.filter((s) => s.is_featured);
+  const featured = [...featuredMovies, ...featuredSeries];
+  const recentMovies = movies.slice(0, 10);
+  const recentSeries = series.slice(0, 10);
+  const releaseMovies = movies.filter((m) => m.is_release);
+  const releaseSeries = series.filter((s) => s.is_release);
+  const releases = [...releaseMovies, ...releaseSeries];
+
+  // Calculate rows for TV navigation
+  const rows = [
+    { id: 'releases', items: releases, title: 'Lançamentos', type: 'mixed' as const },
+    { id: 'movies', items: recentMovies, title: 'Filmes', type: 'movie' as const },
+    { id: 'series', items: recentSeries, title: 'Séries', type: 'series' as const },
+  ].filter(row => row.items.length > 0);
+
+  // TV Mode keyboard navigation
+  useEffect(() => {
+    if (!isTVMode) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const currentRowItems = rows[focusedRow]?.items.length || 0;
+
+      switch (e.key) {
+        case 'ArrowUp':
+          e.preventDefault();
+          setFocusedRow(prev => Math.max(0, prev - 1));
+          break;
+        case 'ArrowDown':
+          e.preventDefault();
+          setFocusedRow(prev => Math.min(rows.length - 1, prev + 1));
+          break;
+        case 'ArrowLeft':
+          e.preventDefault();
+          setFocusedItem(prev => Math.max(0, prev - 1));
+          break;
+        case 'ArrowRight':
+          e.preventDefault();
+          setFocusedItem(prev => Math.min(currentRowItems - 1, prev + 1));
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isTVMode, focusedRow, rows]);
+
+  // Adjust focusedItem when changing rows
+  useEffect(() => {
+    const maxItems = rows[focusedRow]?.items.length || 0;
+    if (focusedItem >= maxItems) {
+      setFocusedItem(Math.max(0, maxItems - 1));
+    }
+  }, [focusedRow, focusedItem, rows]);
+
   if (authLoading || isLoading) {
     return <PageLoader />;
   }
@@ -68,19 +131,6 @@ const Index = () => {
     return <Navigate to="/auth" replace />;
   }
 
-  const featuredMovies = movies.filter((m) => m.is_featured);
-  const featuredSeries = series.filter((s) => s.is_featured);
-  const featured = [...featuredMovies, ...featuredSeries];
-  
-  const recentMovies = movies.slice(0, 10);
-  const recentSeries = series.slice(0, 10);
-  
-  // Filter by is_release for "Lançamentos"
-  const releaseMovies = movies.filter((m) => m.is_release);
-  const releaseSeries = series.filter((s) => s.is_release);
-  const releases = [...releaseMovies, ...releaseSeries];
-  
-  // Fallback for hero carousel
   const allContent = [...movies, ...series].slice(0, 5);
 
   if (isBanned) {
@@ -100,6 +150,9 @@ const Index = () => {
       {/* Admin Notification Banner */}
       <AdminNotificationBanner userId={user?.id} />
       
+      {/* TV Mode Indicator */}
+      <TVModeIndicator />
+      
       {/* Hero Section */}
       <HeroCarousel
         items={featured.length > 0 ? featured : allContent}
@@ -113,11 +166,17 @@ const Index = () => {
         {/* Continue Watching */}
         <ContinueWatchingRow />
         
-        {releases.length > 0 && (
-          <ContentRow title="Lançamentos" items={releases} type="mixed" />
-        )}
-        <ContentRow title="Filmes" items={recentMovies} type="movie" />
-        <ContentRow title="Séries" items={recentSeries} type="series" />
+        {rows.map((row, rowIndex) => (
+          <ContentRow 
+            key={row.id}
+            title={row.title} 
+            items={row.items} 
+            type={row.type}
+            rowIndex={rowIndex}
+            isRowFocused={isTVMode && focusedRow === rowIndex}
+            focusedItemIndex={focusedItem}
+          />
+        ))}
       </main>
 
       <Footer />
