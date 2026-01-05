@@ -37,9 +37,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { Series, Episode } from '@/types/database';
 import { captureVideoFrame, parseTimeToSeconds } from '@/utils/videoThumbnail';
+import { CATEGORIES, RATINGS } from '@/constants/categories';
 
-const categories = ['Ação', 'Aventura', 'Comédia', 'Drama', 'Terror', 'Ficção Científica', 'Romance', 'Animação', 'Documentário'];
-const ratings = ['Livre', '10', '12', '14', '16', '18'];
 const DELETE_PASSWORD = '*****';
 
 const EditSeries = () => {
@@ -411,7 +410,7 @@ const EditSeries = () => {
                       <SelectValue placeholder="Selecione" />
                     </SelectTrigger>
                     <SelectContent>
-                      {categories.map((cat) => (
+                      {CATEGORIES.map((cat) => (
                         <SelectItem key={cat} value={cat}>
                           {cat}
                         </SelectItem>
@@ -430,7 +429,7 @@ const EditSeries = () => {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {ratings.map((rating) => (
+                      {RATINGS.map((rating) => (
                         <SelectItem key={rating} value={rating}>
                           {rating}
                         </SelectItem>

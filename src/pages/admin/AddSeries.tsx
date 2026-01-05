@@ -16,9 +16,7 @@ import {
 import { ThumbnailUpload } from '@/components/admin/ThumbnailUpload';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-
-const categories = ['Ação', 'Aventura', 'Comédia', 'Drama', 'Terror', 'Ficção Científica', 'Romance', 'Animação', 'Documentário'];
-const ratings = ['Livre', '10', '12', '14', '16', '18'];
+import { CATEGORIES, RATINGS } from '@/constants/categories';
 
 const AddSeries = () => {
   const navigate = useNavigate();
@@ -128,7 +126,7 @@ const AddSeries = () => {
                       <SelectValue placeholder="Selecione" />
                     </SelectTrigger>
                     <SelectContent>
-                      {categories.map((cat) => (
+                      {CATEGORIES.map((cat) => (
                         <SelectItem key={cat} value={cat}>
                           {cat}
                         </SelectItem>
@@ -147,7 +145,7 @@ const AddSeries = () => {
                       <SelectValue placeholder="Selecione" />
                     </SelectTrigger>
                     <SelectContent>
-                      {ratings.map((rating) => (
+                      {RATINGS.map((rating) => (
                         <SelectItem key={rating} value={rating}>
                           {rating}
                         </SelectItem>
