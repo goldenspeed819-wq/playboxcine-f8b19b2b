@@ -7,10 +7,9 @@ import { cn } from '@/lib/utils';
 
 interface HeroCarouselProps {
   items: (Movie | Series)[];
-  type: 'movie' | 'series';
 }
 
-export function HeroCarousel({ items, type }: HeroCarouselProps) {
+export function HeroCarousel({ items }: HeroCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
 
@@ -51,10 +50,13 @@ export function HeroCarousel({ items, type }: HeroCarouselProps) {
   }
 
   const currentItem = items[currentIndex];
-  const detailLink = type === 'movie' ? `/movie/${currentItem.id}` : `/series/${currentItem.id}`;
+  
+  // Determine if current item is a movie by checking for movie-specific properties
+  const isMovie = 'duration' in currentItem || 'cover' in currentItem || 'video_url' in currentItem;
+  const detailLink = isMovie ? `/movie/${currentItem.id}` : `/series/${currentItem.id}`;
 
   // Use cover if available for movies, otherwise fallback to thumbnail
-  const backgroundImage = type === 'movie' && 'cover' in currentItem && (currentItem as Movie).cover 
+  const backgroundImage = isMovie && 'cover' in currentItem && (currentItem as Movie).cover 
     ? (currentItem as Movie).cover 
     : currentItem.thumbnail;
 
@@ -87,7 +89,7 @@ export function HeroCarousel({ items, type }: HeroCarouselProps) {
         )}>
           {/* Category Badge */}
           <span className="inline-block px-3 py-1 bg-primary/20 border border-primary/50 rounded-full text-primary text-xs font-semibold uppercase tracking-wider mb-4">
-            {currentItem.category || (type === 'movie' ? 'Filme' : 'Série')}
+            {currentItem.category || (isMovie ? 'Filme' : 'Série')}
           </span>
 
           {/* Title */}

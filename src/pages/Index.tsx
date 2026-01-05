@@ -101,10 +101,7 @@ const Index = () => {
       <AdminNotificationBanner userId={user?.id} />
       
       {/* Hero Section */}
-      <HeroCarousel
-        items={featured.length > 0 ? featured : allContent}
-        type={featured.length > 0 && featuredMovies.length > 0 ? 'movie' : 'series'}
-      />
+      <HeroCarousel items={featured.length > 0 ? featured : allContent} />
 
       {/* Content Sections */}
       <main className="relative z-10 -mt-32 pb-10">
