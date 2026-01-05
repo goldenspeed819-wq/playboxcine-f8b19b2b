@@ -1,9 +1,8 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, Plus, Settings, X, Trash2, LogIn, Tv, Smartphone } from 'lucide-react';
+import { User, Plus, Settings, X, Trash2, LogIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
-import { useTVMode } from '@/contexts/TVModeContext';
 import { PageLoader } from '@/components/LoadingSpinner';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -15,8 +14,6 @@ import {
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
 
 interface LinkedProfile {
   id: string;
@@ -30,7 +27,6 @@ const MAX_ACCOUNTS = 5;
 
 const ProfileSelection = () => {
   const { user, profile, isLoading: authLoading } = useAuth();
-  const { isTVMode, setTVMode } = useTVMode();
   const navigate = useNavigate();
   const [linkedProfiles, setLinkedProfiles] = useState<LinkedProfile[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -40,8 +36,6 @@ const ProfileSelection = () => {
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [authTab, setAuthTab] = useState<'login' | 'signup'>('login');
-  const [focusedIndex, setFocusedIndex] = useState(0);
-  const profileRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
   useEffect(() => {
     if (user && profile) {
@@ -124,53 +118,6 @@ const ProfileSelection = () => {
   const handleManageProfile = () => {
     navigate('/profile-setup');
   };
-
-  // TV Mode keyboard navigation
-  const canAddAccount = linkedProfiles.length < MAX_ACCOUNTS;
-  const totalItems = linkedProfiles.length + (canAddAccount ? 1 : 0) + 1; // profiles + add button + manage button
-
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (!isTVMode || showAddDialog || showDeleteConfirm) return;
-
-    switch (e.key) {
-      case 'ArrowLeft':
-        e.preventDefault();
-        setFocusedIndex(prev => Math.max(0, prev - 1));
-        break;
-      case 'ArrowRight':
-        e.preventDefault();
-        setFocusedIndex(prev => Math.min(totalItems - 1, prev + 1));
-        break;
-      case 'ArrowUp':
-        e.preventDefault();
-        // Move to manage button (last item)
-        setFocusedIndex(totalItems - 1);
-        break;
-      case 'ArrowDown':
-        e.preventDefault();
-        // Move to first profile
-        setFocusedIndex(0);
-        break;
-      case 'Enter':
-      case ' ':
-        e.preventDefault();
-        profileRefs.current[focusedIndex]?.click();
-        break;
-    }
-  }, [isTVMode, showAddDialog, showDeleteConfirm, totalItems, focusedIndex]);
-
-  useEffect(() => {
-    if (isTVMode) {
-      window.addEventListener('keydown', handleKeyDown);
-      return () => window.removeEventListener('keydown', handleKeyDown);
-    }
-  }, [isTVMode, handleKeyDown]);
-
-  useEffect(() => {
-    if (isTVMode && profileRefs.current[focusedIndex]) {
-      profileRefs.current[focusedIndex]?.focus();
-    }
-  }, [focusedIndex, isTVMode]);
 
   const handleAddAccount = async () => {
     if (!user || !email.trim() || !password.trim()) return;
@@ -260,56 +207,26 @@ const ProfileSelection = () => {
     return null;
   }
 
+  const canAddAccount = linkedProfiles.length < MAX_ACCOUNTS;
+
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4">
-      {/* TV Mode Toggle */}
-      <div className="absolute top-6 right-6 flex items-center gap-3 bg-secondary/80 backdrop-blur-sm rounded-lg px-4 py-3">
-        <div className="flex items-center gap-2">
-          <Smartphone className={`w-5 h-5 ${!isTVMode ? 'text-primary' : 'text-muted-foreground'}`} />
-          <span className="text-sm text-muted-foreground">Normal</span>
-        </div>
-        <Switch
-          checked={isTVMode}
-          onCheckedChange={setTVMode}
-          className="data-[state=checked]:bg-primary"
-        />
-        <div className="flex items-center gap-2">
-          <Tv className={`w-5 h-5 ${isTVMode ? 'text-primary' : 'text-muted-foreground'}`} />
-          <span className="text-sm text-muted-foreground">TV</span>
-        </div>
-      </div>
-
-      {/* TV Mode Indicator */}
-      {isTVMode && (
-        <div className="absolute top-6 left-6 bg-primary/20 border border-primary/50 rounded-lg px-4 py-2">
-          <p className="text-sm text-primary flex items-center gap-2">
-            <Tv className="w-4 h-4" />
-            Modo TV ativo - Use as setas para navegar
-          </p>
-        </div>
-      )}
-
       <h1 className="text-3xl md:text-5xl font-display font-bold text-foreground mb-12">
         Quem está assistindo?
       </h1>
 
       <div className="flex flex-wrap justify-center gap-6 mb-12">
         {/* Linked Accounts */}
-        {linkedProfiles.map((linkedProfile, index) => (
+        {linkedProfiles.map((linkedProfile) => (
           <div key={linkedProfile.id} className="relative group">
             <button
-              ref={(el) => { profileRefs.current[index] = el; }}
               onClick={() => handleSelectProfile(linkedProfile)}
-              className={`flex flex-col items-center gap-3 transition-all hover:scale-105 focus:outline-none ${
-                isTVMode && focusedIndex === index ? 'scale-110 ring-4 ring-primary rounded-lg' : ''
-              }`}
+              className="flex flex-col items-center gap-3 transition-transform hover:scale-105"
             >
               <div className={`w-28 h-28 md:w-36 md:h-36 rounded-lg overflow-hidden bg-secondary border-2 transition-colors ${
                 linkedProfile.isCurrentUser 
                   ? 'border-primary' 
-                  : isTVMode && focusedIndex === index
-                    ? 'border-primary'
-                    : 'border-transparent group-hover:border-foreground'
+                  : 'border-transparent group-hover:border-foreground'
               }`}>
                 {linkedProfile.avatar_url ? (
                   <img
@@ -329,7 +246,7 @@ const ProfileSelection = () => {
             </button>
 
             {/* Delete button for non-current users */}
-            {!linkedProfile.isCurrentUser && !isTVMode && (
+            {!linkedProfile.isCurrentUser && (
               <button
                 onClick={() => setShowDeleteConfirm(linkedProfile.id)}
                 className="absolute -top-2 -right-2 w-7 h-7 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
@@ -343,17 +260,10 @@ const ProfileSelection = () => {
         {/* Add Account Button */}
         {canAddAccount && (
           <button
-            ref={(el) => { profileRefs.current[linkedProfiles.length] = el; }}
             onClick={() => setShowAddDialog(true)}
-            className={`group flex flex-col items-center gap-3 transition-all hover:scale-105 focus:outline-none ${
-              isTVMode && focusedIndex === linkedProfiles.length ? 'scale-110 ring-4 ring-primary rounded-lg' : ''
-            }`}
+            className="group flex flex-col items-center gap-3 transition-transform hover:scale-105"
           >
-            <div className={`w-28 h-28 md:w-36 md:h-36 rounded-lg overflow-hidden bg-secondary/50 border-2 border-dashed transition-colors flex items-center justify-center ${
-              isTVMode && focusedIndex === linkedProfiles.length
-                ? 'border-primary'
-                : 'border-muted-foreground/30 group-hover:border-foreground/50'
-            }`}>
+            <div className="w-28 h-28 md:w-36 md:h-36 rounded-lg overflow-hidden bg-secondary/50 border-2 border-dashed border-muted-foreground/30 group-hover:border-foreground/50 transition-colors flex items-center justify-center">
               <Plus className="w-12 h-12 text-muted-foreground group-hover:text-foreground transition-colors" />
             </div>
             <span className="text-muted-foreground group-hover:text-foreground transition-colors text-sm md:text-base">
@@ -365,12 +275,9 @@ const ProfileSelection = () => {
 
       {/* Action Button */}
       <Button
-        ref={(el) => { profileRefs.current[linkedProfiles.length + (canAddAccount ? 1 : 0)] = el; }}
         variant="outline"
         onClick={handleManageProfile}
-        className={`gap-2 px-6 py-2 border-muted-foreground/50 text-muted-foreground hover:text-foreground hover:border-foreground ${
-          isTVMode && focusedIndex === linkedProfiles.length + (canAddAccount ? 1 : 0) ? 'ring-4 ring-primary' : ''
-        }`}
+        className="gap-2 px-6 py-2 border-muted-foreground/50 text-muted-foreground hover:text-foreground hover:border-foreground"
       >
         <Settings className="w-4 h-4" />
         Gerenciar perfil

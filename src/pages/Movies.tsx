@@ -4,12 +4,9 @@ import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { ContentCard } from '@/components/ContentCard';
 import { PageLoader } from '@/components/LoadingSpinner';
-import { TVModeIndicator } from '@/components/TVModeIndicator';
 import { supabase } from '@/integrations/supabase/client';
 import { Movie } from '@/types/database';
 import { Film, Search } from 'lucide-react';
-import { useTVMode } from '@/contexts/TVModeContext';
-import { cn } from '@/lib/utils';
 
 const Movies = () => {
   const [movies, setMovies] = useState<Movie[]>([]);
@@ -17,11 +14,6 @@ const Movies = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchParams] = useSearchParams();
   const searchQuery = searchParams.get('search') || '';
-  const { isTVMode } = useTVMode();
-
-  // TV Navigation
-  const [focusedIndex, setFocusedIndex] = useState(0);
-  const [focusSection, setFocusSection] = useState<'categories' | 'grid'>('grid');
 
   useEffect(() => {
     fetchMovies();
@@ -41,10 +33,15 @@ const Movies = () => {
     setIsLoading(false);
   };
 
+  if (isLoading) {
+    return <PageLoader />;
+  }
+
   const categories = ['all', ...new Set(movies.map((m) => m.category).filter(Boolean))];
   
   let filteredMovies = movies;
   
+  // Apply search filter
   if (searchQuery) {
     const query = searchQuery.toLowerCase();
     filteredMovies = filteredMovies.filter(
@@ -55,80 +52,14 @@ const Movies = () => {
     );
   }
   
+  // Apply category filter
   if (selectedCategory !== 'all') {
     filteredMovies = filteredMovies.filter((m) => m.category === selectedCategory);
-  }
-
-  // TV Mode keyboard navigation
-  useEffect(() => {
-    if (!isTVMode) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const columnsPerRow = 6; // xl:grid-cols-6
-      const totalItems = filteredMovies.length;
-      const totalCategories = categories.length;
-
-      switch (e.key) {
-        case 'ArrowUp':
-          e.preventDefault();
-          if (focusSection === 'grid') {
-            if (focusedIndex < columnsPerRow) {
-              setFocusSection('categories');
-              setFocusedIndex(0);
-            } else {
-              setFocusedIndex(prev => Math.max(0, prev - columnsPerRow));
-            }
-          }
-          break;
-        case 'ArrowDown':
-          e.preventDefault();
-          if (focusSection === 'categories') {
-            setFocusSection('grid');
-            setFocusedIndex(0);
-          } else {
-            setFocusedIndex(prev => Math.min(totalItems - 1, prev + columnsPerRow));
-          }
-          break;
-        case 'ArrowLeft':
-          e.preventDefault();
-          if (focusSection === 'categories') {
-            setFocusedIndex(prev => Math.max(0, prev - 1));
-          } else {
-            setFocusedIndex(prev => Math.max(0, prev - 1));
-          }
-          break;
-        case 'ArrowRight':
-          e.preventDefault();
-          if (focusSection === 'categories') {
-            setFocusedIndex(prev => Math.min(totalCategories - 1, prev + 1));
-          } else {
-            setFocusedIndex(prev => Math.min(totalItems - 1, prev + 1));
-          }
-          break;
-        case 'Enter':
-        case ' ':
-          e.preventDefault();
-          if (focusSection === 'categories') {
-            setSelectedCategory(categories[focusedIndex] as string);
-            setFocusSection('grid');
-            setFocusedIndex(0);
-          }
-          break;
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isTVMode, focusedIndex, focusSection, filteredMovies.length, categories]);
-
-  if (isLoading) {
-    return <PageLoader />;
   }
 
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <TVModeIndicator />
 
       <main className="pt-24 pb-12">
         <div className="container mx-auto px-4">
@@ -147,21 +78,16 @@ const Movies = () => {
 
           {/* Category Filter */}
           {!searchQuery && categories.length > 1 && (
-            <div className={cn(
-              "flex flex-wrap gap-2 mb-8 p-2 rounded-lg transition-all",
-              isTVMode && focusSection === 'categories' && "bg-primary/10"
-            )}>
-              {categories.map((category, index) => (
+            <div className="flex flex-wrap gap-2 mb-8">
+              {categories.map((category) => (
                 <button
                   key={category}
                   onClick={() => setSelectedCategory(category as string)}
-                  className={cn(
-                    `px-4 py-2 rounded-full text-sm font-semibold transition-all`,
+                  className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${
                     selectedCategory === category
                       ? 'bg-primary text-primary-foreground'
-                      : 'bg-secondary text-muted-foreground hover:bg-secondary/80',
-                    isTVMode && focusSection === 'categories' && focusedIndex === index && 'ring-4 ring-primary scale-110'
-                  )}
+                      : 'bg-secondary text-muted-foreground hover:bg-secondary/80'
+                  }`}
                 >
                   {category === 'all' ? 'Todos' : category}
                 </button>
@@ -197,13 +123,7 @@ const Movies = () => {
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
               {filteredMovies.map((movie, index) => (
-                <ContentCard 
-                  key={movie.id} 
-                  item={movie} 
-                  type="movie" 
-                  index={index}
-                  isTVFocused={isTVMode && focusSection === 'grid' && focusedIndex === index}
-                />
+                <ContentCard key={movie.id} item={movie} type="movie" index={index} />
               ))}
             </div>
           )}

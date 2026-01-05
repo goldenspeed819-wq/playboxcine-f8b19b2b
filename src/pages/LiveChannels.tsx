@@ -3,7 +3,6 @@ import { Radio, ArrowLeft, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Tv
 import { Button } from '@/components/ui/button';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
-import { TVModeIndicator } from '@/components/TVModeIndicator';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 
@@ -358,7 +357,6 @@ const LiveChannels = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <TVModeIndicator />
       
       <main className="pt-24 pb-16">
         <div className="container mx-auto px-4">
