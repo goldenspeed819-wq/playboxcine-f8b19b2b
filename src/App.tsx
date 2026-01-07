@@ -39,7 +39,15 @@ import ManageBans from "./pages/admin/ManageBans";
 import ManageNotifications from "./pages/admin/ManageNotifications";
 import SiteSettings from "./pages/admin/SiteSettings";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      staleTime: 1000 * 60 * 5, // 5 minutes
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
