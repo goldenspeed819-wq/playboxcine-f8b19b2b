@@ -536,6 +536,21 @@ export function VideoPlayer({ src, poster, title, subtitles = [], nextLabel, onN
 
           {/* Right Controls */}
           <div className="flex items-center gap-1">
+            {/* Fullscreen - First on mobile for easy access */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-white hover:bg-white/15 h-10 w-10 rounded-full transition-all hover:scale-105 md:order-last"
+              onClick={toggleFullscreen}
+              title={isFullscreen ? 'Sair da tela cheia' : 'Tela cheia'}
+            >
+              {isFullscreen ? (
+                <Minimize className="w-5 h-5" />
+              ) : (
+                <Maximize className="w-5 h-5" />
+              )}
+            </Button>
+
             {/* Subtitles */}
             {subtitles.length > 0 && (
               <DropdownMenu>
@@ -661,20 +676,6 @@ export function VideoPlayer({ src, poster, title, subtitles = [], nextLabel, onN
               <RectangleHorizontal className="w-5 h-5" />
             </Button>
 
-            {/* Fullscreen */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-white hover:bg-white/15 h-10 w-10 rounded-full transition-all hover:scale-105"
-              onClick={toggleFullscreen}
-              title={isFullscreen ? 'Sair da tela cheia' : 'Tela cheia'}
-            >
-              {isFullscreen ? (
-                <Minimize className="w-5 h-5" />
-              ) : (
-                <Maximize className="w-5 h-5" />
-              )}
-            </Button>
           </div>
         </div>
       </div>
