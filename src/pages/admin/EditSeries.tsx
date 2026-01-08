@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Tv, Save, ArrowLeft, Plus, Trash2, Play, AlertTriangle, Pencil, Camera, Loader2 } from 'lucide-react';
+import { Tv, Save, ArrowLeft, Plus, Trash2, Play, AlertTriangle, Pencil, Camera, Loader2, Languages } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -32,6 +32,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { ThumbnailUpload } from '@/components/admin/ThumbnailUpload';
 import { VideoUpload } from '@/components/admin/VideoUpload';
+import { SubtitleUpload } from '@/components/admin/SubtitleUpload';
 import { PageLoader } from '@/components/LoadingSpinner';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -47,6 +48,7 @@ const EditSeries = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [episodes, setEpisodes] = useState<Episode[]>([]);
+  const [episodeSubtitles, setEpisodeSubtitles] = useState<Record<string, Array<{id: string; language: string; subtitle_url: string}>>>({});
   const [episodeDialogOpen, setEpisodeDialogOpen] = useState(false);
   const [editingEpisode, setEditingEpisode] = useState<Episode | null>(null);
   const [deleteEpisodeId, setDeleteEpisodeId] = useState<string | null>(null);
@@ -124,6 +126,40 @@ const EditSeries = () => {
 
     if (!error && data) {
       setEpisodes(data);
+      // Fetch subtitles for all episodes
+      fetchEpisodeSubtitles(data.map(ep => ep.id));
+    }
+  };
+
+  const fetchEpisodeSubtitles = async (episodeIds: string[]) => {
+    if (episodeIds.length === 0) return;
+    
+    const { data, error } = await supabase
+      .from('subtitles')
+      .select('id, language, subtitle_url, episode_id')
+      .in('episode_id', episodeIds);
+
+    if (!error && data) {
+      const subtitlesByEpisode: Record<string, Array<{id: string; language: string; subtitle_url: string}>> = {};
+      data.forEach(sub => {
+        if (sub.episode_id) {
+          if (!subtitlesByEpisode[sub.episode_id]) {
+            subtitlesByEpisode[sub.episode_id] = [];
+          }
+          subtitlesByEpisode[sub.episode_id].push({
+            id: sub.id,
+            language: sub.language,
+            subtitle_url: sub.subtitle_url
+          });
+        }
+      });
+      setEpisodeSubtitles(subtitlesByEpisode);
+    }
+  };
+
+  const handleSubtitleChange = () => {
+    if (editingEpisode) {
+      fetchEpisodeSubtitles([editingEpisode.id]);
     }
   };
 
@@ -642,6 +678,18 @@ const EditSeries = () => {
                           </p>
                         )}
                       </div>
+
+                      {/* Subtitles - only show when editing existing episode */}
+                      {editingEpisode && (
+                        <div className="pt-4 border-t border-border">
+                          <SubtitleUpload
+                            episodeId={editingEpisode.id}
+                            existingSubtitles={episodeSubtitles[editingEpisode.id] || []}
+                            onSubtitleChange={handleSubtitleChange}
+                          />
+                        </div>
+                      )}
+
                       <Button onClick={handleSaveEpisode} className="w-full">
                         {editingEpisode ? 'Salvar Alterações' : 'Adicionar Episódio'}
                       </Button>
@@ -676,10 +724,16 @@ const EditSeries = () => {
                         <p className="font-semibold text-sm truncate">
                           T{ep.season}E{ep.episode}: {ep.title || `Episódio ${ep.episode}`}
                         </p>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
                           {ep.duration && <span>{ep.duration}</span>}
                           {ep.intro_start != null && ep.intro_end != null && (
                             <span className="text-primary">• Abertura: {ep.intro_start}s - {ep.intro_end}s</span>
+                          )}
+                          {episodeSubtitles[ep.id]?.length > 0 && (
+                            <span className="flex items-center gap-1 text-green-500">
+                              <Languages className="w-3 h-3" />
+                              {episodeSubtitles[ep.id].length} legenda(s)
+                            </span>
                           )}
                         </div>
                       </div>
