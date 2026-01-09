@@ -61,15 +61,15 @@ const Movies = () => {
     <div className="min-h-screen bg-background">
       <Header />
 
-      <main className="pt-24 pb-12">
-        <div className="container mx-auto px-4">
+      <main className="pt-20 sm:pt-24 pb-8 sm:pb-12">
+        <div className="container mx-auto px-3 sm:px-4">
           {/* Page Header */}
-          <div className="mb-8">
-            <h1 className="font-display text-3xl md:text-4xl font-bold mb-2 flex items-center gap-3">
-              <Film className="w-8 h-8 text-primary" />
+          <div className="mb-6 sm:mb-8">
+            <h1 className="font-display text-2xl sm:text-3xl md:text-4xl font-bold mb-1 sm:mb-2 flex items-center gap-2 sm:gap-3">
+              <Film className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
               {searchQuery ? `Resultados para "${searchQuery}"` : 'Filmes'}
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-muted-foreground text-sm sm:text-base">
               {searchQuery 
                 ? `${filteredMovies.length} filme(s) encontrado(s)`
                 : 'Explore nossa coleção completa de filmes'}
@@ -78,12 +78,12 @@ const Movies = () => {
 
           {/* Category Filter */}
           {!searchQuery && categories.length > 1 && (
-            <div className="flex flex-wrap gap-2 mb-8">
+            <div className="flex flex-wrap gap-1.5 sm:gap-2 mb-6 sm:mb-8">
               {categories.map((category) => (
                 <button
                   key={category}
                   onClick={() => setSelectedCategory(category as string)}
-                  className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${
+                  className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-semibold transition-all ${
                     selectedCategory === category
                       ? 'bg-primary text-primary-foreground'
                       : 'bg-secondary text-muted-foreground hover:bg-secondary/80'
@@ -97,31 +97,31 @@ const Movies = () => {
 
           {/* Movies Grid */}
           {filteredMovies.length === 0 ? (
-            <div className="text-center py-20">
+            <div className="text-center py-12 sm:py-20">
               {searchQuery ? (
                 <>
-                  <Search className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                  <h2 className="font-display text-xl text-muted-foreground">
+                  <Search className="w-12 h-12 sm:w-16 sm:h-16 text-muted-foreground mx-auto mb-3 sm:mb-4" />
+                  <h2 className="font-display text-lg sm:text-xl text-muted-foreground">
                     Nenhum resultado para "{searchQuery}"
                   </h2>
-                  <p className="text-muted-foreground mt-2">
+                  <p className="text-muted-foreground mt-2 text-sm sm:text-base">
                     Tente buscar por outro termo
                   </p>
                 </>
               ) : (
                 <>
-                  <Film className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                  <h2 className="font-display text-xl text-muted-foreground">
+                  <Film className="w-12 h-12 sm:w-16 sm:h-16 text-muted-foreground mx-auto mb-3 sm:mb-4" />
+                  <h2 className="font-display text-lg sm:text-xl text-muted-foreground">
                     Nenhum filme encontrado
                   </h2>
-                  <p className="text-muted-foreground mt-2">
+                  <p className="text-muted-foreground mt-2 text-sm sm:text-base">
                     Adicione filmes pelo painel administrativo
                   </p>
                 </>
               )}
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
               {filteredMovies.map((movie, index) => (
                 <ContentCard key={movie.id} item={movie} type="movie" index={index} />
               ))}

@@ -38,12 +38,12 @@ export function HeroCarousel({ items }: HeroCarouselProps) {
 
   if (items.length === 0) {
     return (
-      <div className="relative h-[70vh] md:h-[85vh] flex items-center justify-center bg-hero-gradient">
-        <div className="text-center">
-          <h2 className="font-display text-2xl md:text-4xl text-muted-foreground">
+      <div className="relative h-[60vh] sm:h-[70vh] md:h-[85vh] flex items-center justify-center bg-hero-gradient">
+        <div className="text-center px-4">
+          <h2 className="font-display text-xl sm:text-2xl md:text-4xl text-muted-foreground">
             Nenhum conteúdo em destaque
           </h2>
-          <p className="text-muted-foreground mt-2">Adicione conteúdo pelo painel admin</p>
+          <p className="text-muted-foreground mt-2 text-sm sm:text-base">Adicione conteúdo pelo painel admin</p>
         </div>
       </div>
     );
@@ -61,7 +61,7 @@ export function HeroCarousel({ items }: HeroCarouselProps) {
     : currentItem.thumbnail;
 
   return (
-    <div className="relative h-[70vh] md:h-[85vh] overflow-hidden">
+    <div className="relative h-[60vh] sm:h-[70vh] md:h-[85vh] overflow-hidden">
       {/* Background Image */}
       <div className="absolute inset-0">
         {backgroundImage ? (
@@ -82,51 +82,53 @@ export function HeroCarousel({ items }: HeroCarouselProps) {
       </div>
 
       {/* Content */}
-      <div className="relative container mx-auto px-4 h-full flex items-center">
+      <div className="relative container mx-auto px-4 h-full flex items-end sm:items-center pb-20 sm:pb-0">
         <div className={cn(
-          'max-w-2xl transition-all duration-500',
+          'max-w-lg sm:max-w-xl md:max-w-2xl transition-all duration-500',
           isTransitioning ? 'opacity-0 translate-y-8' : 'opacity-100 translate-y-0'
         )}>
           {/* Category Badge */}
-          <span className="inline-block px-3 py-1 bg-primary/20 border border-primary/50 rounded-full text-primary text-xs font-semibold uppercase tracking-wider mb-4">
+          <span className="inline-block px-2 sm:px-3 py-0.5 sm:py-1 bg-primary/20 border border-primary/50 rounded-full text-primary text-[10px] sm:text-xs font-semibold uppercase tracking-wider mb-2 sm:mb-4">
             {currentItem.category || (isMovie ? 'Filme' : 'Série')}
           </span>
 
           {/* Title */}
-          <h1 className="font-display text-4xl md:text-6xl lg:text-7xl font-bold mb-4 leading-tight">
+          <h1 className="font-display text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-2 sm:mb-4 leading-tight line-clamp-2">
             {currentItem.title}
           </h1>
 
           {/* Meta Info */}
-          <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
+          <div className="flex items-center gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground mb-2 sm:mb-4">
             {currentItem.release_year && <span>{currentItem.release_year}</span>}
             {currentItem.rating && (
-              <span className="px-2 py-0.5 border border-muted-foreground/50 rounded text-xs">
+              <span className="px-1.5 sm:px-2 py-0.5 border border-muted-foreground/50 rounded text-[10px] sm:text-xs">
                 {currentItem.rating}
               </span>
             )}
             {'duration' in currentItem && currentItem.duration && (
-              <span>{currentItem.duration}</span>
+              <span className="hidden sm:inline">{currentItem.duration}</span>
             )}
           </div>
 
           {/* Description */}
-          <p className="text-muted-foreground text-base md:text-lg mb-8 line-clamp-3">
+          <p className="text-muted-foreground text-sm sm:text-base md:text-lg mb-4 sm:mb-6 md:mb-8 line-clamp-2 sm:line-clamp-3">
             {currentItem.description || 'Sem descrição disponível.'}
           </p>
 
           {/* Buttons */}
-          <div className="flex flex-wrap gap-4">
-            <Button asChild size="lg" className="gap-2 neon-glow">
+          <div className="flex flex-wrap gap-2 sm:gap-4">
+            <Button asChild size="sm" className="gap-2 neon-glow text-sm sm:text-base h-9 sm:h-11 px-4 sm:px-6">
               <Link to={detailLink}>
-                <Play className="w-5 h-5" />
-                Assistir Agora
+                <Play className="w-4 h-4 sm:w-5 sm:h-5" />
+                <span className="hidden xs:inline">Assistir</span>
+                <span className="xs:hidden">Play</span>
               </Link>
             </Button>
-            <Button asChild variant="outline" size="lg" className="gap-2 border-foreground/30 hover:bg-foreground/10">
+            <Button asChild variant="outline" size="sm" className="gap-2 border-foreground/30 hover:bg-foreground/10 text-sm sm:text-base h-9 sm:h-11 px-4 sm:px-6">
               <Link to={detailLink}>
-                <Info className="w-5 h-5" />
-                Mais Informações
+                <Info className="w-4 h-4 sm:w-5 sm:h-5" />
+                <span className="hidden sm:inline">Mais Informações</span>
+                <span className="sm:hidden">Info</span>
               </Link>
             </Button>
           </div>
@@ -138,31 +140,31 @@ export function HeroCarousel({ items }: HeroCarouselProps) {
         <>
           <button
             onClick={handlePrev}
-            className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-background/50 backdrop-blur-sm border border-border flex items-center justify-center text-foreground hover:bg-primary/20 hover:border-primary transition-colors"
+            className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 w-9 h-9 sm:w-12 sm:h-12 rounded-full bg-background/50 backdrop-blur-sm border border-border flex items-center justify-center text-foreground hover:bg-primary/20 hover:border-primary transition-colors"
           >
-            <ChevronLeft className="w-6 h-6" />
+            <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
           </button>
           <button
             onClick={handleNext}
-            className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-background/50 backdrop-blur-sm border border-border flex items-center justify-center text-foreground hover:bg-primary/20 hover:border-primary transition-colors"
+            className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 w-9 h-9 sm:w-12 sm:h-12 rounded-full bg-background/50 backdrop-blur-sm border border-border flex items-center justify-center text-foreground hover:bg-primary/20 hover:border-primary transition-colors"
           >
-            <ChevronRight className="w-6 h-6" />
+            <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
           </button>
         </>
       )}
 
       {/* Dots Indicator */}
       {items.length > 1 && (
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-2">
+        <div className="absolute bottom-4 sm:bottom-8 left-1/2 -translate-x-1/2 flex gap-1.5 sm:gap-2">
           {items.map((_, index) => (
             <button
               key={index}
               onClick={() => setCurrentIndex(index)}
               className={cn(
-                'w-2 h-2 rounded-full transition-all duration-300',
+                'h-1.5 sm:h-2 rounded-full transition-all duration-300',
                 index === currentIndex
-                  ? 'w-8 bg-primary'
-                  : 'bg-foreground/30 hover:bg-foreground/50'
+                  ? 'w-6 sm:w-8 bg-primary'
+                  : 'w-1.5 sm:w-2 bg-foreground/30 hover:bg-foreground/50'
               )}
             />
           ))}

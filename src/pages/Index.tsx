@@ -104,8 +104,8 @@ const Index = () => {
       <HeroCarousel items={featured.length > 0 ? featured : allContent} />
 
       {/* Content Sections */}
-      <main className="relative z-10 -mt-32 pb-10">
-        <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-transparent to-background pointer-events-none" />
+      <main className="relative z-10 -mt-16 sm:-mt-32 pb-6 sm:pb-10">
+        <div className="absolute inset-x-0 top-0 h-16 sm:h-32 bg-gradient-to-b from-transparent to-background pointer-events-none" />
         
         {/* Continue Watching */}
         <ContinueWatchingRow />
