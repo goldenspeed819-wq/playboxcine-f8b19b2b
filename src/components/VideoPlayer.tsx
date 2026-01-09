@@ -208,7 +208,19 @@ export function VideoPlayer({ src, poster, title, subtitles = [], nextLabel, onN
 
   useEffect(() => {
     const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
+      const isNowFullscreen = !!document.fullscreenElement;
+      setIsFullscreen(isNowFullscreen);
+      
+      // Unlock orientation when exiting fullscreen on mobile
+      if (!isNowFullscreen) {
+        try {
+          if (screen.orientation && 'unlock' in screen.orientation) {
+            (screen.orientation as any).unlock();
+          }
+        } catch (error) {
+          // Ignore errors
+        }
+      }
     };
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
@@ -226,14 +238,56 @@ export function VideoPlayer({ src, poster, title, subtitles = [], nextLabel, onN
     }
   };
 
-  const togglePlay = () => {
+  // Check if device is mobile
+  const isMobile = () => {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
+  };
+
+  // Lock screen to landscape on mobile
+  const lockLandscape = async () => {
+    try {
+      if (screen.orientation && 'lock' in screen.orientation) {
+        await (screen.orientation as any).lock('landscape');
+      }
+    } catch (error) {
+      // Screen orientation lock not supported or failed
+      console.log('Screen orientation lock not available');
+    }
+  };
+
+  // Unlock screen orientation
+  const unlockOrientation = () => {
+    try {
+      if (screen.orientation && 'unlock' in screen.orientation) {
+        (screen.orientation as any).unlock();
+      }
+    } catch (error) {
+      // Ignore errors
+    }
+  };
+
+  const togglePlay = async () => {
     const video = videoRef.current;
+    const container = containerRef.current;
     if (!video) return;
 
     if (isPlaying) {
       video.pause();
     } else {
       video.play();
+      // Auto fullscreen when starting to play (if not already fullscreen)
+      if (!isFullscreen && container) {
+        try {
+          await container.requestFullscreen?.();
+          // Lock to landscape on mobile
+          if (isMobile()) {
+            await lockLandscape();
+          }
+        } catch (error) {
+          // Fullscreen not supported or user denied
+          console.log('Fullscreen request failed');
+        }
+      }
     }
   };
 
@@ -264,13 +318,22 @@ export function VideoPlayer({ src, poster, title, subtitles = [], nextLabel, onN
     setIsMuted(!isMuted);
   };
 
-  const toggleFullscreen = () => {
+  const toggleFullscreen = async () => {
     const container = containerRef.current;
     if (!container) return;
 
     if (!isFullscreen) {
-      container.requestFullscreen?.();
+      try {
+        await container.requestFullscreen?.();
+        // Lock to landscape on mobile
+        if (isMobile()) {
+          await lockLandscape();
+        }
+      } catch (error) {
+        console.log('Fullscreen request failed');
+      }
     } else {
+      unlockOrientation();
       document.exitFullscreen?.();
     }
   };
