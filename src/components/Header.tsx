@@ -73,25 +73,25 @@ export function Header() {
           : 'bg-gradient-to-b from-background/80 to-transparent'
       )}
     >
-      <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-16 md:h-20">
+      <div className="container mx-auto px-3 sm:px-4">
+        <div className="flex items-center justify-between h-14 sm:h-16 md:h-20">
           {/* Logo */}
-          <Link to="/browse" className="flex items-center gap-3 group">
+          <Link to="/browse" className="flex items-center gap-2 sm:gap-3 group flex-shrink-0">
             <div className="relative">
               <div className="absolute inset-0 bg-primary/20 rounded-full blur-md group-hover:bg-primary/30 transition-colors" />
               <img 
                 src={logo} 
                 alt="PlayBox Cine" 
-                className="h-10 w-10 md:h-12 md:w-12 rounded-full object-cover ring-2 ring-primary/50 group-hover:ring-primary transition-all relative z-10"
+                className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 rounded-full object-cover ring-2 ring-primary/50 group-hover:ring-primary transition-all relative z-10"
               />
             </div>
-            <span className="hidden sm:block font-display text-lg md:text-xl font-bold text-foreground group-hover:text-primary transition-colors">
+            <span className="hidden sm:block font-display text-base sm:text-lg md:text-xl font-bold text-foreground group-hover:text-primary transition-colors">
               PlayBox<span className="text-primary">Cine</span>
             </span>
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-6 lg:gap-8">
+          <nav className="hidden md:flex items-center gap-4 lg:gap-8">
             {navLinks.map((link) => {
               const Icon = link.icon;
               return (
@@ -119,18 +119,18 @@ export function Header() {
           </nav>
 
           {/* Search & Actions */}
-          <div className="flex items-center gap-1 md:gap-2">
+          <div className="flex items-center gap-1">
             {/* Search */}
             <div className="flex items-center">
               <form onSubmit={handleSearch} className={cn(
                 'transition-all duration-300 overflow-hidden',
-                searchOpen ? 'w-40 md:w-56' : 'w-0'
+                searchOpen ? 'w-32 sm:w-40 md:w-56' : 'w-0'
               )}>
                 <Input
                   placeholder="Buscar..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="bg-secondary/80 border-border/50 focus:border-primary h-8 text-sm rounded-full px-4"
+                  className="bg-secondary/80 border-border/50 focus:border-primary h-8 text-sm rounded-full px-3 sm:px-4"
                   autoFocus={searchOpen}
                 />
               </form>
@@ -138,39 +138,39 @@ export function Header() {
                 variant="ghost"
                 size="icon"
                 onClick={handleSearchClick}
-                className="text-muted-foreground hover:text-foreground hover:bg-secondary/50 h-9 w-9 rounded-full"
+                className="text-muted-foreground hover:text-foreground hover:bg-secondary/50 h-8 w-8 sm:h-9 sm:w-9 rounded-full"
               >
                 <Search className="w-4 h-4" />
               </Button>
             </div>
 
-            {/* Divider */}
-            <div className="hidden sm:block h-6 w-px bg-border/50" />
+            {/* Divider - Hidden on mobile */}
+            <div className="hidden sm:block h-5 w-px bg-border/50 mx-1" />
 
-            {/* User Profile */}
+            {/* User Profile - Hidden on mobile */}
             {profile && (
-              <div className="hidden sm:flex items-center gap-2 px-2 py-1.5 rounded-full bg-secondary/30 hover:bg-secondary/50 transition-colors">
+              <div className="hidden md:flex items-center gap-2 px-2 py-1.5 rounded-full bg-secondary/30 hover:bg-secondary/50 transition-colors">
                 {profile.avatar_url && (
                   <img 
                     src={profile.avatar_url} 
                     alt="Avatar" 
-                    className="w-7 h-7 rounded-full object-cover ring-2 ring-primary/20"
+                    className="w-6 h-6 sm:w-7 sm:h-7 rounded-full object-cover ring-2 ring-primary/20"
                   />
                 )}
-                <span className="text-xs font-medium text-foreground max-w-[80px] truncate">
+                <span className="text-xs font-medium text-foreground max-w-[70px] truncate">
                   {profile.username || profile.user_code}
                 </span>
               </div>
             )}
 
             {/* Action Buttons */}
-            <div className="flex items-center gap-0.5">
+            <div className="flex items-center">
               {isAdmin && (
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={handleAdminClick}
-                  className="text-muted-foreground hover:text-foreground hover:bg-secondary/50 h-8 w-8 rounded-full"
+                  className="hidden sm:flex text-muted-foreground hover:text-foreground hover:bg-secondary/50 h-8 w-8 rounded-full"
                   title="Painel Admin"
                 >
                   <MoreVertical className="w-4 h-4" />
@@ -182,7 +182,7 @@ export function Header() {
                     variant="ghost"
                     size="icon"
                     onClick={() => navigate('/history')}
-                    className="text-muted-foreground hover:text-foreground hover:bg-secondary/50 h-8 w-8 rounded-full"
+                    className="hidden sm:flex text-muted-foreground hover:text-foreground hover:bg-secondary/50 h-8 w-8 rounded-full"
                     title="Histórico"
                   >
                     <History className="w-4 h-4" />
@@ -191,7 +191,7 @@ export function Header() {
                     variant="ghost"
                     size="icon"
                     onClick={() => navigate('/settings')}
-                    className="text-muted-foreground hover:text-foreground hover:bg-secondary/50 h-8 w-8 rounded-full"
+                    className="hidden sm:flex text-muted-foreground hover:text-foreground hover:bg-secondary/50 h-8 w-8 rounded-full"
                     title="Configurações"
                   >
                     <Settings className="w-4 h-4" />
@@ -200,7 +200,7 @@ export function Header() {
                     variant="ghost"
                     size="icon"
                     onClick={signOut}
-                    className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-8 w-8 rounded-full"
+                    className="hidden sm:flex text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-8 w-8 rounded-full"
                     title="Sair"
                   >
                     <LogOut className="w-4 h-4" />
@@ -213,7 +213,7 @@ export function Header() {
                 className="md:hidden text-muted-foreground hover:text-foreground hover:bg-secondary/50 h-8 w-8 rounded-full"
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
               >
-                {isMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+                {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
               </Button>
             </div>
           </div>
@@ -223,10 +223,32 @@ export function Header() {
         <div
           className={cn(
             'md:hidden overflow-hidden transition-all duration-300',
-            isMenuOpen ? 'max-h-64 pb-4' : 'max-h-0'
+            isMenuOpen ? 'max-h-[400px] pb-4' : 'max-h-0'
           )}
         >
-          <nav className="flex flex-col gap-2">
+          {/* User Profile Mobile */}
+          {profile && (
+            <div className="flex items-center gap-3 px-3 py-3 mb-2 rounded-xl bg-secondary/30">
+              {profile.avatar_url && (
+                <img 
+                  src={profile.avatar_url} 
+                  alt="Avatar" 
+                  className="w-10 h-10 rounded-full object-cover ring-2 ring-primary/30"
+                />
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-foreground truncate">
+                  {profile.username || 'Usuário'}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  #{profile.user_code}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Navigation Links */}
+          <nav className="flex flex-col gap-1">
             {navLinks.map((link) => {
               const Icon = link.icon;
               return (
@@ -235,17 +257,56 @@ export function Header() {
                   to={link.href}
                   onClick={() => setIsMenuOpen(false)}
                   className={cn(
-                    'flex items-center gap-3 font-body font-semibold py-2.5 px-4 rounded-lg transition-colors',
+                    'flex items-center gap-3 font-body font-semibold py-3 px-4 rounded-xl transition-colors',
                     location.pathname === link.href
                       ? 'bg-primary/20 text-primary'
-                      : 'text-muted-foreground hover:bg-secondary'
+                      : 'text-muted-foreground hover:bg-secondary active:bg-secondary'
                   )}
                 >
-                  <Icon className="w-4 h-4" />
+                  <Icon className="w-5 h-5" />
                   <span>{link.label}</span>
                 </Link>
               );
             })}
+            
+            {/* Divider */}
+            <div className="h-px bg-border/50 my-2" />
+            
+            {/* Additional Links */}
+            <Link
+              to="/history"
+              onClick={() => setIsMenuOpen(false)}
+              className="flex items-center gap-3 font-body font-semibold py-3 px-4 rounded-xl text-muted-foreground hover:bg-secondary active:bg-secondary"
+            >
+              <History className="w-5 h-5" />
+              <span>Histórico</span>
+            </Link>
+            <Link
+              to="/settings"
+              onClick={() => setIsMenuOpen(false)}
+              className="flex items-center gap-3 font-body font-semibold py-3 px-4 rounded-xl text-muted-foreground hover:bg-secondary active:bg-secondary"
+            >
+              <Settings className="w-5 h-5" />
+              <span>Configurações</span>
+            </Link>
+            {isAdmin && (
+              <button
+                onClick={() => { setIsMenuOpen(false); handleAdminClick(); }}
+                className="flex items-center gap-3 font-body font-semibold py-3 px-4 rounded-xl text-muted-foreground hover:bg-secondary active:bg-secondary w-full text-left"
+              >
+                <MoreVertical className="w-5 h-5" />
+                <span>Painel Admin</span>
+              </button>
+            )}
+            
+            {/* Logout */}
+            <button
+              onClick={() => { setIsMenuOpen(false); signOut(); }}
+              className="flex items-center gap-3 font-body font-semibold py-3 px-4 rounded-xl text-destructive hover:bg-destructive/10 active:bg-destructive/10 w-full text-left mt-1"
+            >
+              <LogOut className="w-5 h-5" />
+              <span>Sair</span>
+            </button>
           </nav>
         </div>
       </div>

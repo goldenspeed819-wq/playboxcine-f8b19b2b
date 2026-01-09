@@ -157,7 +157,7 @@ const MovieDetail = () => {
       />
 
       {/* Hero Background */}
-      <div className="relative h-[50vh] overflow-hidden">
+      <div className="relative h-[35vh] sm:h-[50vh] overflow-hidden">
         {movie.thumbnail ? (
           <img
             src={movie.thumbnail}
@@ -170,13 +170,14 @@ const MovieDetail = () => {
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent" />
       </div>
 
-      <main className="relative z-10 -mt-40 pb-12">
-        <div className="container mx-auto px-4">
+      <main className="relative z-10 -mt-20 sm:-mt-40 pb-8 sm:pb-12">
+        <div className="container mx-auto px-3 sm:px-4">
           {/* Back Button */}
           <Button
             asChild
             variant="ghost"
-            className="mb-6 text-muted-foreground hover:text-foreground"
+            size="sm"
+            className="mb-4 sm:mb-6 text-muted-foreground hover:text-foreground"
           >
             <Link to="/movies">
               <ArrowLeft className="w-4 h-4 mr-2" />
@@ -184,9 +185,9 @@ const MovieDetail = () => {
             </Link>
           </Button>
 
-          <div className="grid lg:grid-cols-3 gap-8">
+          <div className="grid lg:grid-cols-3 gap-6 sm:gap-8">
             {/* Main Content */}
-            <div className="lg:col-span-2 space-y-8">
+            <div className="lg:col-span-2 space-y-6 sm:space-y-8">
               {/* Part Selector */}
               {hasPart2 && (
                 <div className="flex gap-2 mb-4">
@@ -221,37 +222,37 @@ const MovieDetail = () => {
 
               {/* Movie Info */}
               <div>
-                <h1 className="font-display text-3xl md:text-4xl font-bold mb-4">
+                <h1 className="font-display text-2xl sm:text-3xl md:text-4xl font-bold mb-3 sm:mb-4">
                   {movie.title}
                 </h1>
 
-                <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mb-6">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground mb-4 sm:mb-6">
                   {movie.release_year && (
                     <span className="flex items-center gap-1">
-                      <Calendar className="w-4 h-4" />
+                      <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                       {movie.release_year}
                     </span>
                   )}
                   {movie.duration && (
                     <span className="flex items-center gap-1">
-                      <Clock className="w-4 h-4" />
+                      <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                       {movie.duration}
                     </span>
                   )}
                   {movie.category && (
                     <span className="flex items-center gap-1">
-                      <Tag className="w-4 h-4" />
+                      <Tag className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                       {movie.category}
                     </span>
                   )}
                   {movie.rating && (
-                    <span className="px-2 py-0.5 border border-muted-foreground/50 rounded text-xs">
+                    <span className="px-1.5 sm:px-2 py-0.5 border border-muted-foreground/50 rounded text-[10px] sm:text-xs">
                       {movie.rating}
                     </span>
                   )}
                 </div>
 
-                <p className="text-muted-foreground leading-relaxed">
+                <p className="text-muted-foreground text-sm sm:text-base leading-relaxed">
                   {movie.description || 'Sem descrição disponível.'}
                 </p>
               </div>
@@ -260,8 +261,8 @@ const MovieDetail = () => {
               <CommentSection movieId={movie.id} />
             </div>
 
-            {/* Sidebar */}
-            <div className="space-y-6">
+            {/* Sidebar - Hidden on mobile, shows below on tablet */}
+            <div className="space-y-6 hidden lg:block">
               {/* Poster */}
               {movie.thumbnail && (
                 <div className="aspect-[2/3] rounded-xl overflow-hidden border border-border">
