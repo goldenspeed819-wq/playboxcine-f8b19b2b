@@ -16,4 +16,4 @@ User-agent: *
 Allow: /
 
 # Sitemap
-Sitemap: https://playboxcine.vercel.app/sitemap.xml
+Sitemap: https://rynexcine.vercel.app/sitemap.xml
