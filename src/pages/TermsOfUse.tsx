@@ -1,10 +1,8 @@
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { Link } from 'react-router-dom';
-
 const TermsOfUse = () => {
-  return (
-    <div className="min-h-screen bg-background">
+  return <div className="min-h-screen bg-background">
       <Header />
       
       <main className="container mx-auto px-4 py-24 max-w-4xl">
@@ -29,14 +27,9 @@ const TermsOfUse = () => {
             <h2 className="text-xl font-semibold text-destructive mb-3">
               ⚖️ Aviso Legal - DMCA e Direitos Autorais
             </h2>
-            <p className="text-foreground font-medium mb-3">
-              O PlayBox Cine é uma plataforma de indexação e organização de links. 
-              <strong> NÃO hospedamos, armazenamos ou distribuímos nenhum conteúdo audiovisual protegido por direitos autorais em nossos servidores.</strong>
+            <p className="text-foreground font-medium mb-3">O Rynex Cine é uma plataforma de indexação e organização de links. NÃO hospedamos, armazenamos ou distribuímos nenhum conteúdo audiovisual protegido por direitos autorais em nossos servidores.<strong> NÃO hospedamos, armazenamos ou distribuímos nenhum conteúdo audiovisual protegido por direitos autorais em nossos servidores.</strong>
             </p>
-            <p className="text-foreground">
-              Todo o conteúdo exibido é proveniente de fontes externas de terceiros, disponíveis publicamente na internet. 
-              O PlayBox Cine atua apenas como um agregador de links, similar a um motor de busca.
-            </p>
+            <p className="text-foreground">Todo o conteúdo exibido é proveniente de fontes externas de terceiros, disponíveis publicamente na internet. A Rynex Cine atua apenas como um agregador de links, similar a um motor de busca.</p>
           </div>
 
           {/* Acceptance */}
@@ -45,9 +38,7 @@ const TermsOfUse = () => {
               1. Aceitação dos Termos
             </h2>
             <p>
-              Ao acessar e usar o PlayBox Cine, você concorda em cumprir e estar sujeito a estes Termos de Uso. 
-              Estes termos se aplicam a todos os visitantes, usuários e outras pessoas que acessam ou usam o serviço.
-              O uso contínuo da plataforma constitui aceitação integral destes termos.
+              Ao acessar e usar o Rynex Cine, você concorda em cumprir e estar sujeito a estes Termos de Uso. Estes termos se aplicam a todos os visitantes, usuários e outras pessoas que acessam ou usam o serviço. O uso contínuo da plataforma constitui aceitação integral destes termos.
             </p>
           </section>
 
@@ -84,9 +75,7 @@ const TermsOfUse = () => {
             <h2 className="text-xl font-semibold text-foreground mb-3">
               3. Responsabilidade do Usuário
             </h2>
-            <p className="mb-3">
-              Ao utilizar o PlayBox Cine, você reconhece e concorda que:
-            </p>
+            <p className="mb-3">Ao utilizar o Rynex Cine, você reconhece e concorda que:</p>
             <ul className="list-disc list-inside mt-2 space-y-1">
               <li>É o único responsável por verificar a legalidade do acesso ao conteúdo em sua jurisdição</li>
               <li>Deve respeitar as leis de direitos autorais aplicáveis em seu país</li>
@@ -101,10 +90,7 @@ const TermsOfUse = () => {
             <h2 className="text-xl font-semibold text-foreground mb-3">
               4. Conformidade com DMCA
             </h2>
-            <p className="mb-3">
-              O PlayBox Cine respeita os direitos de propriedade intelectual e está comprometido 
-              com a conformidade com o Digital Millennium Copyright Act (DMCA) e legislações similares.
-            </p>
+            <p className="mb-3">O Rynex Cine respeita os direitos de propriedade intelectual e está comprometido com a conformidade com o Digital Millennium Copyright Act (DMCA) e legislações similares.</p>
             <p className="mb-3">
               <strong>Procedimento de Notificação:</strong>
             </p>
@@ -158,13 +144,10 @@ const TermsOfUse = () => {
             <h2 className="text-xl font-semibold text-foreground mb-3">
               7. Isenção de Responsabilidade
             </h2>
-            <p className="mb-3">
-              <strong>AVISO IMPORTANTE:</strong> O PlayBox Cine é fornecido "como está" e "conforme disponível", 
+            <p className="mb-3">AVISO IMPORTANTE: O Rynex Cine é fornecido "como está" e "conforme disponível", sem garantias de qualquer tipo, expressas ou implícitas.<strong>AVISO IMPORTANTE:</strong> O PlayBox Cine é fornecido "como está" e "conforme disponível", 
               sem garantias de qualquer tipo, expressas ou implícitas.
             </p>
-            <p className="mb-3">
-              O PlayBox Cine NÃO se responsabiliza por:
-            </p>
+            <p className="mb-3">O Rynex Cine NÃO se responsabiliza por:</p>
             <ul className="list-disc list-inside mt-2 space-y-1">
               <li>Conteúdo hospedado em servidores de terceiros</li>
               <li>Qualidade, disponibilidade ou legalidade dos links indexados</li>
@@ -181,10 +164,7 @@ const TermsOfUse = () => {
             <h2 className="text-xl font-semibold text-foreground mb-3">
               8. Conteúdo de Terceiros
             </h2>
-            <p className="mb-3">
-              Todo o conteúdo audiovisual acessível através do PlayBox Cine é hospedado 
-              e fornecido por servidores de terceiros não afiliados a nós.
-            </p>
+            <p className="mb-3">Todo o conteúdo audiovisual acessível através do Rynex Cine é hospedado e fornecido por servidores de terceiros não afiliados a nós.</p>
             <ul className="list-disc list-inside mt-2 space-y-1">
               <li>Não temos controle sobre esses servidores ou seu conteúdo</li>
               <li>Não verificamos a legalidade do conteúdo de terceiros</li>
@@ -198,12 +178,7 @@ const TermsOfUse = () => {
             <h2 className="text-xl font-semibold text-foreground mb-3">
               9. Limitação de Responsabilidade
             </h2>
-            <p>
-              Em nenhuma circunstância o PlayBox Cine, seus proprietários, funcionários ou afiliados 
-              serão responsáveis por quaisquer danos, incluindo, mas não limitados a, danos por perda 
-              de lucros, dados ou outras perdas intangíveis resultantes do uso ou impossibilidade 
-              de uso do serviço.
-            </p>
+            <p>Em nenhuma circunstância o Rynex Cine, seus proprietários, funcionários ou afiliados serão responsáveis por quaisquer danos, incluindo, mas não limitados a, danos por perda de lucros, dados ou outras perdas intangíveis resultantes do uso ou impossibilidade de uso do serviço.</p>
           </section>
 
           {/* Indemnification */}
@@ -211,11 +186,7 @@ const TermsOfUse = () => {
             <h2 className="text-xl font-semibold text-foreground mb-3">
               10. Indenização
             </h2>
-            <p>
-              Você concorda em defender, indenizar e isentar o PlayBox Cine de quaisquer reclamações, 
-              danos, custos e despesas (incluindo honorários advocatícios) decorrentes ou relacionados 
-              ao seu uso do serviço, violação destes Termos ou violação de qualquer lei ou direitos de terceiros.
-            </p>
+            <p>Você concorda em defender, indenizar e isentar o Rynex Cine de quaisquer reclamações, danos, custos e despesas (incluindo honorários advocatícios) decorrentes ou relacionados ao seu uso do serviço, violação destes Termos ou violação de qualquer lei ou direitos de terceiros.</p>
           </section>
 
           {/* Account Termination */}
@@ -272,10 +243,7 @@ const TermsOfUse = () => {
             <p className="mb-4">
               Consulte também nossa Política de Privacidade para entender como tratamos seus dados:
             </p>
-            <Link 
-              to="/privacy" 
-              className="inline-flex items-center gap-2 text-primary hover:text-primary/80 transition-colors font-medium"
-            >
+            <Link to="/privacy" className="inline-flex items-center gap-2 text-primary hover:text-primary/80 transition-colors font-medium">
               Política de Privacidade →
             </Link>
           </section>
@@ -287,8 +255,6 @@ const TermsOfUse = () => {
       </main>
 
       <Footer />
-    </div>
-  );
+    </div>;
 };
-
 export default TermsOfUse;
