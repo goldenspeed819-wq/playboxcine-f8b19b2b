@@ -52,6 +52,18 @@ const ProfileSelection = () => {
     setIsLoading(true);
 
     try {
+      // Get current user's own profile (they can always see their own full data)
+      const { data: ownProfile, error: ownError } = await supabase
+        .from('profiles')
+        .select('id, email, username, avatar_url')
+        .eq('id', user.id)
+        .single();
+
+      if (ownError) {
+        console.error('Error fetching own profile:', ownError);
+        return;
+      }
+
       // Get all linked account IDs (where current user is primary or linked)
       const { data: links, error: linksError } = await supabase
         .from('linked_accounts')
@@ -63,39 +75,43 @@ const ProfileSelection = () => {
         return;
       }
 
-      // Collect all unique user IDs
-      const userIds = new Set<string>([user.id]);
+      // Collect all linked user IDs (excluding current user)
+      const linkedUserIds = new Set<string>();
       links?.forEach((link) => {
-        userIds.add(link.primary_user_id);
-        userIds.add(link.linked_user_id);
+        if (link.primary_user_id !== user.id) linkedUserIds.add(link.primary_user_id);
+        if (link.linked_user_id !== user.id) linkedUserIds.add(link.linked_user_id);
       });
 
-      // Fetch profiles for all linked users
-      const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select('id, email, username, avatar_url')
-        .in('id', Array.from(userIds));
-
-      if (profilesError) {
-        console.error('Error fetching profiles:', profilesError);
-        return;
+      // Fetch safe profile data for linked users using secure RPC
+      const linkedProfilesData: LinkedProfile[] = [];
+      
+      for (const linkedId of linkedUserIds) {
+        const { data: safeProfile, error: safeError } = await supabase
+          .rpc('get_linked_profile_safe', { profile_id: linkedId });
+        
+        if (!safeError && safeProfile && safeProfile.length > 0) {
+          const p = safeProfile[0];
+          linkedProfilesData.push({
+            id: p.id,
+            email: '', // Email is not exposed for linked profiles
+            username: p.username,
+            avatar_url: p.avatar_url,
+            isCurrentUser: false,
+          });
+        }
       }
 
-      const allProfiles: LinkedProfile[] =
-        profiles?.map((p) => ({
-          id: p.id,
-          email: p.email,
-          username: p.username,
-          avatar_url: p.avatar_url,
-          isCurrentUser: p.id === user.id,
-        })) || [];
-
-      // Current user should always appear first
-      allProfiles.sort((a, b) => {
-        if (a.isCurrentUser) return -1;
-        if (b.isCurrentUser) return 1;
-        return 0;
-      });
+      // Build the full list with current user first
+      const allProfiles: LinkedProfile[] = [
+        {
+          id: ownProfile.id,
+          email: ownProfile.email,
+          username: ownProfile.username,
+          avatar_url: ownProfile.avatar_url,
+          isCurrentUser: true,
+        },
+        ...linkedProfilesData,
+      ];
 
       setLinkedProfiles(allProfiles);
     } finally {
@@ -108,8 +124,9 @@ const ProfileSelection = () => {
       localStorage.setItem('selectedProfile', JSON.stringify(selectedProfile));
       navigate('/browse');
     } else {
-      // Switch to another linked account - sign out and go to auth with email prefilled
-      localStorage.setItem('switchToEmail', selectedProfile.email);
+      // For linked accounts, sign out and navigate to auth page
+      // User will need to manually log in with their credentials (email not exposed for security)
+      toast.info('Faça login com as credenciais da conta selecionada');
       await supabase.auth.signOut();
       navigate('/auth');
     }
