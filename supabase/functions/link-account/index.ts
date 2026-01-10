@@ -123,10 +123,10 @@ serve(async (req: Request) => {
       );
     }
 
-    // Get the linked user's profile
+    // Get the linked user's profile (only safe data, no email)
     const { data: linkedProfile } = await adminClient
       .from("profiles")
-      .select("id, email, username, avatar_url")
+      .select("id, username, avatar_url, user_code")
       .eq("id", linkedUserId)
       .single();
 
@@ -135,9 +135,10 @@ serve(async (req: Request) => {
         success: true, 
         linkedProfile: linkedProfile ? {
           id: linkedProfile.id,
-          email: linkedProfile.email,
+          email: '', // Don't expose email for security
           username: linkedProfile.username,
           avatar_url: linkedProfile.avatar_url,
+          user_code: linkedProfile.user_code,
           isCurrentUser: false,
         } : null
       }),

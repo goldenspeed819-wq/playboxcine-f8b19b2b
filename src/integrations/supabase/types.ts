@@ -637,6 +637,15 @@ export type Database = {
     }
     Functions: {
       generate_user_code: { Args: never; Returns: string }
+      get_linked_profile_safe: {
+        Args: { profile_id: string }
+        Returns: {
+          avatar_url: string
+          id: string
+          user_code: string
+          username: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
