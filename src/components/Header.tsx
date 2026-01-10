@@ -81,12 +81,12 @@ export function Header() {
               <div className="absolute inset-0 bg-primary/20 rounded-full blur-md group-hover:bg-primary/30 transition-colors" />
               <img 
                 src={logo} 
-                alt="PlayBox Cine" 
-                className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 rounded-full object-cover ring-2 ring-primary/50 group-hover:ring-primary transition-all relative z-10"
+                alt="Rynex Cine" 
+                className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 rounded-lg object-contain ring-2 ring-primary/50 group-hover:ring-primary transition-all relative z-10"
               />
             </div>
             <span className="hidden sm:block font-display text-base sm:text-lg md:text-xl font-bold text-foreground group-hover:text-primary transition-colors">
-              PlayBox<span className="text-primary">Cine</span>
+              Rynex<span className="text-primary">Cine</span>
             </span>
           </Link>
 
