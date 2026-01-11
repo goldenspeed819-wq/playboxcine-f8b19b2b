@@ -18,6 +18,7 @@ import {
   RectangleHorizontal,
   Subtitles,
   MessageSquareOff,
+  FlipHorizontal2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
@@ -64,6 +65,7 @@ export function VideoPlayer({ src, poster, title, subtitles = [], nextLabel, onN
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isPiP, setIsPiP] = useState(false);
   const [isStretched, setIsStretched] = useState(false);
+  const [isMirrored, setIsMirrored] = useState(false);
   const [showControls, setShowControls] = useState(true);
   const [showNextButton, setShowNextButton] = useState(false);
   const [showSkipIntro, setShowSkipIntro] = useState(false);
@@ -342,6 +344,10 @@ export function VideoPlayer({ src, poster, title, subtitles = [], nextLabel, onN
     setIsStretched(!isStretched);
   };
 
+  const toggleMirror = () => {
+    setIsMirrored(!isMirrored);
+  };
+
   const togglePiP = async () => {
     const video = videoRef.current;
     if (!video) return;
@@ -420,8 +426,9 @@ export function VideoPlayer({ src, poster, title, subtitles = [], nextLabel, onN
         src={src}
         poster={poster || undefined}
         className={cn(
-          "w-full h-full bg-black",
-          isStretched ? "object-cover" : "object-contain"
+          "w-full h-full bg-black transition-transform duration-200",
+          isStretched ? "object-cover" : "object-contain",
+          isMirrored && "scale-x-[-1]"
         )}
         onClick={togglePlay}
         playsInline
@@ -737,6 +744,20 @@ export function VideoPlayer({ src, poster, title, subtitles = [], nextLabel, onN
               title={isStretched ? 'Ajustar à tela' : 'Preencher tela'}
             >
               <RectangleHorizontal className="w-5 h-5" />
+            </Button>
+
+            {/* Mirror/Flip */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn(
+                'text-white hover:bg-white/15 h-10 w-10 rounded-full transition-all hover:scale-105',
+                isMirrored && 'text-primary bg-primary/20'
+              )}
+              onClick={toggleMirror}
+              title={isMirrored ? 'Desespelhar' : 'Espelhar tela'}
+            >
+              <FlipHorizontal2 className="w-5 h-5" />
             </Button>
 
           </div>
