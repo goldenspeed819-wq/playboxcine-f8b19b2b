@@ -19,6 +19,7 @@ import {
   Subtitles,
   MessageSquareOff,
   FlipHorizontal2,
+  Cast,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
@@ -66,6 +67,8 @@ export function VideoPlayer({ src, poster, title, subtitles = [], nextLabel, onN
   const [isPiP, setIsPiP] = useState(false);
   const [isStretched, setIsStretched] = useState(false);
   const [isMirrored, setIsMirrored] = useState(false);
+  const [isCasting, setIsCasting] = useState(false);
+  const [canCast, setCanCast] = useState(false);
   const [showControls, setShowControls] = useState(true);
   const [showNextButton, setShowNextButton] = useState(false);
   const [showSkipIntro, setShowSkipIntro] = useState(false);
@@ -208,6 +211,41 @@ export function VideoPlayer({ src, poster, title, subtitles = [], nextLabel, onN
     };
   }, [src, onTimeUpdate, initialTime]);
 
+  // Check for Remote Playback (casting) support
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    // Check if Remote Playback API is available
+    if ('remote' in video) {
+      const remote = (video as any).remote;
+      
+      // Check if we can cast
+      remote.watchAvailability?.((available: boolean) => {
+        setCanCast(available);
+      }).catch(() => {
+        // Remote playback not supported or no devices available
+        setCanCast(false);
+      });
+
+      // Listen for connection state changes
+      const handleConnecting = () => setIsCasting(true);
+      const handleConnect = () => setIsCasting(true);
+      const handleDisconnect = () => setIsCasting(false);
+
+      remote.addEventListener?.('connecting', handleConnecting);
+      remote.addEventListener?.('connect', handleConnect);
+      remote.addEventListener?.('disconnect', handleDisconnect);
+
+      return () => {
+        remote.removeEventListener?.('connecting', handleConnecting);
+        remote.removeEventListener?.('connect', handleConnect);
+        remote.removeEventListener?.('disconnect', handleDisconnect);
+        remote.cancelWatchAvailability?.().catch(() => {});
+      };
+    }
+  }, [src]);
+
   useEffect(() => {
     const handleFullscreenChange = () => {
       const isNowFullscreen = !!document.fullscreenElement;
@@ -346,6 +384,36 @@ export function VideoPlayer({ src, poster, title, subtitles = [], nextLabel, onN
 
   const toggleMirror = () => {
     setIsMirrored(!isMirrored);
+  };
+
+  const toggleCast = async () => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    try {
+      if ('remote' in video) {
+        const remote = (video as any).remote;
+        
+        if (isCasting) {
+          // If already casting, try to disconnect (prompt user)
+          await remote.prompt();
+        } else {
+          // Show casting device picker
+          await remote.prompt();
+        }
+      } else {
+        // Fallback: Try using Presentation API
+        if ('presentation' in navigator && (navigator as any).presentation) {
+          const presentationRequest = new (window as any).PresentationRequest([src || '']);
+          await presentationRequest.start();
+        } else {
+          // Last fallback: Show info toast
+          console.log('Casting not supported on this browser');
+        }
+      }
+    } catch (error) {
+      console.log('Cast error:', error);
+    }
   };
 
   const togglePiP = async () => {
@@ -758,6 +826,20 @@ export function VideoPlayer({ src, poster, title, subtitles = [], nextLabel, onN
               title={isMirrored ? 'Desespelhar' : 'Espelhar tela'}
             >
               <FlipHorizontal2 className="w-5 h-5" />
+            </Button>
+
+            {/* Cast/Transmitir */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn(
+                'text-white hover:bg-white/15 h-10 w-10 rounded-full transition-all hover:scale-105',
+                isCasting && 'text-primary bg-primary/20'
+              )}
+              onClick={toggleCast}
+              title={isCasting ? 'Parar transmissão' : 'Transmitir para TV'}
+            >
+              <Cast className="w-5 h-5" />
             </Button>
 
           </div>
