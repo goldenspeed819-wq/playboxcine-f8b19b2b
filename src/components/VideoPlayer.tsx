@@ -18,7 +18,6 @@ import {
   RectangleHorizontal,
   Subtitles,
   MessageSquareOff,
-  FlipHorizontal2,
   Cast,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -66,9 +65,7 @@ export function VideoPlayer({ src, poster, title, subtitles = [], nextLabel, onN
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isPiP, setIsPiP] = useState(false);
   const [isStretched, setIsStretched] = useState(false);
-  const [isMirrored, setIsMirrored] = useState(false);
   const [isCasting, setIsCasting] = useState(false);
-  const [canCast, setCanCast] = useState(false);
   const [showControls, setShowControls] = useState(true);
   const [showNextButton, setShowNextButton] = useState(false);
   const [showSkipIntro, setShowSkipIntro] = useState(false);
@@ -216,32 +213,18 @@ export function VideoPlayer({ src, poster, title, subtitles = [], nextLabel, onN
     const video = videoRef.current;
     if (!video) return;
 
-    // Check if Remote Playback API is available
     if ('remote' in video) {
       const remote = (video as any).remote;
       
-      // Check if we can cast
-      remote.watchAvailability?.((available: boolean) => {
-        setCanCast(available);
-      }).catch(() => {
-        // Remote playback not supported or no devices available
-        setCanCast(false);
-      });
-
-      // Listen for connection state changes
-      const handleConnecting = () => setIsCasting(true);
       const handleConnect = () => setIsCasting(true);
       const handleDisconnect = () => setIsCasting(false);
 
-      remote.addEventListener?.('connecting', handleConnecting);
       remote.addEventListener?.('connect', handleConnect);
       remote.addEventListener?.('disconnect', handleDisconnect);
 
       return () => {
-        remote.removeEventListener?.('connecting', handleConnecting);
         remote.removeEventListener?.('connect', handleConnect);
         remote.removeEventListener?.('disconnect', handleDisconnect);
-        remote.cancelWatchAvailability?.().catch(() => {});
       };
     }
   }, [src]);
@@ -382,37 +365,25 @@ export function VideoPlayer({ src, poster, title, subtitles = [], nextLabel, onN
     setIsStretched(!isStretched);
   };
 
-  const toggleMirror = () => {
-    setIsMirrored(!isMirrored);
-  };
-
   const toggleCast = async () => {
     const video = videoRef.current;
-    if (!video) return;
+    if (!video || !src) return;
 
     try {
+      // Try Remote Playback API first (Chrome + Chromecast)
       if ('remote' in video) {
         const remote = (video as any).remote;
-        
-        if (isCasting) {
-          // If already casting, try to disconnect (prompt user)
-          await remote.prompt();
-        } else {
-          // Show casting device picker
-          await remote.prompt();
-        }
-      } else {
-        // Fallback: Try using Presentation API
-        if ('presentation' in navigator && (navigator as any).presentation) {
-          const presentationRequest = new (window as any).PresentationRequest([src || '']);
-          await presentationRequest.start();
-        } else {
-          // Last fallback: Show info toast
-          console.log('Casting not supported on this browser');
-        }
+        await remote.prompt();
+        return;
       }
+      
+      // Fallback: Open video in new tab for manual casting
+      window.open(src, '_blank');
     } catch (error) {
-      console.log('Cast error:', error);
+      // If prompt fails, open video URL for manual casting
+      if (src) {
+        window.open(src, '_blank');
+      }
     }
   };
 
@@ -494,9 +465,8 @@ export function VideoPlayer({ src, poster, title, subtitles = [], nextLabel, onN
         src={src}
         poster={poster || undefined}
         className={cn(
-          "w-full h-full bg-black transition-transform duration-200",
-          isStretched ? "object-cover" : "object-contain",
-          isMirrored && "scale-x-[-1]"
+          "w-full h-full bg-black",
+          isStretched ? "object-cover" : "object-contain"
         )}
         onClick={togglePlay}
         playsInline
@@ -814,20 +784,6 @@ export function VideoPlayer({ src, poster, title, subtitles = [], nextLabel, onN
               <RectangleHorizontal className="w-5 h-5" />
             </Button>
 
-            {/* Mirror/Flip */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className={cn(
-                'text-white hover:bg-white/15 h-10 w-10 rounded-full transition-all hover:scale-105',
-                isMirrored && 'text-primary bg-primary/20'
-              )}
-              onClick={toggleMirror}
-              title={isMirrored ? 'Desespelhar' : 'Espelhar tela'}
-            >
-              <FlipHorizontal2 className="w-5 h-5" />
-            </Button>
-
             {/* Cast/Transmitir */}
             <Button
               variant="ghost"
@@ -837,7 +793,7 @@ export function VideoPlayer({ src, poster, title, subtitles = [], nextLabel, onN
                 isCasting && 'text-primary bg-primary/20'
               )}
               onClick={toggleCast}
-              title={isCasting ? 'Parar transmissão' : 'Transmitir para TV'}
+              title="Transmitir para TV"
             >
               <Cast className="w-5 h-5" />
             </Button>
