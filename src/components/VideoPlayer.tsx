@@ -18,7 +18,6 @@ import {
   RectangleHorizontal,
   Subtitles,
   MessageSquareOff,
-  Cast,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
@@ -65,7 +64,6 @@ export function VideoPlayer({ src, poster, title, subtitles = [], nextLabel, onN
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isPiP, setIsPiP] = useState(false);
   const [isStretched, setIsStretched] = useState(false);
-  const [isCasting, setIsCasting] = useState(false);
   const [showControls, setShowControls] = useState(true);
   const [showNextButton, setShowNextButton] = useState(false);
   const [showSkipIntro, setShowSkipIntro] = useState(false);
@@ -208,27 +206,6 @@ export function VideoPlayer({ src, poster, title, subtitles = [], nextLabel, onN
     };
   }, [src, onTimeUpdate, initialTime]);
 
-  // Check for Remote Playback (casting) support
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    if ('remote' in video) {
-      const remote = (video as any).remote;
-      
-      const handleConnect = () => setIsCasting(true);
-      const handleDisconnect = () => setIsCasting(false);
-
-      remote.addEventListener?.('connect', handleConnect);
-      remote.addEventListener?.('disconnect', handleDisconnect);
-
-      return () => {
-        remote.removeEventListener?.('connect', handleConnect);
-        remote.removeEventListener?.('disconnect', handleDisconnect);
-      };
-    }
-  }, [src]);
-
   useEffect(() => {
     const handleFullscreenChange = () => {
       const isNowFullscreen = !!document.fullscreenElement;
@@ -363,28 +340,6 @@ export function VideoPlayer({ src, poster, title, subtitles = [], nextLabel, onN
 
   const toggleStretch = () => {
     setIsStretched(!isStretched);
-  };
-
-  const toggleCast = async () => {
-    const video = videoRef.current;
-    if (!video || !src) return;
-
-    try {
-      // Try Remote Playback API first (Chrome + Chromecast)
-      if ('remote' in video) {
-        const remote = (video as any).remote;
-        await remote.prompt();
-        return;
-      }
-      
-      // Fallback: Open video in new tab for manual casting
-      window.open(src, '_blank');
-    } catch (error) {
-      // If prompt fails, open video URL for manual casting
-      if (src) {
-        window.open(src, '_blank');
-      }
-    }
   };
 
   const togglePiP = async () => {
@@ -782,20 +737,6 @@ export function VideoPlayer({ src, poster, title, subtitles = [], nextLabel, onN
               title={isStretched ? 'Ajustar à tela' : 'Preencher tela'}
             >
               <RectangleHorizontal className="w-5 h-5" />
-            </Button>
-
-            {/* Cast/Transmitir */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className={cn(
-                'text-white hover:bg-white/15 h-10 w-10 rounded-full transition-all hover:scale-105',
-                isCasting && 'text-primary bg-primary/20'
-              )}
-              onClick={toggleCast}
-              title="Transmitir para TV"
-            >
-              <Cast className="w-5 h-5" />
             </Button>
 
           </div>
