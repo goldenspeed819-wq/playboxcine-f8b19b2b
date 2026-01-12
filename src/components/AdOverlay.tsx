@@ -19,7 +19,7 @@ interface AdOverlayProps {
 //   - Copie o link gerado (formato: https://www.profitabledisplaynetwork.com/xxxxx)
 //
 // PASSO 3: Substitua a URL abaixo pelo seu Direct Link do Adsterra:
-const ADSTERRA_DIRECT_LINK = 'https://www.profitabledisplaynetwork.com/4/YOUR_ADSTERRA_ID';
+const ADSTERRA_DIRECT_LINK = 'https://www.effectivegatecpm.com/mm45k1z9?key=cf797bf3e207228f2b203537dd93910b';
 
 // OPCIONAL - Popunder Script ID (para ganhos extras)
 // Vá em "Popunder" > "Get code" e pegue apenas o ID do script
