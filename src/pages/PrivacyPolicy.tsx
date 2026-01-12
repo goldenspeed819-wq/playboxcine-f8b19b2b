@@ -1,10 +1,8 @@
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { Link } from 'react-router-dom';
-
 const PrivacyPolicy = () => {
-  return (
-    <div className="min-h-screen bg-background">
+  return <div className="min-h-screen bg-background">
       <Header />
       
       <main className="container mx-auto px-4 py-24 max-w-4xl">
@@ -29,14 +27,10 @@ const PrivacyPolicy = () => {
             <h2 className="text-xl font-semibold text-primary mb-3">
               ⚖️ Aviso Legal - Natureza do Serviço
             </h2>
-            <p className="text-foreground font-medium mb-3">
-              O PlayBox Cine é um serviço de <strong>indexação de links</strong>. Não hospedamos, 
+            <p className="text-foreground font-medium mb-3">O Rynex Cine é um serviço de indexação de links. Não hospedamos, armazenamos ou distribuímos conteúdo audiovisual em nossos servidores.<strong>indexação de links</strong>. Não hospedamos, 
               armazenamos ou distribuímos conteúdo audiovisual em nossos servidores.
             </p>
-            <p className="text-foreground">
-              Esta política de privacidade se aplica exclusivamente aos dados coletados pelo PlayBox Cine, 
-              e não aos sites de terceiros para os quais podemos direcionar.
-            </p>
+            <p className="text-foreground">Esta política de privacidade se aplica exclusivamente aos dados coletados pelo Rynex Cine, e não aos sites de terceiros para os quais podemos direcionar.</p>
           </div>
 
           {/* Data Collection */}
@@ -78,14 +72,10 @@ const PrivacyPolicy = () => {
             <h2 className="text-xl font-semibold text-foreground mb-3">
               3. Armazenamento de Conteúdo
             </h2>
-            <p className="mb-3">
-              <strong>IMPORTANTE:</strong> O PlayBox Cine NÃO armazena, hospeda ou distribui 
+            <p className="mb-3">IMPORTANTE: O Rynex Cine NÃO armazena, hospeda ou distribui nenhum conteúdo audiovisual (vídeos, filmes, séries, etc.) em seus servidores.<strong>IMPORTANTE:</strong> O PlayBox Cine NÃO armazena, hospeda ou distribui 
               nenhum conteúdo audiovisual (vídeos, filmes, séries, etc.) em seus servidores.
             </p>
-            <p>
-              Todo o conteúdo acessível através da plataforma é hospedado em servidores de terceiros 
-              não afiliados a nós. O PlayBox Cine atua apenas como um indexador de links públicos.
-            </p>
+            <p>Todo o conteúdo acessível através da plataforma é hospedado em servidores de terceiros não afiliados a nós. O Rynex Cine atua apenas como um indexador de links públicos.</p>
           </section>
 
           {/* Data Storage */}
@@ -187,11 +177,7 @@ const PrivacyPolicy = () => {
             <h2 className="text-xl font-semibold text-foreground mb-3">
               10. Menores de Idade
             </h2>
-            <p>
-              O PlayBox Cine não é destinado a menores de 18 anos. Não coletamos intencionalmente 
-              informações de menores. Se você é responsável por um menor que utilizou o serviço, 
-              entre em contato para solicitar a remoção dos dados.
-            </p>
+            <p>O Rynex Cine não é destinado a menores de 18 anos. Não coletamos intencionalmente informações de menores. Se você é responsável por um menor que utilizou o serviço, entre em contato para solicitar a remoção dos dados.</p>
           </section>
 
           {/* Changes */}
@@ -226,10 +212,7 @@ const PrivacyPolicy = () => {
             <p className="mb-4">
               Consulte também nossos Termos de Uso para entender as regras de utilização:
             </p>
-            <Link 
-              to="/terms" 
-              className="inline-flex items-center gap-2 text-primary hover:text-primary/80 transition-colors font-medium"
-            >
+            <Link to="/terms" className="inline-flex items-center gap-2 text-primary hover:text-primary/80 transition-colors font-medium">
               Termos de Uso →
             </Link>
           </section>
@@ -241,8 +224,6 @@ const PrivacyPolicy = () => {
       </main>
 
       <Footer />
-    </div>
-  );
+    </div>;
 };
-
 export default PrivacyPolicy;
