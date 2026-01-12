@@ -21,9 +21,8 @@ interface AdOverlayProps {
 // PASSO 3: Substitua a URL abaixo pelo seu Direct Link do Adsterra:
 const ADSTERRA_DIRECT_LINK = 'https://www.effectivegatecpm.com/mm45k1z9?key=cf797bf3e207228f2b203537dd93910b';
 
-// OPCIONAL - Popunder Script ID (para ganhos extras)
-// Vá em "Popunder" > "Get code" e pegue apenas o ID do script
-const ADSTERRA_POPUNDER_ID = 'YOUR_POPUNDER_ID'; // Ex: '1234567'
+// Popunder Script ID para ganhos extras
+const ADSTERRA_POPUNDER_ID = '28361788';
 
 // ============================================
 
@@ -31,12 +30,56 @@ export function AdOverlay({ onComplete, requiredClicks = 2 }: AdOverlayProps) {
   const [clickCount, setClickCount] = useState(0);
   const [showClickIndicator, setShowClickIndicator] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [adblockDetected, setAdblockDetected] = useState(false);
 
-  // Inicializa o Popunder do Adsterra (carrega uma vez)
+  // Detecta AdBlock
   useEffect(() => {
-    if (ADSTERRA_POPUNDER_ID && ADSTERRA_POPUNDER_ID !== 'YOUR_POPUNDER_ID') {
+    const detectAdBlock = async () => {
       try {
-        // Cria o script do popunder do Adsterra
+        // Tenta carregar um script de teste que AdBlockers normalmente bloqueiam
+        const testAd = document.createElement('div');
+        testAd.innerHTML = '&nbsp;';
+        testAd.className = 'adsbox ad-banner ad-placeholder';
+        testAd.style.position = 'absolute';
+        testAd.style.left = '-9999px';
+        document.body.appendChild(testAd);
+
+        // Aguarda um momento para o AdBlock agir
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // Se o elemento foi removido ou está oculto, AdBlock está ativo
+        const isBlocked = testAd.offsetHeight === 0 || 
+                         testAd.clientHeight === 0 || 
+                         !document.body.contains(testAd);
+        
+        if (document.body.contains(testAd)) {
+          document.body.removeChild(testAd);
+        }
+
+        // Também tenta fazer uma requisição para um domínio típico de ads
+        try {
+          await fetch('https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js', {
+            method: 'HEAD',
+            mode: 'no-cors'
+          });
+        } catch {
+          setAdblockDetected(true);
+          return;
+        }
+
+        setAdblockDetected(isBlocked);
+      } catch {
+        setAdblockDetected(true);
+      }
+    };
+
+    detectAdBlock();
+  }, []);
+
+  // Inicializa o Popunder do Adsterra
+  useEffect(() => {
+    if (ADSTERRA_POPUNDER_ID && !adblockDetected) {
+      try {
         const script = document.createElement('script');
         script.src = `//www.highperformanceformat.com/${ADSTERRA_POPUNDER_ID}/invoke.js`;
         script.async = true;
@@ -44,23 +87,21 @@ export function AdOverlay({ onComplete, requiredClicks = 2 }: AdOverlayProps) {
         document.body.appendChild(script);
 
         return () => {
-          document.body.removeChild(script);
+          if (document.body.contains(script)) {
+            document.body.removeChild(script);
+          }
         };
       } catch (error) {
         console.log('Popunder não carregado');
       }
     }
-  }, []);
+  }, [adblockDetected]);
 
   const handleAdClick = useCallback(() => {
     setIsLoading(true);
     
     // Abre o Direct Link do Adsterra
-    const directLink = ADSTERRA_DIRECT_LINK !== 'https://www.profitabledisplaynetwork.com/4/YOUR_ADSTERRA_ID' 
-      ? ADSTERRA_DIRECT_LINK 
-      : 'https://www.profitabledisplaynetwork.com/4/8444172'; // Link de exemplo/teste
-    
-    window.open(directLink, '_blank', 'noopener,noreferrer');
+    window.open(ADSTERRA_DIRECT_LINK, '_blank', 'noopener,noreferrer');
 
     const newClickCount = clickCount + 1;
     setClickCount(newClickCount);
@@ -82,6 +123,52 @@ export function AdOverlay({ onComplete, requiredClicks = 2 }: AdOverlayProps) {
 
   const remainingClicks = requiredClicks - clickCount;
   const isCompleted = clickCount >= requiredClicks;
+
+  // Se AdBlock detectado, mostra aviso
+  if (adblockDetected) {
+    return (
+      <div className="absolute inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-black via-black/98 to-black">
+        <div className="relative flex flex-col items-center gap-6 p-6 max-w-lg w-full mx-4 text-center">
+          <div className="w-20 h-20 rounded-full bg-destructive/20 flex items-center justify-center mx-auto mb-2">
+            <svg className="w-10 h-10 text-destructive" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          
+          <h3 className="text-2xl font-bold text-white">
+            AdBlock Detectado
+          </h3>
+          
+          <p className="text-white/70 text-base leading-relaxed">
+            Detectamos que você está usando um bloqueador de anúncios. 
+            Por favor, desative-o para continuar assistindo.
+          </p>
+          
+          <div className="bg-white/10 rounded-xl p-4 w-full border border-white/10">
+            <p className="text-white/80 text-sm mb-3">
+              <strong>Como desativar:</strong>
+            </p>
+            <ol className="text-white/60 text-sm text-left space-y-2">
+              <li>1. Clique no ícone do AdBlock no seu navegador</li>
+              <li>2. Selecione "Pausar neste site" ou "Desativar"</li>
+              <li>3. Atualize a página (F5)</li>
+            </ol>
+          </div>
+
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-2 px-8 py-3 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-lg transition-colors"
+          >
+            Já desativei, atualizar página
+          </button>
+
+          <p className="text-white/40 text-xs mt-2">
+            Os anúncios nos ajudam a manter o site gratuito. Obrigado pelo apoio! 💜
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="absolute inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-black via-black/98 to-black">
