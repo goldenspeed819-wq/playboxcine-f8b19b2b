@@ -30,6 +30,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { useSubtitleStyles } from '@/hooks/useSubtitleStyles';
+import { AdOverlay } from './AdOverlay';
 
 interface SubtitleTrack {
   id: string;
@@ -71,6 +72,7 @@ export function VideoPlayer({ src, poster, title, subtitles = [], nextLabel, onN
   const [videoError, setVideoError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeSubtitle, setActiveSubtitle] = useState<string | null>(null);
+  const [showAdOverlay, setShowAdOverlay] = useState(true);
   const controlsTimeoutRef = useRef<NodeJS.Timeout>();
 
   // Inject subtitle styles
@@ -439,8 +441,16 @@ export function VideoPlayer({ src, poster, title, subtitles = [], nextLabel, onN
         ))}
       </video>
 
+      {/* Ad Overlay - Requires clicks to unlock video */}
+      {showAdOverlay && (
+        <AdOverlay 
+          onComplete={() => setShowAdOverlay(false)} 
+          requiredClicks={2} 
+        />
+      )}
+
       {/* Loading Indicator */}
-      {isLoading && !videoError && (
+      {isLoading && !videoError && !showAdOverlay && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/60">
           <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
         </div>
@@ -460,7 +470,7 @@ export function VideoPlayer({ src, poster, title, subtitles = [], nextLabel, onN
       )}
 
       {/* Center Play Button Overlay */}
-      {!isPlaying && !videoError && !isLoading && (
+      {!isPlaying && !videoError && !isLoading && !showAdOverlay && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <button
             onClick={togglePlay}
