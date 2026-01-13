@@ -124,45 +124,45 @@ export function AdOverlay({ onComplete, requiredClicks = 2 }: AdOverlayProps) {
   const remainingClicks = requiredClicks - clickCount;
   const isCompleted = clickCount >= requiredClicks;
 
-  // Se AdBlock detectado, mostra aviso
+  // Se AdBlock detectado, mostra aviso em tela cheia
   if (adblockDetected) {
     return (
-      <div className="absolute inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-black via-black/98 to-black">
-        <div className="relative flex flex-col items-center gap-6 p-6 max-w-lg w-full mx-4 text-center">
-          <div className="w-20 h-20 rounded-full bg-destructive/20 flex items-center justify-center mx-auto mb-2">
-            <svg className="w-10 h-10 text-destructive" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black overflow-auto">
+        <div className="relative flex flex-col items-center gap-4 sm:gap-6 p-4 sm:p-6 w-full h-full sm:h-auto sm:max-w-lg sm:mx-4 text-center justify-center">
+          <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-destructive/20 flex items-center justify-center shrink-0">
+            <svg className="w-8 h-8 sm:w-10 sm:h-10 text-destructive" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
           </div>
           
-          <h3 className="text-2xl font-bold text-white">
+          <h3 className="text-xl sm:text-2xl font-bold text-white">
             AdBlock Detectado
           </h3>
           
-          <p className="text-white/70 text-base leading-relaxed">
+          <p className="text-white/70 text-sm sm:text-base leading-relaxed px-2">
             Detectamos que você está usando um bloqueador de anúncios. 
             Por favor, desative-o para continuar assistindo.
           </p>
           
-          <div className="bg-white/10 rounded-xl p-4 w-full border border-white/10">
-            <p className="text-white/80 text-sm mb-3">
+          <div className="bg-white/10 rounded-xl p-3 sm:p-4 w-full border border-white/10">
+            <p className="text-white/80 text-sm mb-2 sm:mb-3">
               <strong>Como desativar:</strong>
             </p>
-            <ol className="text-white/60 text-sm text-left space-y-2">
-              <li>1. Clique no ícone do AdBlock no seu navegador</li>
+            <ol className="text-white/60 text-xs sm:text-sm text-left space-y-1.5 sm:space-y-2">
+              <li>1. Clique no ícone do AdBlock no navegador</li>
               <li>2. Selecione "Pausar neste site" ou "Desativar"</li>
-              <li>3. Atualize a página (F5)</li>
+              <li>3. Atualize a página</li>
             </ol>
           </div>
 
           <button
             onClick={() => window.location.reload()}
-            className="mt-2 px-8 py-3 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-lg transition-colors"
+            className="w-full sm:w-auto mt-2 px-6 sm:px-8 py-3 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-lg transition-colors text-sm sm:text-base"
           >
             Já desativei, atualizar página
           </button>
 
-          <p className="text-white/40 text-xs mt-2">
+          <p className="text-white/40 text-xs px-4">
             Os anúncios nos ajudam a manter o site gratuito. Obrigado pelo apoio! 💜
           </p>
         </div>
