@@ -12,7 +12,7 @@ export function ChatangoWidget() {
     if (isOpen && !isLoaded && containerRef.current) {
       // Create and inject the Chatango script
       const script = document.createElement('script');
-      script.id = 'cid0020000429306372543';
+      script.id = 'cid0020000429395389390';
       script.src = '//st.chatango.com/js/gz/emb.js';
       script.async = true;
       script.setAttribute('data-cfasync', 'false');
