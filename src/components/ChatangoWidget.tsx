@@ -59,8 +59,8 @@ export function ChatangoWidget() {
           className={cn(
             "fixed z-[100] bg-background border border-border rounded-xl shadow-2xl overflow-hidden transition-all duration-300",
             isMinimized 
-              ? "bottom-4 right-4 w-64 h-12" 
-              : "bottom-4 right-4 w-80 h-96 sm:w-[320px] sm:h-[450px]"
+              ? "bottom-4 right-4 w-72 h-12" 
+              : "bottom-4 right-4 w-[300px] h-[450px] sm:w-[350px] sm:h-[500px]"
           )}
         >
           {/* Header */}
