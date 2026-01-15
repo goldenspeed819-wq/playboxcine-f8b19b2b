@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { BackgroundProvider, BackgroundImage } from "@/contexts/BackgroundContext";
-import { ChatangoWidget } from "@/components/ChatangoWidget";
+
 // Public Pages
 import Index from "./pages/Index";
 import ProfileSelection from "./pages/ProfileSelection";
@@ -57,7 +57,7 @@ const App = () => (
           <BackgroundImage />
           <Toaster />
           <Sonner />
-          <ChatangoWidget />
+          
           <BrowserRouter>
             <Routes>
               {/* Public Routes */}

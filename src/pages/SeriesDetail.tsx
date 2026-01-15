@@ -5,6 +5,7 @@ import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { VideoPlayer } from '@/components/VideoPlayer';
 import { CommentSection } from '@/components/CommentSection';
+import { ChatangoWidget } from '@/components/ChatangoWidget';
 import { PageLoader } from '@/components/LoadingSpinner';
 import { ContinueWatchingDialog } from '@/components/ContinueWatchingDialog';
 import { Button } from '@/components/ui/button';
@@ -357,6 +358,10 @@ const SeriesDetail = () => {
                 <p className="text-muted-foreground leading-relaxed">
                   {series.description || 'Sem descrição disponível.'}
                 </p>
+
+                <div className="mt-6">
+                  <ChatangoWidget variant="inline" />
+                </div>
               </div>
 
               {/* Episodes List */}
