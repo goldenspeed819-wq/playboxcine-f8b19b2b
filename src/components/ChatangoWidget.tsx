@@ -1,81 +1,29 @@
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useState } from "react";
 import { MessageCircle, X, Minimize2, Maximize2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type ChatangoVariant = "floating" | "inline";
 
-const CHATANGO_SCRIPT_ID = "cid0020000431041310432";
-const CHATANGO_SCRIPT_SRC = "//st.chatango.com/js/gz/emb.js";
-
-const CHATANGO_EMBED_CONFIG = {
-  handle: "rynexcine",
-  arch: "js",
-  styles: {
-    a: "CC0000",
-    b: 100,
-    c: "FFFFFF",
-    d: "FFFFFF",
-    k: "CC0000",
-    l: "CC0000",
-    m: "CC0000",
-    n: "FFFFFF",
-    p: "10",
-    q: "CC0000",
-    r: 100,
-    fwtickm: 1,
-  },
-} as const;
+// Chatango iframe embed URL
+const CHATANGO_IFRAME_URL =
+  "https://rynexcine.chatango.com/";
 
 function ChatangoEmbed({
   className,
-  style,
-  scriptWidth = "100%",
-  scriptHeight = "520px",
+  height = 520,
 }: {
   className?: string;
-  style?: CSSProperties;
-  scriptWidth?: string;
-  scriptHeight?: string;
+  height?: number;
 }) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [isLoaded, setIsLoaded] = useState(false);
-
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container || isLoaded) return;
-
-    // React 18 StrictMode may mount/unmount twice in dev. Avoid duplicating the embed.
-    const existing = container.querySelector(`#${CHATANGO_SCRIPT_ID}`);
-    if (existing) {
-      setIsLoaded(true);
-      return;
-    }
-
-    const script = document.createElement("script");
-    script.id = CHATANGO_SCRIPT_ID;
-    script.src = CHATANGO_SCRIPT_SRC;
-    script.async = true;
-    script.setAttribute("data-cfasync", "false");
-    // Chatango embed relies on explicit width/height on the script element.
-    // Percent heights frequently resolve to 0 and break the input.
-    script.style.display = "block";
-    script.style.width = scriptWidth;
-    script.style.height = scriptHeight;
-    script.innerHTML = JSON.stringify(CHATANGO_EMBED_CONFIG);
-
-    container.appendChild(script);
-    setIsLoaded(true);
-
-    return () => {
-      // Ensure the embed is fully torn down when navigating between pages
-      // (avoids "ghost" overlays that can block typing).
-      if (containerRef.current) {
-        containerRef.current.innerHTML = "";
-      }
-    };
-  }, [isLoaded]);
-
-  return <div ref={containerRef} className={className} style={style} />;
+  return (
+    <iframe
+      src={CHATANGO_IFRAME_URL}
+      className={cn("w-full border-0", className)}
+      style={{ height }}
+      allow="autoplay"
+      title="Chat ao Vivo"
+    />
+  );
 }
 
 export function ChatangoWidget({
@@ -101,12 +49,7 @@ export function ChatangoWidget({
           </p>
         </header>
 
-        <ChatangoEmbed
-          className="w-full h-[520px] bg-background"
-          style={{ minHeight: 350 }}
-          scriptWidth="100%"
-          scriptHeight="520px"
-        />
+        <ChatangoEmbed className="bg-background" height={520} />
       </section>
     );
   }
@@ -131,7 +74,7 @@ export function ChatangoWidget({
             "fixed z-[100] bg-background border border-border rounded-xl shadow-2xl overflow-hidden transition-all duration-300",
             isMinimized
               ? "bottom-4 right-4 w-72 h-12"
-              : "bottom-4 right-4 w-[300px] h-[450px] sm:w-[350px] sm:h-[500px]",
+              : "bottom-4 right-4 w-[350px] h-[500px]",
             className
           )}
         >
@@ -164,17 +107,9 @@ export function ChatangoWidget({
           </div>
 
           {/* Chat Container */}
-          {!isMinimized && (
-            <ChatangoEmbed
-              className="w-full h-[calc(100%-40px)] bg-background"
-              style={{ minHeight: 300 }}
-              scriptWidth="100%"
-              scriptHeight="500px"
-            />
-          )}
+          {!isMinimized && <ChatangoEmbed className="bg-background" height={460} />}
         </div>
       )}
     </>
   );
 }
-
