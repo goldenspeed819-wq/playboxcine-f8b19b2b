@@ -29,9 +29,13 @@ const CHATANGO_EMBED_CONFIG = {
 function ChatangoEmbed({
   className,
   style,
+  scriptWidth = "100%",
+  scriptHeight = "520px",
 }: {
   className?: string;
   style?: CSSProperties;
+  scriptWidth?: string;
+  scriptHeight?: string;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -52,7 +56,11 @@ function ChatangoEmbed({
     script.src = CHATANGO_SCRIPT_SRC;
     script.async = true;
     script.setAttribute("data-cfasync", "false");
-    script.style.cssText = "width: 100%; height: 100%;";
+    // Chatango embed relies on explicit width/height on the script element.
+    // Percent heights frequently resolve to 0 and break the input.
+    script.style.display = "block";
+    script.style.width = scriptWidth;
+    script.style.height = scriptHeight;
     script.innerHTML = JSON.stringify(CHATANGO_EMBED_CONFIG);
 
     container.appendChild(script);
@@ -96,6 +104,8 @@ export function ChatangoWidget({
         <ChatangoEmbed
           className="w-full h-[520px] bg-background"
           style={{ minHeight: 350 }}
+          scriptWidth="100%"
+          scriptHeight="520px"
         />
       </section>
     );
@@ -158,6 +168,8 @@ export function ChatangoWidget({
             <ChatangoEmbed
               className="w-full h-[calc(100%-40px)] bg-background"
               style={{ minHeight: 300 }}
+              scriptWidth="100%"
+              scriptHeight="500px"
             />
           )}
         </div>
