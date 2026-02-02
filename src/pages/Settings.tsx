@@ -11,6 +11,9 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
 import { ChangePasswordDialog } from '@/components/ChangePasswordDialog';
+import { ParentalControlDialog } from '@/components/ParentalControlDialog';
+import { LanguagePreferences } from '@/components/LanguagePreferences';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import {
   User,
   Mail,
@@ -29,6 +32,8 @@ import {
   Clock,
   Hash,
   Calendar,
+  Languages,
+  Moon,
 } from 'lucide-react';
 import {
   AlertDialog,
@@ -59,6 +64,7 @@ const Settings = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingAvatars, setIsLoadingAvatars] = useState(true);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [showParentalDialog, setShowParentalDialog] = useState(false);
 
   // Preferences state
   const [autoPlay, setAutoPlay] = useState(true);
@@ -499,6 +505,80 @@ const Settings = () => {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Language Preferences */}
+            <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-blue-500/10">
+                    <Languages className="w-5 h-5 text-blue-500" />
+                  </div>
+                  <div>
+                    <CardTitle>Idioma</CardTitle>
+                    <CardDescription>Preferências de áudio e legenda</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <LanguagePreferences variant="inline" />
+              </CardContent>
+            </Card>
+
+            {/* Theme */}
+            <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-indigo-500/10">
+                    <Moon className="w-5 h-5 text-indigo-500" />
+                  </div>
+                  <div>
+                    <CardTitle>Aparência</CardTitle>
+                    <CardDescription>Personalize o visual do site</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between p-4 rounded-xl bg-secondary/30">
+                  <div className="flex items-center gap-3">
+                    <Moon className="w-5 h-5 text-muted-foreground" />
+                    <div>
+                      <p className="font-medium text-foreground">Tema</p>
+                      <p className="text-sm text-muted-foreground">Escolha entre claro, escuro ou automático</p>
+                    </div>
+                  </div>
+                  <ThemeToggle />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Parental Control */}
+            <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-orange-500/10">
+                    <Shield className="w-5 h-5 text-orange-500" />
+                  </div>
+                  <div>
+                    <CardTitle>Controle Parental</CardTitle>
+                    <CardDescription>Restrinja conteúdo por classificação etária</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between p-4 rounded-xl bg-secondary/30">
+                  <div className="flex items-center gap-3">
+                    <Shield className="w-5 h-5 text-muted-foreground" />
+                    <div>
+                      <p className="font-medium text-foreground">Configurar controle parental</p>
+                      <p className="text-sm text-muted-foreground">Defina um PIN e limite de classificação</p>
+                    </div>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={() => setShowParentalDialog(true)}>
+                    Configurar
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* Help Tab */}
@@ -569,6 +649,9 @@ const Settings = () => {
 
       {/* Password Dialog */}
       <ChangePasswordDialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog} />
+      
+      {/* Parental Control Dialog */}
+      <ParentalControlDialog open={showParentalDialog} onOpenChange={setShowParentalDialog} />
     </div>
   );
 };

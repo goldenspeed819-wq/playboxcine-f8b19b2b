@@ -8,6 +8,9 @@ import { CommentSection } from '@/components/CommentSection';
 import { ChatangoWidget } from '@/components/ChatangoWidget';
 import { PageLoader } from '@/components/LoadingSpinner';
 import { ContinueWatchingDialog } from '@/components/ContinueWatchingDialog';
+import { FavoriteButton } from '@/components/FavoriteButton';
+import { RatingStars } from '@/components/RatingStars';
+import { ShareButtons } from '@/components/ShareButtons';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { Movie } from '@/types/database';
@@ -251,6 +254,15 @@ const MovieDetail = () => {
                       {movie.rating}
                     </span>
                   )}
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex flex-wrap items-center gap-2 mb-6">
+                  <FavoriteButton movieId={movie.id} showLabel variant="outline" />
+                  <ShareButtons title={movie.title} description={movie.description || ''} showLabel variant="outline" />
+                  <div className="flex items-center gap-2 px-3 py-2 bg-secondary/50 rounded-lg">
+                    <RatingStars movieId={movie.id} size="default" />
+                  </div>
                 </div>
 
                 <p className="text-muted-foreground text-sm sm:text-base leading-relaxed">
