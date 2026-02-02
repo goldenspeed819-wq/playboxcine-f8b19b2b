@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Search, Menu, X, MoreVertical, LogOut, Settings, Home, Film, Popcorn, Tv, History } from 'lucide-react';
+import { Search, Menu, X, MoreVertical, LogOut, Settings, Home, Film, Popcorn, Tv, History, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
+import { EpisodeNotifications } from '@/components/EpisodeNotifications';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import logo from '@/assets/logo.png';
 
 export function Header() {
@@ -165,6 +167,27 @@ export function Header() {
 
             {/* Action Buttons */}
             <div className="flex items-center">
+              {/* Notifications */}
+              <div className="hidden sm:flex">
+                <EpisodeNotifications />
+              </div>
+              
+              {/* Theme Toggle */}
+              <div className="hidden sm:flex">
+                <ThemeToggle />
+              </div>
+
+              {/* Favorites Link */}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate('/favorites')}
+                className="hidden sm:flex text-muted-foreground hover:text-foreground hover:bg-secondary/50 h-8 w-8 rounded-full"
+                title="Favoritos"
+              >
+                <Heart className="w-4 h-4" />
+              </Button>
+
               {isAdmin && (
                 <Button
                   variant="ghost"

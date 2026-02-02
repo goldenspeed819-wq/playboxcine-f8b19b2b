@@ -8,6 +8,10 @@ import { CommentSection } from '@/components/CommentSection';
 import { ChatangoWidget } from '@/components/ChatangoWidget';
 import { PageLoader } from '@/components/LoadingSpinner';
 import { ContinueWatchingDialog } from '@/components/ContinueWatchingDialog';
+import { FavoriteButton } from '@/components/FavoriteButton';
+import { RatingStars } from '@/components/RatingStars';
+import { ShareButtons } from '@/components/ShareButtons';
+import { FollowSeriesButton } from '@/components/FollowSeriesButton';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { Series, Episode } from '@/types/database';
@@ -353,6 +357,16 @@ const SeriesDetail = () => {
                     </span>
                   )}
                   <span>{episodes.length} episódios</span>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex flex-wrap items-center gap-2 mb-6">
+                  <FavoriteButton seriesId={series.id} showLabel variant="outline" />
+                  <FollowSeriesButton seriesId={series.id} showLabel variant="outline" />
+                  <ShareButtons title={series.title} description={series.description || ''} showLabel variant="outline" />
+                  <div className="flex items-center gap-2 px-3 py-2 bg-secondary/50 rounded-lg">
+                    <RatingStars seriesId={series.id} size="default" />
+                  </div>
                 </div>
 
                 <p className="text-muted-foreground leading-relaxed">

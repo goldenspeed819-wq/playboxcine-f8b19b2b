@@ -22,6 +22,7 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfUse from "./pages/TermsOfUse";
 import Settings from "./pages/Settings";
 import WatchHistory from "./pages/WatchHistory";
+import Favorites from "./pages/Favorites";
 
 // Admin Pages
 import AdminLayout from "./pages/admin/AdminLayout";
@@ -75,6 +76,7 @@ const App = () => (
               <Route path="/terms" element={<TermsOfUse />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/history" element={<WatchHistory />} />
+              <Route path="/favorites" element={<Favorites />} />
               
               {/* Admin Routes */}
               <Route path="/admin" element={<AdminLayout />}>
