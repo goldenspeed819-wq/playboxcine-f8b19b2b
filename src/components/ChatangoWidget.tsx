@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 
 type ChatangoVariant = "floating" | "inline";
 
-const CHATANGO_SCRIPT_ID = "cid0020000429395389390";
+const CHATANGO_SCRIPT_ID = "cid0020000431041310432";
 const CHATANGO_SCRIPT_SRC = "//st.chatango.com/js/gz/emb.js";
 
 const CHATANGO_EMBED_CONFIG = {
@@ -52,6 +52,7 @@ function ChatangoEmbed({
     script.src = CHATANGO_SCRIPT_SRC;
     script.async = true;
     script.setAttribute("data-cfasync", "false");
+    script.style.cssText = "width: 100%; height: 100%;";
     script.innerHTML = JSON.stringify(CHATANGO_EMBED_CONFIG);
 
     container.appendChild(script);
