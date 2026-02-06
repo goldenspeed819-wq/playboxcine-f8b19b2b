@@ -5,6 +5,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { BackgroundProvider, BackgroundImage } from "@/contexts/BackgroundContext";
+import { VIPProvider } from "@/contexts/VIPContext";
+import { SecurityGuard } from "@/components/SecurityGuard";
 
 // Public Pages
 import Index from "./pages/Index";
@@ -39,6 +41,7 @@ import ManageLiveChannels from "./pages/admin/ManageLiveChannels";
 import ManageBans from "./pages/admin/ManageBans";
 import ManageNotifications from "./pages/admin/ManageNotifications";
 import SiteSettings from "./pages/admin/SiteSettings";
+import ManageVIP from "./pages/admin/ManageVIP";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -54,12 +57,14 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <AuthProvider>
-        <BackgroundProvider>
-          <BackgroundImage />
-          <Toaster />
-          <Sonner />
-          
-          <BrowserRouter>
+        <VIPProvider>
+          <BackgroundProvider>
+            <BackgroundImage />
+            <SecurityGuard />
+            <Toaster />
+            <Sonner />
+            
+            <BrowserRouter>
             <Routes>
               {/* Public Routes */}
               <Route path="/" element={<ProfileSelection />} />
@@ -93,6 +98,7 @@ const App = () => (
                 <Route path="site-settings" element={<SiteSettings />} />
                 <Route path="bans" element={<ManageBans />} />
                 <Route path="notifications" element={<ManageNotifications />} />
+                <Route path="vip" element={<ManageVIP />} />
               </Route>
 
               {/* 404 */}
@@ -100,9 +106,10 @@ const App = () => (
             </Routes>
           </BrowserRouter>
         </BackgroundProvider>
-      </AuthProvider>
-    </TooltipProvider>
-  </QueryClientProvider>
+      </VIPProvider>
+    </AuthProvider>
+  </TooltipProvider>
+</QueryClientProvider>
 );
 
 export default App;

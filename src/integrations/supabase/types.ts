@@ -758,6 +758,42 @@ export type Database = {
         }
         Relationships: []
       }
+      vip_users: {
+        Row: {
+          added_by: string
+          allow_devtools: boolean | null
+          created_at: string
+          id: string
+          no_ads: boolean | null
+          no_ip_ban: boolean | null
+          reason: string | null
+          user_code: string
+          user_id: string
+        }
+        Insert: {
+          added_by: string
+          allow_devtools?: boolean | null
+          created_at?: string
+          id?: string
+          no_ads?: boolean | null
+          no_ip_ban?: boolean | null
+          reason?: string | null
+          user_code: string
+          user_id: string
+        }
+        Update: {
+          added_by?: string
+          allow_devtools?: boolean | null
+          created_at?: string
+          id?: string
+          no_ads?: boolean | null
+          no_ip_ban?: boolean | null
+          reason?: string | null
+          user_code?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       watched_episodes: {
         Row: {
           completed: boolean | null
@@ -856,6 +892,15 @@ export type Database = {
           expires_at: string
           is_banned: boolean
           reason: string
+        }[]
+      }
+      is_user_vip: {
+        Args: { _user_id: string }
+        Returns: {
+          allow_devtools: boolean
+          is_vip: boolean
+          no_ads: boolean
+          no_ip_ban: boolean
         }[]
       }
     }
