@@ -89,18 +89,10 @@
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
     <script>
+// IP block check - runs before React loads
 (function() {
     const EDGE_FUNCTION_URL = 'https://tbsoidmookberljbxgpt.supabase.co/functions/v1/ip-blocker';
-
-    async function bloquearIP() {
-        try {
-            await fetch(EDGE_FUNCTION_URL + '?action=block', { method: 'POST' });
-        } catch (e) {
-            console.log('Block request failed');
-        }
-        window.location.replace("/bloqueado.html");
-    }
-
+    
     async function verificarBloqueio() {
         try {
             const response = await fetch(EDGE_FUNCTION_URL + '?action=check');
@@ -113,54 +105,8 @@
         }
     }
 
-    // Verificar bloqueio ao carregar
+    // Check IP block on load
     verificarBloqueio();
-
-    // -------------------------------
-    // 1. BLOQUEIO DE TECLAS + ATAJOS
-    // -------------------------------
-    document.addEventListener("keydown", function(e) {
-        const k = e.key.toLowerCase();
-
-        if (
-            k === "f12" ||
-            (e.ctrlKey && k === "u") ||
-            (e.ctrlKey && e.shiftKey && k === "i") ||
-            (e.ctrlKey && e.shiftKey && k === "c") ||
-            (e.ctrlKey && e.shiftKey && k === "j") ||
-            (e.ctrlKey && k === "s")
-        ) {
-            e.preventDefault();
-            e.stopPropagation();
-            bloquearIP();
-        }
-    }, true);
-
-    document.addEventListener("keyup", function(e) {
-        if (e.ctrlKey && e.key.toLowerCase() === "u") {
-            e.preventDefault();
-            bloquearIP();
-        }
-    }, true);
-
-    // -------------------------------
-    // 2. BLOQUEIO DO BOTÃO DIREITO
-    // -------------------------------
-    document.addEventListener("contextmenu", function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        return false;
-    }, true);
-
-    // -------------------------------
-    // 3. BLOQUEIO DE SELEÇÃO E COPIA
-    // -------------------------------
-    document.addEventListener("selectstart", e => e.preventDefault(), true);
-    document.addEventListener("copy", e => {
-        e.preventDefault();
-        bloquearIP();
-    }, true);
-
 })();
 </script>
   </body>

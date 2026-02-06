@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Film, Tv, Plus, List, LogOut, Menu, X, Shield, UserCircle, Radio, Settings, ChevronDown, Home, Bell, Sparkles, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, Film, Tv, Plus, List, LogOut, Menu, X, Shield, UserCircle, Radio, Settings, ChevronDown, Home, Bell, Sparkles, ChevronRight, Crown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
@@ -104,6 +104,10 @@ const AdminLayout = () => {
     icon: Bell,
     label: 'Notificações',
     href: '/admin/notifications'
+  }, {
+    icon: Crown,
+    label: 'Usuários VIP',
+    href: '/admin/vip'
   }] : [];
   const handleLogout = async () => {
     await signOut();

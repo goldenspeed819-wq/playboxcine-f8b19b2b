@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ExternalLink, MousePointer, Play } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useVIP } from '@/contexts/VIPContext';
 
 interface AdOverlayProps {
   onComplete: () => void;
@@ -27,10 +28,18 @@ const ADSTERRA_POPUNDER_ID = '28361788';
 // ============================================
 
 export function AdOverlay({ onComplete, requiredClicks = 2 }: AdOverlayProps) {
+  const { noAds, isLoading: isVIPLoading } = useVIP();
   const [clickCount, setClickCount] = useState(0);
   const [showClickIndicator, setShowClickIndicator] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [adblockDetected, setAdblockDetected] = useState(false);
+
+  // If user is VIP and has no_ads enabled, skip the overlay entirely
+  useEffect(() => {
+    if (!isVIPLoading && noAds) {
+      onComplete();
+    }
+  }, [noAds, isVIPLoading, onComplete]);
 
   // Detecta AdBlock
   useEffect(() => {
