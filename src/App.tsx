@@ -56,60 +56,60 @@ const queryClient = new QueryClient({
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <AuthProvider>
-        <VIPProvider>
-          <BackgroundProvider>
-            <BackgroundImage />
-            <SecurityGuard />
-            <Toaster />
-            <Sonner />
-            
-            <BrowserRouter>
-            <Routes>
-              {/* Public Routes */}
-              <Route path="/" element={<ProfileSelection />} />
-              <Route path="/browse" element={<Index />} />
-              <Route path="/movies" element={<Movies />} />
-              <Route path="/series" element={<Series />} />
-              <Route path="/movie/:id" element={<MovieDetail />} />
-              <Route path="/series/:id" element={<SeriesDetail />} />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/profile-setup" element={<ProfileSetup />} />
-              <Route path="/live" element={<LiveChannels />} />
-              <Route path="/search" element={<Search />} />
-              <Route path="/privacy" element={<PrivacyPolicy />} />
-              <Route path="/terms" element={<TermsOfUse />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="/history" element={<WatchHistory />} />
-              <Route path="/favorites" element={<Favorites />} />
+      <BrowserRouter>
+        <AuthProvider>
+          <VIPProvider>
+            <BackgroundProvider>
+              <BackgroundImage />
+              <SecurityGuard />
+              <Toaster />
+              <Sonner />
               
-              {/* Admin Routes */}
-              <Route path="/admin" element={<AdminLayout />}>
-                <Route index element={<Dashboard />} />
-                <Route path="movies" element={<ListMovies />} />
-                <Route path="movies/add" element={<AddMovie />} />
-                <Route path="movies/edit/:id" element={<EditMovie />} />
-                <Route path="series" element={<ListSeries />} />
-                <Route path="series/add" element={<AddSeries />} />
-                <Route path="series/edit/:id" element={<EditSeries />} />
-                <Route path="manage-admins" element={<ManageAdmins />} />
-                <Route path="avatars" element={<ManageAvatars />} />
-                <Route path="live-channels" element={<ManageLiveChannels />} />
-                <Route path="site-settings" element={<SiteSettings />} />
-                <Route path="bans" element={<ManageBans />} />
-                <Route path="notifications" element={<ManageNotifications />} />
-                <Route path="vip" element={<ManageVIP />} />
-              </Route>
+              <Routes>
+                {/* Public Routes */}
+                <Route path="/" element={<ProfileSelection />} />
+                <Route path="/browse" element={<Index />} />
+                <Route path="/movies" element={<Movies />} />
+                <Route path="/series" element={<Series />} />
+                <Route path="/movie/:id" element={<MovieDetail />} />
+                <Route path="/series/:id" element={<SeriesDetail />} />
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/profile-setup" element={<ProfileSetup />} />
+                <Route path="/live" element={<LiveChannels />} />
+                <Route path="/search" element={<Search />} />
+                <Route path="/privacy" element={<PrivacyPolicy />} />
+                <Route path="/terms" element={<TermsOfUse />} />
+                <Route path="/settings" element={<Settings />} />
+                <Route path="/history" element={<WatchHistory />} />
+                <Route path="/favorites" element={<Favorites />} />
+                
+                {/* Admin Routes */}
+                <Route path="/admin" element={<AdminLayout />}>
+                  <Route index element={<Dashboard />} />
+                  <Route path="movies" element={<ListMovies />} />
+                  <Route path="movies/add" element={<AddMovie />} />
+                  <Route path="movies/edit/:id" element={<EditMovie />} />
+                  <Route path="series" element={<ListSeries />} />
+                  <Route path="series/add" element={<AddSeries />} />
+                  <Route path="series/edit/:id" element={<EditSeries />} />
+                  <Route path="manage-admins" element={<ManageAdmins />} />
+                  <Route path="avatars" element={<ManageAvatars />} />
+                  <Route path="live-channels" element={<ManageLiveChannels />} />
+                  <Route path="site-settings" element={<SiteSettings />} />
+                  <Route path="bans" element={<ManageBans />} />
+                  <Route path="notifications" element={<ManageNotifications />} />
+                  <Route path="vip" element={<ManageVIP />} />
+                </Route>
 
-              {/* 404 */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </BackgroundProvider>
-      </VIPProvider>
-    </AuthProvider>
-  </TooltipProvider>
-</QueryClientProvider>
+                {/* 404 */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BackgroundProvider>
+          </VIPProvider>
+        </AuthProvider>
+      </BrowserRouter>
+    </TooltipProvider>
+  </QueryClientProvider>
 );
 
 export default App;
