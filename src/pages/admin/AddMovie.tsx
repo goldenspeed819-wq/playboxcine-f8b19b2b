@@ -17,6 +17,7 @@ import { VideoUpload } from '@/components/admin/VideoUpload';
 import { ThumbnailUpload } from '@/components/admin/ThumbnailUpload';
 import { CoverUpload } from '@/components/admin/CoverUpload';
 import { SubtitleUpload } from '@/components/admin/SubtitleUpload';
+import { TMDBSearch } from '@/components/admin/TMDBSearch';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { CATEGORIES, RATINGS } from '@/constants/categories';
@@ -97,16 +98,33 @@ const AddMovie = () => {
     if (data) setSubtitles(data);
   };
 
+  const handleTMDBSelect = (data: any) => {
+    setFormData(prev => ({
+      ...prev,
+      title: data.title || prev.title,
+      description: data.overview || prev.description,
+      thumbnail: data.posterUrl || prev.thumbnail,
+      cover: data.backdropUrl || prev.cover,
+      category: data.genres?.[0] || prev.category,
+      duration: data.duration || prev.duration,
+      release_year: data.releaseYear?.toString() || prev.release_year,
+      rating: data.contentRating || prev.rating,
+    }));
+  };
+
   return (
     <div className="max-w-4xl mx-auto space-y-8">
-      <div>
-        <h1 className="font-display text-2xl md:text-3xl font-bold mb-2 flex items-center gap-3">
-          <Film className="w-8 h-8 text-primary" />
-          Adicionar Filme
-        </h1>
-        <p className="text-muted-foreground">
-          Preencha os dados do novo filme
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="font-display text-2xl md:text-3xl font-bold mb-2 flex items-center gap-3">
+            <Film className="w-8 h-8 text-primary" />
+            Adicionar Filme
+          </h1>
+          <p className="text-muted-foreground">
+            Preencha os dados do novo filme
+          </p>
+        </div>
+        <TMDBSearch type="movie" onSelect={handleTMDBSelect} />
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-8">

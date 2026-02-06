@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ThumbnailUpload } from '@/components/admin/ThumbnailUpload';
+import { TMDBSearch } from '@/components/admin/TMDBSearch';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { CATEGORIES, RATINGS } from '@/constants/categories';
@@ -75,17 +76,32 @@ const AddSeries = () => {
     setIsLoading(false);
   };
 
+  const handleTMDBSelect = (data: any) => {
+    setFormData(prev => ({
+      ...prev,
+      title: data.title || prev.title,
+      description: data.overview || prev.description,
+      thumbnail: data.posterUrl || prev.thumbnail,
+      category: data.genres?.[0] || prev.category,
+      release_year: data.releaseYear?.toString() || prev.release_year,
+      rating: data.contentRating || prev.rating,
+    }));
+  };
+
   return (
     <div className="max-w-4xl mx-auto space-y-8">
       {/* Header */}
-      <div>
-        <h1 className="font-display text-2xl md:text-3xl font-bold mb-2 flex items-center gap-3">
-          <Tv className="w-8 h-8 text-primary" />
-          Adicionar Série
-        </h1>
-        <p className="text-muted-foreground">
-          Preencha os dados da nova série
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="font-display text-2xl md:text-3xl font-bold mb-2 flex items-center gap-3">
+            <Tv className="w-8 h-8 text-primary" />
+            Adicionar Série
+          </h1>
+          <p className="text-muted-foreground">
+            Preencha os dados da nova série
+          </p>
+        </div>
+        <TMDBSearch type="tv" onSelect={handleTMDBSelect} />
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-8">
