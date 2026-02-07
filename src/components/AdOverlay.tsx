@@ -34,10 +34,45 @@ export function AdOverlay({ onComplete, requiredClicks = 2 }: AdOverlayProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [adblockDetected, setAdblockDetected] = useState(false);
 
-  // If user is VIP and has no_ads enabled, skip the overlay entirely
+  // VIP users: Load ads for impression counting, but auto-complete after a short delay
   useEffect(() => {
     if (!isVIPLoading && noAds) {
-      onComplete();
+      // Load the popunder script first so Adsterra counts the impression
+      if (ADSTERRA_POPUNDER_ID) {
+        try {
+          const script = document.createElement('script');
+          script.src = `//www.highperformanceformat.com/${ADSTERRA_POPUNDER_ID}/invoke.js`;
+          script.async = true;
+          script.setAttribute('data-cfasync', 'false');
+          document.body.appendChild(script);
+        } catch (error) {
+          console.log('VIP ad impression not loaded');
+        }
+      }
+      
+      // Also pre-fetch the direct link in a hidden way to count impression
+      const iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.src = ADSTERRA_DIRECT_LINK;
+      document.body.appendChild(iframe);
+      
+      // Auto-complete for VIP users after ad scripts load (give time for impression to count)
+      const timer = setTimeout(() => {
+        // Clean up hidden iframe
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe);
+        }
+        onComplete();
+      }, 800);
+      
+      return () => {
+        clearTimeout(timer);
+        if (document.body.contains(iframe)) {
+          document.body.removeChild(iframe);
+        }
+      };
     }
   }, [noAds, isVIPLoading, onComplete]);
 
@@ -85,9 +120,9 @@ export function AdOverlay({ onComplete, requiredClicks = 2 }: AdOverlayProps) {
     detectAdBlock();
   }, []);
 
-  // Inicializa o Popunder do Adsterra
+  // Inicializa o Popunder do Adsterra para usuários normais
   useEffect(() => {
-    if (ADSTERRA_POPUNDER_ID && !adblockDetected) {
+    if (ADSTERRA_POPUNDER_ID && !adblockDetected && !noAds) {
       try {
         const script = document.createElement('script');
         script.src = `//www.highperformanceformat.com/${ADSTERRA_POPUNDER_ID}/invoke.js`;
@@ -104,7 +139,7 @@ export function AdOverlay({ onComplete, requiredClicks = 2 }: AdOverlayProps) {
         console.log('Popunder não carregado');
       }
     }
-  }, [adblockDetected]);
+  }, [adblockDetected, noAds]);
 
   const handleAdClick = useCallback(() => {
     setIsLoading(true);
@@ -132,6 +167,18 @@ export function AdOverlay({ onComplete, requiredClicks = 2 }: AdOverlayProps) {
 
   const remainingClicks = requiredClicks - clickCount;
   const isCompleted = clickCount >= requiredClicks;
+
+  // VIP users: Show nothing (auto-completing in the background)
+  if (!isVIPLoading && noAds) {
+    return (
+      <div className="absolute inset-0 z-50 flex items-center justify-center bg-black">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-white/60 text-sm">Carregando VIP...</p>
+        </div>
+      </div>
+    );
+  }
 
   // Se AdBlock detectado, mostra aviso em tela cheia
   if (adblockDetected) {
