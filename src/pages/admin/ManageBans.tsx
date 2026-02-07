@@ -105,6 +105,17 @@ const ManageBans = () => {
         return;
       }
 
+      // Prevent banning Fundador
+      if (userProfile.user_code === 'User001' || userProfile.user_code === 'Fundador') {
+        toast({
+          title: 'Ação não permitida',
+          description: 'O Fundador não pode ser banido',
+          variant: 'destructive',
+        });
+        setIsBanning(false);
+        return;
+      }
+
       // Check if already banned
       const { data: existingBan } = await supabase
         .from('banned_users')
