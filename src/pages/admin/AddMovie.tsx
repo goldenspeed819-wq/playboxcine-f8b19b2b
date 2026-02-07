@@ -245,18 +245,29 @@ const AddMovie = () => {
               </div>
             </div>
 
-            {/* Cover Upload - for featured */}
-            {formData.is_featured && (
-              <div className="p-6 bg-card rounded-2xl border border-primary/50">
-                <h3 className="font-display font-bold mb-2">Capa de Destaque</h3>
-                <p className="text-xs text-muted-foreground mb-4">
-                  Imagem widescreen (16:9) para o carrossel principal
-                </p>
-                <CoverUpload
-                  onUploadComplete={(url) => setFormData({ ...formData, cover: url })}
-                />
-              </div>
-            )}
+            {/* Cover Preview & Upload */}
+            <div className="p-6 bg-card rounded-2xl border border-border">
+              <h3 className="font-display font-bold mb-2">Capa de Destaque</h3>
+              <p className="text-xs text-muted-foreground mb-4">
+                Imagem widescreen (16:9) para o carrossel principal
+              </p>
+              
+              {/* Preview da capa do TMDB */}
+              {formData.cover && (
+                <div className="mb-4">
+                  <img 
+                    src={formData.cover} 
+                    alt="Capa" 
+                    className="w-full h-40 object-cover rounded-lg border border-border"
+                  />
+                  <p className="text-xs text-green-500 mt-2">✓ Capa importada do TMDB</p>
+                </div>
+              )}
+              
+              <CoverUpload
+                onUploadComplete={(url) => setFormData({ ...formData, cover: url })}
+              />
+            </div>
 
             <div className="p-6 bg-card rounded-2xl border border-border">
               <h3 className="font-display font-bold mb-4">Vídeo</h3>
