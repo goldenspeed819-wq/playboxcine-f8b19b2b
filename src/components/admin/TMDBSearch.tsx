@@ -54,12 +54,6 @@ export function TMDBSearch({ type, onSelect }: TMDBSearchProps) {
     setResults([]);
 
     try {
-      const { data, error } = await supabase.functions.invoke('tmdb-search', {
-        body: null,
-        headers: {},
-      });
-
-      // Use query params approach
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/tmdb-search?action=search&query=${encodeURIComponent(query)}&type=${type}`,
         {
