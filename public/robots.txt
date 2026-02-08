@@ -16,4 +16,4 @@ User-agent: *
 Allow: /
 
 # Sitemap
-Sitemap: https://rynexcine.vercel.app/sitemap.xml
+Sitemap: https://rynexcine.com/sitemap.xml
