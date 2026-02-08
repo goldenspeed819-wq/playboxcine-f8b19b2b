@@ -221,6 +221,19 @@ const AddSeries = () => {
           <div className="space-y-6">
             <div className="p-6 bg-card rounded-2xl border border-border">
               <h3 className="font-display font-bold mb-4">Thumbnail</h3>
+              
+              {/* Preview da thumbnail do TMDB */}
+              {formData.thumbnail && (
+                <div className="mb-4">
+                  <img 
+                    src={formData.thumbnail} 
+                    alt="Thumbnail" 
+                    className="w-full h-48 object-cover rounded-lg border border-border"
+                  />
+                  <p className="text-xs text-primary mt-2">✓ Thumbnail importada do TMDB</p>
+                </div>
+              )}
+              
               <ThumbnailUpload
                 onUploadComplete={(url) => setFormData({ ...formData, thumbnail: url })}
               />
