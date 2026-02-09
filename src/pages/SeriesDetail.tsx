@@ -270,6 +270,17 @@ const SeriesDetail = () => {
     }
   };
 
+  const handleVideoEnded = () => {
+    // Mark current episode as completed
+    if (user && selectedEpisode) {
+      markAsWatched(selectedEpisode.id);
+    }
+    // Autoplay next episode
+    if (nextEpisode) {
+      handleNextEpisode();
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -330,6 +341,7 @@ const SeriesDetail = () => {
                 introEndTime={selectedEpisode?.intro_end}
                 onTimeUpdate={saveWatchProgress}
                 initialTime={initialTime}
+                onEnded={handleVideoEnded}
               />
 
               {/* Series Info */}
