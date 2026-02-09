@@ -870,6 +870,10 @@ export type Database = {
     }
     Functions: {
       generate_user_code: { Args: never; Returns: string }
+      get_auth_email_by_username: {
+        Args: { _username: string }
+        Returns: string
+      }
       get_linked_profile_safe: {
         Args: { profile_id: string }
         Returns: {

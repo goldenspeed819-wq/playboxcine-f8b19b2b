@@ -49,9 +49,10 @@ interface VideoPlayerProps {
   introEndTime?: number | null;
   onTimeUpdate?: (currentTime: number) => void;
   initialTime?: number;
+  onEnded?: () => void;
 }
 
-export function VideoPlayer({ src, poster, title, subtitles = [], nextLabel, onNextClick, introStartTime, introEndTime, onTimeUpdate, initialTime }: VideoPlayerProps) {
+export function VideoPlayer({ src, poster, title, subtitles = [], nextLabel, onNextClick, introStartTime, introEndTime, onTimeUpdate, initialTime, onEnded }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const { getSubtitleCSS } = useSubtitleStyles();
@@ -150,7 +151,10 @@ export function VideoPlayer({ src, poster, title, subtitles = [], nextLabel, onN
 
     const handlePlay = () => setIsPlaying(true);
     const handlePause = () => setIsPlaying(false);
-    const handleEnded = () => setIsPlaying(false);
+    const handleEnded = () => {
+      setIsPlaying(false);
+      onEnded?.();
+    };
     const handleLeavePiP = () => setIsPiP(false);
     const handleEnterPiP = () => setIsPiP(true);
     const handleCanPlay = () => {

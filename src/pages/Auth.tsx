@@ -1,20 +1,20 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff, AlertCircle, User, FileText, Shield, Check } from 'lucide-react';
+import { Lock, Eye, EyeOff, AlertCircle, User, FileText, Shield, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
+
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const [switchingAccount, setSwitchingAccount] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const {
     signIn,
@@ -24,18 +24,9 @@ const Auth = () => {
     isLoading: authLoading
   } = useAuth();
   const navigate = useNavigate();
-  useEffect(() => {
-    // Check if we're switching accounts
-    const switchToEmail = localStorage.getItem('switchToEmail');
-    if (switchToEmail) {
-      setEmail(switchToEmail);
-      setSwitchingAccount(true);
-      localStorage.removeItem('switchToEmail');
-    }
-  }, []);
+
   useEffect(() => {
     if (!authLoading && user && profile) {
-      // Check if profile is complete (has username and avatar)
       if (!profile.username || !profile.avatar_url) {
         navigate('/profile-setup');
       } else {
@@ -43,18 +34,31 @@ const Auth = () => {
       }
     }
   }, [user, profile, authLoading, navigate]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
+
+    // Validate username format
+    if (username.trim().length < 3) {
+      setError('O nome de usuário deve ter pelo menos 3 caracteres.');
+      setIsLoading(false);
+      return;
+    }
+
+    if (!/^[a-zA-Z0-9_.-]+$/.test(username.trim())) {
+      setError('O nome de usuário só pode conter letras, números, pontos, hífens e underscores.');
+      setIsLoading(false);
+      return;
+    }
+
     try {
       if (isLogin) {
-        const {
-          error
-        } = await signIn(email, password);
+        const { error } = await signIn(username.trim(), password);
         if (error) {
-          if (error.message.includes('Invalid login credentials')) {
-            setError('Email ou senha incorretos.');
+          if (error.message.includes('Invalid login credentials') || error.message.includes('Usuário não encontrado')) {
+            setError('Usuário ou senha incorretos.');
           } else {
             setError(error.message);
           }
@@ -66,18 +70,15 @@ const Auth = () => {
           navigate('/');
         }
       } else {
-        // Check if terms are accepted for signup
         if (!acceptedTerms) {
           setError('Você precisa aceitar os Termos de Uso e Política de Privacidade.');
           setIsLoading(false);
           return;
         }
-        const {
-          error
-        } = await signUp(email, password);
+        const { error } = await signUp(username.trim(), password);
         if (error) {
           if (error.message.includes('already registered')) {
-            setError('Este email já está cadastrado.');
+            setError('Este nome de usuário já está em uso.');
           } else {
             setError(error.message);
           }
@@ -94,12 +95,17 @@ const Auth = () => {
     }
     setIsLoading(false);
   };
+
   if (authLoading) {
-    return <div className="min-h-screen bg-background flex items-center justify-center">
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>;
+      </div>
+    );
   }
-  return <div className="min-h-screen bg-background flex items-center justify-center p-4">
+
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl" />
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
@@ -123,29 +129,43 @@ const Auth = () => {
             {isLogin ? 'Entrar' : 'Criar Conta'}
           </h2>
           <p className="text-muted-foreground text-sm">
-            {isLogin ? 'Entre com suas credenciais para acessar' : 'Preencha os dados para criar sua conta'}
+            {isLogin ? 'Entre com seu nome de usuário' : 'Escolha um nome de usuário único'}
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="p-6 bg-card rounded-2xl border border-border space-y-4">
-            {switchingAccount && <div className="p-3 bg-primary/10 border border-primary/50 rounded-lg text-primary text-sm">
-                Trocando para conta: <strong>{email}</strong>
-              </div>}
-
-            {error && <div className="p-3 bg-destructive/10 border border-destructive/50 rounded-lg flex items-center gap-2 text-destructive text-sm">
+            {error && (
+              <div className="p-3 bg-destructive/10 border border-destructive/50 rounded-lg flex items-center gap-2 text-destructive text-sm">
                 <AlertCircle className="w-4 h-4" />
                 {error}
-              </div>}
+              </div>
+            )}
 
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-sm font-semibold">
-                Email
+              <Label htmlFor="username" className="text-sm font-semibold">
+                Nome de Usuário
               </Label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="seu@email.com" className="pl-10 bg-secondary/50 border-border focus:border-primary" required />
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  id="username"
+                  type="text"
+                  value={username}
+                  onChange={e => setUsername(e.target.value)}
+                  placeholder="seu_usuario"
+                  className="pl-10 bg-secondary/50 border-border focus:border-primary"
+                  required
+                  minLength={3}
+                  maxLength={30}
+                  autoComplete="username"
+                />
               </div>
+              {!isLogin && (
+                <p className="text-xs text-muted-foreground">
+                  Letras, números, pontos, hífens e underscores. Mínimo 3 caracteres.
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -154,8 +174,21 @@ const Auth = () => {
               </Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input id="password" type={showPassword ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" className="pl-10 pr-10 bg-secondary/50 border-border focus:border-primary" required minLength={6} />
-                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                <Input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="pl-10 pr-10 bg-secondary/50 border-border focus:border-primary"
+                  required
+                  minLength={6}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
@@ -163,9 +196,15 @@ const Auth = () => {
           </div>
 
           {/* Terms and Privacy for signup */}
-          {!isLogin && <div className="p-4 bg-card rounded-xl border border-border space-y-3">
+          {!isLogin && (
+            <div className="p-4 bg-card rounded-xl border border-border space-y-3">
               <div className="flex items-start gap-3">
-                <Checkbox id="terms" checked={acceptedTerms} onCheckedChange={checked => setAcceptedTerms(checked as boolean)} className="mt-1" />
+                <Checkbox
+                  id="terms"
+                  checked={acceptedTerms}
+                  onCheckedChange={checked => setAcceptedTerms(checked as boolean)}
+                  className="mt-1"
+                />
                 <label htmlFor="terms" className="text-sm text-muted-foreground leading-relaxed cursor-pointer">
                   Li e aceito os{' '}
                   <Link to="/terms" target="_blank" className="text-primary hover:underline inline-flex items-center gap-1">
@@ -180,21 +219,38 @@ const Auth = () => {
                 </label>
               </div>
               
-              {acceptedTerms && <div className="flex items-center gap-2 text-green-500 text-sm">
+              {acceptedTerms && (
+                <div className="flex items-center gap-2 text-green-500 text-sm">
                   <Check className="w-4 h-4" />
                   Termos aceitos
-                </div>}
-            </div>}
+                </div>
+              )}
+            </div>
+          )}
 
-          <Button type="submit" className="w-full h-12 font-semibold neon-glow" disabled={isLoading || !isLogin && !acceptedTerms}>
+          {isLogin && (
+            <div className="p-3 bg-muted/50 rounded-lg text-xs text-muted-foreground text-center">
+              Se você se cadastrou por email, use seu <strong>nome de usuário</strong> (definido no perfil) para entrar.
+            </div>
+          )}
+
+          <Button
+            type="submit"
+            className="w-full h-12 font-semibold neon-glow"
+            disabled={isLoading || (!isLogin && !acceptedTerms)}
+          >
             {isLoading ? 'Aguarde...' : isLogin ? 'Entrar' : 'Criar Conta'}
           </Button>
 
           <div className="text-center space-y-2">
-            <button type="button" onClick={() => {
-            setIsLogin(!isLogin);
-            setError('');
-          }} className="text-sm text-muted-foreground hover:text-primary transition-colors">
+            <button
+              type="button"
+              onClick={() => {
+                setIsLogin(!isLogin);
+                setError('');
+              }}
+              className="text-sm text-muted-foreground hover:text-primary transition-colors"
+            >
               {isLogin ? 'Não tem conta? Criar agora' : 'Já tem conta? Entrar'}
             </button>
             <p className="text-center text-sm text-muted-foreground">
@@ -205,6 +261,8 @@ const Auth = () => {
           </div>
         </form>
       </div>
-    </div>;
+    </div>
+  );
 };
+
 export default Auth;
