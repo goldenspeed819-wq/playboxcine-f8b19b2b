@@ -116,6 +116,23 @@ const ManageBans = () => {
         return;
       }
 
+      // Check if user is VIP
+      const { data: vipData } = await supabase
+        .from('vip_users')
+        .select('id')
+        .eq('user_id', userProfile.id)
+        .maybeSingle();
+
+      if (vipData) {
+        toast({
+          title: 'Ação não permitida',
+          description: 'Usuários VIP não podem ser banidos',
+          variant: 'destructive',
+        });
+        setIsBanning(false);
+        return;
+      }
+
       // Check if already banned
       const { data: existingBan } = await supabase
         .from('banned_users')
