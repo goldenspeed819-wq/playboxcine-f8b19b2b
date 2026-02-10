@@ -4,6 +4,7 @@ import { ArrowLeft, Calendar, Clock, Tag } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { VideoPlayer } from '@/components/VideoPlayer';
+import IframePlayer from '@/components/IframePlayer';
 import { CommentSection } from '@/components/CommentSection';
 import { ChatangoWidget } from '@/components/ChatangoWidget';
 import { PageLoader } from '@/components/LoadingSpinner';
@@ -15,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { Movie } from '@/types/database';
 import { useAuth } from '@/contexts/AuthContext';
+import { getSourceType } from '@/utils/videoSource';
 
 interface SubtitleTrack {
   id: string;
@@ -213,16 +215,20 @@ const MovieDetail = () => {
               )}
 
               {/* Video Player */}
-              <VideoPlayer
-                src={currentVideoUrl || null}
-                poster={movie.thumbnail}
-                title={hasPart2 ? `${movie.title} - Parte ${currentPart}` : movie.title}
-                subtitles={subtitles}
-                nextLabel={currentPart === 1 && hasPart2 ? 'Parte 2' : undefined}
-                onNextClick={currentPart === 1 && hasPart2 ? handleNextPart : undefined}
-                onTimeUpdate={saveWatchProgress}
-                initialTime={initialTime}
-              />
+              {currentVideoUrl && getSourceType(currentVideoUrl) === 'iframe' ? (
+                <IframePlayer src={currentVideoUrl} />
+              ) : (
+                <VideoPlayer
+                  src={currentVideoUrl || null}
+                  poster={movie.thumbnail}
+                  title={hasPart2 ? `${movie.title} - Parte ${currentPart}` : movie.title}
+                  subtitles={subtitles}
+                  nextLabel={currentPart === 1 && hasPart2 ? 'Parte 2' : undefined}
+                  onNextClick={currentPart === 1 && hasPart2 ? handleNextPart : undefined}
+                  onTimeUpdate={saveWatchProgress}
+                  initialTime={initialTime}
+                />
+              )}
 
               {/* Movie Info */}
               <div>
