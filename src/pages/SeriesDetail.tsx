@@ -4,6 +4,7 @@ import { ArrowLeft, Calendar, Tag, Play, CheckCircle2 } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { VideoPlayer } from '@/components/VideoPlayer';
+import IframePlayer from '@/components/IframePlayer';
 import { CommentSection } from '@/components/CommentSection';
 import { ChatangoWidget } from '@/components/ChatangoWidget';
 import { PageLoader } from '@/components/LoadingSpinner';
@@ -17,6 +18,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Series, Episode } from '@/types/database';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
+import { getSourceType } from '@/utils/videoSource';
 
 interface SubtitleTrack {
   id: string;
@@ -326,23 +328,27 @@ const SeriesDetail = () => {
             {/* Main Content */}
             <div className="lg:col-span-2 space-y-8">
               {/* Video Player */}
-              <VideoPlayer
-                src={selectedEpisode?.video_url || null}
-                poster={selectedEpisode?.thumbnail || series.thumbnail}
-                title={
-                  selectedEpisode
-                    ? `${series.title} - T${selectedEpisode.season}E${selectedEpisode.episode}`
-                    : series.title
-                }
-                subtitles={episodeSubtitles}
-                nextLabel={nextEpisode ? `Próximo: T${nextEpisode.season}E${nextEpisode.episode}` : undefined}
-                onNextClick={nextEpisode ? handleNextEpisode : undefined}
-                introStartTime={selectedEpisode?.intro_start}
-                introEndTime={selectedEpisode?.intro_end}
-                onTimeUpdate={saveWatchProgress}
-                initialTime={initialTime}
-                onEnded={handleVideoEnded}
-              />
+              {selectedEpisode?.video_url && getSourceType(selectedEpisode.video_url) === 'iframe' ? (
+                <IframePlayer src={selectedEpisode.video_url} />
+              ) : (
+                <VideoPlayer
+                  src={selectedEpisode?.video_url || null}
+                  poster={selectedEpisode?.thumbnail || series.thumbnail}
+                  title={
+                    selectedEpisode
+                      ? `${series.title} - T${selectedEpisode.season}E${selectedEpisode.episode}`
+                      : series.title
+                  }
+                  subtitles={episodeSubtitles}
+                  nextLabel={nextEpisode ? `Próximo: T${nextEpisode.season}E${nextEpisode.episode}` : undefined}
+                  onNextClick={nextEpisode ? handleNextEpisode : undefined}
+                  introStartTime={selectedEpisode?.intro_start}
+                  introEndTime={selectedEpisode?.intro_end}
+                  onTimeUpdate={saveWatchProgress}
+                  initialTime={initialTime}
+                  onEnded={handleVideoEnded}
+                />
+              )}
 
               {/* Series Info */}
               <div>

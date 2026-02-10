@@ -5,12 +5,14 @@ import { ContentCard } from '@/components/ContentCard';
 import { PageLoader } from '@/components/LoadingSpinner';
 import { supabase } from '@/integrations/supabase/client';
 import { Series as SeriesType } from '@/types/database';
-import { Tv } from 'lucide-react';
+import { Tv, ChevronDown, ChevronUp } from 'lucide-react';
+import { CATEGORIES } from '@/constants/categories';
 
 const Series = () => {
   const [series, setSeries] = useState<SeriesType[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [showAllCategories, setShowAllCategories] = useState(false);
 
   useEffect(() => {
     fetchSeries();
@@ -34,11 +36,23 @@ const Series = () => {
     return <PageLoader />;
   }
 
-  const categories = ['all', ...new Set(series.map((s) => s.category).filter(Boolean))];
+  const availableCategories = new Set<string>();
+  series.forEach(s => {
+    if (s.category) {
+      s.category.split(',').map(c => c.trim()).filter(Boolean).forEach(c => availableCategories.add(c));
+    }
+  });
+  const orderedCategories = CATEGORIES.filter(c => availableCategories.has(c));
+  const visibleCategories = showAllCategories ? orderedCategories : orderedCategories.slice(0, 8);
+
   const filteredSeries =
     selectedCategory === 'all'
       ? series
-      : series.filter((s) => s.category === selectedCategory);
+      : series.filter((s) => {
+          if (!s.category) return false;
+          const cats = s.category.split(',').map(c => c.trim());
+          return cats.includes(selectedCategory);
+        });
 
   return (
     <div className="min-h-screen bg-background">
@@ -58,21 +72,45 @@ const Series = () => {
           </div>
 
           {/* Category Filter */}
-          {categories.length > 1 && (
-            <div className="flex flex-wrap gap-2 mb-8">
-              {categories.map((category) => (
+          {orderedCategories.length > 0 && (
+            <div className="mb-8">
+              <div className="flex flex-wrap gap-2">
                 <button
-                  key={category}
-                  onClick={() => setSelectedCategory(category as string)}
+                  onClick={() => setSelectedCategory('all')}
                   className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${
-                    selectedCategory === category
+                    selectedCategory === 'all'
                       ? 'bg-primary text-primary-foreground'
                       : 'bg-secondary text-muted-foreground hover:bg-secondary/80'
                   }`}
                 >
-                  {category === 'all' ? 'Todas' : category}
+                  Todas
                 </button>
-              ))}
+                {visibleCategories.map((category) => (
+                  <button
+                    key={category}
+                    onClick={() => setSelectedCategory(category)}
+                    className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${
+                      selectedCategory === category
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-secondary text-muted-foreground hover:bg-secondary/80'
+                    }`}
+                  >
+                    {category}
+                  </button>
+                ))}
+              </div>
+              {orderedCategories.length > 8 && (
+                <button
+                  onClick={() => setShowAllCategories(!showAllCategories)}
+                  className="mt-2 flex items-center gap-1 text-xs text-primary hover:underline"
+                >
+                  {showAllCategories ? (
+                    <><ChevronUp className="w-3 h-3" /> Mostrar menos</>
+                  ) : (
+                    <><ChevronDown className="w-3 h-3" /> Mostrar todas ({orderedCategories.length})</>
+                  )}
+                </button>
+              )}
             </div>
           )}
 
