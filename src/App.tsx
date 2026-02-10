@@ -42,6 +42,7 @@ import ManageBans from "./pages/admin/ManageBans";
 import ManageNotifications from "./pages/admin/ManageNotifications";
 import SiteSettings from "./pages/admin/SiteSettings";
 import ManageVIP from "./pages/admin/ManageVIP";
+import BulkImport from "./pages/admin/BulkImport";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -99,6 +100,7 @@ const App = () => (
                   <Route path="bans" element={<ManageBans />} />
                   <Route path="notifications" element={<ManageNotifications />} />
                   <Route path="vip" element={<ManageVIP />} />
+                  <Route path="bulk-import" element={<BulkImport />} />
                 </Route>
 
                 {/* 404 */}

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Film, Tv, Plus, List, LogOut, Menu, X, Shield, UserCircle, Radio, Settings, ChevronDown, Home, Bell, Sparkles, ChevronRight, Crown } from 'lucide-react';
+import { LayoutDashboard, Film, Tv, Plus, List, LogOut, Menu, X, Shield, UserCircle, Radio, Settings, ChevronDown, Home, Bell, Sparkles, ChevronRight, Crown, Database } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
@@ -73,9 +73,17 @@ const AdminLayout = () => {
       label: 'Adicionar Série',
       href: '/admin/series/add'
     }, {
+      icon: Plus,
+      label: 'Adicionar Série',
+      href: '/admin/series/add'
+    }, {
       icon: Radio,
       label: 'Canais ao Vivo',
       href: '/admin/live-channels'
+    }, {
+      icon: Database,
+      label: 'Abastecer Site',
+      href: '/admin/bulk-import'
     }]
   }];
   const mainItems: MenuItem[] = [{
