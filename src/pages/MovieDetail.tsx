@@ -17,6 +17,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Movie } from '@/types/database';
 import { useAuth } from '@/contexts/AuthContext';
 import { getSourceType } from '@/utils/videoSource';
+import { useResolvedEmbedUrl } from '@/hooks/useResolvedEmbedUrl';
 
 interface SubtitleTrack {
   id: string;
@@ -120,6 +121,7 @@ const MovieDetail = () => {
 
   const hasPart2 = movie?.video_url_part2;
   const currentVideoUrl = currentPart === 1 ? movie?.video_url : movie?.video_url_part2;
+  const { url: resolvedIframeUrl } = useResolvedEmbedUrl(currentVideoUrl);
 
   const handleNextPart = () => {
     if (currentPart === 1 && hasPart2) {
@@ -216,7 +218,7 @@ const MovieDetail = () => {
 
               {/* Video Player */}
               {currentVideoUrl && getSourceType(currentVideoUrl) === 'iframe' ? (
-                <IframePlayer src={currentVideoUrl} />
+                <IframePlayer src={resolvedIframeUrl || currentVideoUrl} originalUrl={currentVideoUrl} />
               ) : (
                 <VideoPlayer
                   src={currentVideoUrl || null}

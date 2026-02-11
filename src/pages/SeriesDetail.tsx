@@ -19,6 +19,7 @@ import { Series, Episode } from '@/types/database';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { getSourceType } from '@/utils/videoSource';
+import { useResolvedEmbedUrl } from '@/hooks/useResolvedEmbedUrl';
 
 interface SubtitleTrack {
   id: string;
@@ -47,6 +48,8 @@ const SeriesDetail = () => {
   const [savedProgress, setSavedProgress] = useState<number>(0);
   const [initialTime, setInitialTime] = useState<number>(0);
   const lastSavedTimeRef = useRef<number>(0);
+
+  const { url: resolvedEpisodeIframeUrl } = useResolvedEmbedUrl(selectedEpisode?.video_url);
 
   useEffect(() => {
     if (id) {
@@ -329,7 +332,10 @@ const SeriesDetail = () => {
             <div className="lg:col-span-2 space-y-8">
               {/* Video Player */}
               {selectedEpisode?.video_url && getSourceType(selectedEpisode.video_url) === 'iframe' ? (
-                <IframePlayer src={selectedEpisode.video_url} />
+                <IframePlayer
+                  src={resolvedEpisodeIframeUrl || selectedEpisode.video_url}
+                  originalUrl={selectedEpisode.video_url}
+                />
               ) : (
                 <VideoPlayer
                   src={selectedEpisode?.video_url || null}
