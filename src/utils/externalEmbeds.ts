@@ -87,8 +87,10 @@ export function shouldResolveRemotely(inputUrl: string): boolean {
     const path = u.pathname.toLowerCase();
 
     if (path.includes('redirect.php')) return true;
-    // Some sites wrap providers behind /e/redirect.php
-    if (host.includes('pobreflixtv') && path.includes('/e/')) return true;
+    // pobreflixtv pages need remote resolution to extract embed iframe
+    if (host.includes('pobreflixtv')) return true;
+    // Any .html page is likely a player page that wraps an embed
+    if (path.endsWith('.html') && detectProvider(url) === 'unknown') return true;
 
     return false;
   } catch {
