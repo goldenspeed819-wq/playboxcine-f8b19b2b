@@ -16,7 +16,23 @@ interface ParsedItem {
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const BATCH_SIZE = 5;
-const SOURCE_BASE_URL = 'https://www.pobreflixtv.uk';
+const PLAYER_BASE = 'https://redecanais.cafe/player3/server.php?server=RCServer26&subfolder=ondemand&vid=';
+
+/**
+ * Abbreviate a title to build the redecanais vid= parameter.
+ * Rule: strip accents, remove lowercase 'e' (and accented variants),
+ * remove spaces/special chars, uppercase.
+ */
+function titleToVid(titulo: string): string {
+  // Normalize accents
+  let t = titulo.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  // Remove lowercase 'e'
+  t = t.replace(/e/g, '');
+  // Remove anything that isn't a letter or digit
+  t = t.replace(/[^A-Za-z0-9]/g, '');
+  // Uppercase
+  return t.toUpperCase();
+}
 
 function cleanTitle(titulo: string, ano?: string): string {
   if (!titulo) return '';
@@ -47,23 +63,15 @@ function parseJSON(raw: string): ParsedItem[] {
       const ano = entry.ano ? String(entry.ano) : '';
       const relativeUrl = (entry.url || '').trim();
 
-      // Skip entries without a title AND url (can't do anything with them)
-      if (!relativeUrl) continue;
-
-      // Build full page URL – the resolve-video-url function will extract the embed at playback
-      const fullUrl = relativeUrl.startsWith('http')
-        ? relativeUrl
-        : `${SOURCE_BASE_URL}${relativeUrl.startsWith('/') ? '' : '/'}${relativeUrl}`;
+      if (!relativeUrl && !titulo) continue;
 
       // Derive title from URL slug if titulo is empty
       let title = titulo;
       if (!title) {
-        // e.g. "/500-dias-com-ela-dublado-2009-1080p_19b422562.html" → "500 dias com ela"
         const slug = relativeUrl
           .replace(/\.html$/, '')
           .replace(/_[a-f0-9]+$/, '')
           .replace(/^\//, '');
-        // Remove quality/language suffixes
         const cleaned = slug
           .replace(/-(dublado|legendado|nacional|dual-audio)/gi, '')
           .replace(/-\d{4}/, '')
@@ -76,10 +84,14 @@ function parseJSON(raw: string): ParsedItem[] {
       title = cleanTitle(title, ano);
       if (!title) continue;
 
+      // Build direct player URL from title abbreviation
+      const vid = titleToVid(title);
+      const embed_url = vid ? `${PLAYER_BASE}${vid}` : '';
+
       items.push({
         title,
         year: ano,
-        embed_url: fullUrl,
+        embed_url,
         status: 'pending',
       });
     }
