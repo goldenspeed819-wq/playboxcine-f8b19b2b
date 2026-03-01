@@ -16,46 +16,97 @@ interface ParsedItem {
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const BATCH_SIZE = 5;
+const SOURCE_BASE_URL = 'https://www.pobreflixtv.uk';
 
-function cleanTitle(titulo: string, ano: string): string {
-  // Pattern: "Title Name" + year(4digits) + duration + "min"
-  const regex = new RegExp(`(.+)${ano}\\d+min$`);
-  const match = titulo.match(regex);
-  if (match) return match[1].trim();
-  // Fallback: try removing year
-  const idx = titulo.lastIndexOf(ano);
-  if (idx > 0) return titulo.substring(0, idx).trim();
-  return titulo;
+function cleanTitle(titulo: string, ano?: string): string {
+  if (!titulo) return '';
+  let t = titulo.trim();
+  if (ano) {
+    const regex = new RegExp(`(.+)${ano}\\d+min$`);
+    const match = t.match(regex);
+    if (match) return match[1].trim();
+    const idx = t.lastIndexOf(ano);
+    if (idx > 0) return t.substring(0, idx).trim();
+  }
+  return t;
 }
 
+/**
+ * Detect JSON format and parse accordingly.
+ * Format A (new – array):  [{ titulo, idioma, ano, qualidade, url, tipo }, ...]
+ * Format B (legacy – object): { id: { titulo, ano, players: {...} }, ... }
+ */
 function parseJSON(raw: string): ParsedItem[] {
   const data = JSON.parse(raw);
   const items: ParsedItem[] = [];
 
-  for (const key of Object.keys(data)) {
-    const entry = data[key];
-    if (!entry.titulo || !entry.ano) continue;
+  // --- Format A: array of objects with "url" field ---
+  if (Array.isArray(data)) {
+    for (const entry of data) {
+      const titulo = (entry.titulo || '').trim();
+      const ano = entry.ano ? String(entry.ano) : '';
+      const relativeUrl = (entry.url || '').trim();
 
-    const title = cleanTitle(entry.titulo, entry.ano);
-    
-    // Get first available embed URL
-    let embed_url = '';
-    if (entry.players) {
-      for (const provider of Object.keys(entry.players)) {
-        const players = entry.players[provider];
-        if (Array.isArray(players) && players.length > 0 && players[0].embed_url) {
-          embed_url = players[0].embed_url;
-          break;
+      // Skip entries without a title AND url (can't do anything with them)
+      if (!relativeUrl) continue;
+
+      // Build full page URL – the resolve-video-url function will extract the embed at playback
+      const fullUrl = relativeUrl.startsWith('http')
+        ? relativeUrl
+        : `${SOURCE_BASE_URL}${relativeUrl.startsWith('/') ? '' : '/'}${relativeUrl}`;
+
+      // Derive title from URL slug if titulo is empty
+      let title = titulo;
+      if (!title) {
+        // e.g. "/500-dias-com-ela-dublado-2009-1080p_19b422562.html" → "500 dias com ela"
+        const slug = relativeUrl
+          .replace(/\.html$/, '')
+          .replace(/_[a-f0-9]+$/, '')
+          .replace(/^\//, '');
+        // Remove quality/language suffixes
+        const cleaned = slug
+          .replace(/-(dublado|legendado|nacional|dual-audio)/gi, '')
+          .replace(/-\d{4}/, '')
+          .replace(/-\d{3,4}p/, '')
+          .replace(/-/g, ' ')
+          .trim();
+        title = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+      }
+
+      title = cleanTitle(title, ano);
+      if (!title) continue;
+
+      items.push({
+        title,
+        year: ano,
+        embed_url: fullUrl,
+        status: 'pending',
+      });
+    }
+    return items;
+  }
+
+  // --- Format B: legacy keyed object ---
+  if (typeof data === 'object' && data !== null) {
+    for (const key of Object.keys(data)) {
+      const entry = data[key];
+      if (!entry.titulo || !entry.ano) continue;
+
+      const title = cleanTitle(entry.titulo, entry.ano);
+
+      let embed_url = '';
+      if (entry.players) {
+        for (const provider of Object.keys(entry.players)) {
+          const players = entry.players[provider];
+          if (Array.isArray(players) && players.length > 0 && players[0].embed_url) {
+            embed_url = players[0].embed_url;
+            break;
+          }
         }
       }
-    }
 
-    items.push({
-      title,
-      year: entry.ano,
-      embed_url,
-      status: 'pending',
-    });
+      items.push({ title, year: entry.ano, embed_url, status: 'pending' });
+    }
   }
 
   return items;
@@ -86,6 +137,17 @@ export default function BulkImport() {
     }
   };
 
+  const handleLoadBuiltIn = async () => {
+    try {
+      const res = await fetch('/data/filmes.json');
+      const text = await res.text();
+      setJsonText(text);
+      toast({ title: 'Arquivo carregado', description: 'Clique em "Analisar JSON" para continuar.' });
+    } catch {
+      toast({ title: 'Erro ao carregar arquivo embutido', variant: 'destructive' });
+    }
+  };
+
   const handleImport = async () => {
     setIsImporting(true);
     abortRef.current = false;
@@ -95,8 +157,7 @@ export default function BulkImport() {
       if (abortRef.current) break;
 
       const batch = items.slice(i, i + BATCH_SIZE);
-      
-      // Mark batch as processing
+
       setItems(prev => {
         const next = [...prev];
         batch.forEach((_, j) => {
@@ -132,8 +193,7 @@ export default function BulkImport() {
             return next;
           });
         }
-      } catch (e) {
-        // Mark batch as error
+      } catch {
         setItems(prev => {
           const next = [...prev];
           batch.forEach((_, j) => {
@@ -188,16 +248,19 @@ export default function BulkImport() {
 
       {items.length === 0 ? (
         <div className="space-y-4">
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <label className="cursor-pointer">
               <input type="file" accept=".json" className="hidden" onChange={handleFileUpload} />
               <Button variant="outline" asChild>
                 <span><FileJson className="w-4 h-4 mr-2" /> Carregar arquivo JSON</span>
               </Button>
             </label>
+            <Button variant="outline" onClick={handleLoadBuiltIn}>
+              <FileJson className="w-4 h-4 mr-2" /> Usar filmes.json embutido
+            </Button>
           </div>
           <Textarea
-            placeholder='Cole o JSON aqui... (formato: { "id": { "titulo": "...", "ano": "...", "players": {...} }, ... })'
+            placeholder={'Cole o JSON aqui...\n\nFormato 1 (array): [{ "titulo": "...", "ano": 2024, "url": "/slug.html" }, ...]\nFormato 2 (objeto): { "id": { "titulo": "...", "ano": "...", "players": {...} }, ... }'}
             value={jsonText}
             onChange={e => setJsonText(e.target.value)}
             className="min-h-[300px] font-mono text-xs"
