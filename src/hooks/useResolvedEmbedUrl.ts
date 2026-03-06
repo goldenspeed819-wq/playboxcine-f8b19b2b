@@ -62,8 +62,7 @@ export function useResolvedEmbedUrl(rawUrl: string | null | undefined): State {
           return;
         }
 
-        const embedUrl: string | undefined = data?.embedUrl;
-        if (embedUrl) {
+        if (embedUrl && !embedUrl.includes('/cdn-cgi/challenge-platform/')) {
           cacheRef.current.set(input, embedUrl);
           setState({ url: embedUrl, isLoading: false, error: null });
           return;

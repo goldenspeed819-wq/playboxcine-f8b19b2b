@@ -105,6 +105,10 @@ async function fetchPage(url: string, extraHeaders: Record<string, string> = {})
   });
 }
 
+function isChallengeOrBlockedUrl(url: string): boolean {
+  return /\/cdn-cgi\/challenge-platform\//i.test(url);
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
