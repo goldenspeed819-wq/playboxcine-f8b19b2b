@@ -18,6 +18,7 @@ import { Movie } from '@/types/database';
 import { useAuth } from '@/contexts/AuthContext';
 import { getSourceType } from '@/utils/videoSource';
 import { useResolvedEmbedUrl } from '@/hooks/useResolvedEmbedUrl';
+import { shouldResolveRemotely } from '@/utils/externalEmbeds';
 
 interface SubtitleTrack {
   id: string;
