@@ -1,8 +1,10 @@
 import { useState, useRef } from 'react';
-import { Upload, Play, CheckCircle, XCircle, AlertCircle, Loader2, FileJson } from 'lucide-react';
+import { Upload, Play, CheckCircle, XCircle, AlertCircle, Loader2, FileJson, Zap, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Progress } from '@/components/ui/progress';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
@@ -24,13 +26,9 @@ const PLAYER_BASE = 'https://redecanais.cafe/player3/server.php?server=RCServer2
  * remove spaces/special chars, uppercase.
  */
 function titleToVid(titulo: string): string {
-  // Normalize accents
   let t = titulo.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  // Remove lowercase 'e'
   t = t.replace(/e/g, '');
-  // Remove anything that isn't a letter or digit
   t = t.replace(/[^A-Za-z0-9]/g, '');
-  // Uppercase
   return t.toUpperCase();
 }
 
@@ -47,16 +45,10 @@ function cleanTitle(titulo: string, ano?: string): string {
   return t;
 }
 
-/**
- * Detect JSON format and parse accordingly.
- * Format A (new – array):  [{ titulo, idioma, ano, qualidade, url, tipo }, ...]
- * Format B (legacy – object): { id: { titulo, ano, players: {...} }, ... }
- */
 function parseJSON(raw: string): ParsedItem[] {
   const data = JSON.parse(raw);
   const items: ParsedItem[] = [];
 
-  // --- Format A: array of objects with "url" field ---
   if (Array.isArray(data)) {
     for (const entry of data) {
       const titulo = (entry.titulo || '').trim();
@@ -65,7 +57,6 @@ function parseJSON(raw: string): ParsedItem[] {
 
       if (!relativeUrl && !titulo) continue;
 
-      // Derive title from URL slug if titulo is empty
       let title = titulo;
       if (!title) {
         const slug = relativeUrl
@@ -84,7 +75,6 @@ function parseJSON(raw: string): ParsedItem[] {
       title = cleanTitle(title, ano);
       if (!title) continue;
 
-      // Build direct player URL from title abbreviation
       const vid = titleToVid(title);
       const embed_url = vid ? `${PLAYER_BASE}${vid}` : '';
 
@@ -98,7 +88,6 @@ function parseJSON(raw: string): ParsedItem[] {
     return items;
   }
 
-  // --- Format B: legacy keyed object ---
   if (typeof data === 'object' && data !== null) {
     for (const key of Object.keys(data)) {
       const entry = data[key];
@@ -131,6 +120,7 @@ export default function BulkImport() {
   const [isImporting, setIsImporting] = useState(false);
   const [processed, setProcessed] = useState(0);
   const [stats, setStats] = useState({ added: 0, exists: 0, notFound: 0, errors: 0 });
+  const [skipTmdb, setSkipTmdb] = useState(false);
   const abortRef = useRef(false);
 
   const handleParse = () => {
@@ -183,7 +173,8 @@ export default function BulkImport() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            items: batch.map(b => ({ title: b.title, year: b.year, embed_url: b.embed_url }))
+            items: batch.map(b => ({ title: b.title, year: b.year, embed_url: b.embed_url })),
+            skipTmdb,
           }),
         });
 
@@ -255,7 +246,7 @@ export default function BulkImport() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Abastecer Site</h1>
-        <p className="text-muted-foreground mt-1">Cole um JSON com filmes/séries para importar automaticamente via TMDB</p>
+        <p className="text-muted-foreground mt-1">Cole um JSON com filmes/séries para importar automaticamente</p>
       </div>
 
       {items.length === 0 ? (
@@ -271,6 +262,25 @@ export default function BulkImport() {
               <FileJson className="w-4 h-4 mr-2" /> Usar filmes.json embutido
             </Button>
           </div>
+
+          {/* Import mode toggle */}
+          <div className="flex items-center gap-3 p-4 bg-card border rounded-xl">
+            <Switch id="skip-tmdb" checked={skipTmdb} onCheckedChange={setSkipTmdb} />
+            <Label htmlFor="skip-tmdb" className="flex-1 cursor-pointer">
+              <div className="flex items-center gap-2">
+                {skipTmdb ? <Zap className="w-4 h-4 text-yellow-500" /> : <Search className="w-4 h-4 text-primary" />}
+                <span className="font-medium">
+                  {skipTmdb ? 'Importação Direta (sem API)' : 'Importação com TMDB (metadados completos)'}
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {skipTmdb
+                  ? 'Importa apenas título, ano e link do player. Muito mais rápido, sem necessidade de API externa.'
+                  : 'Busca capa, descrição, categoria e classificação no TMDB. Mais lento mas dados completos.'}
+              </p>
+            </Label>
+          </div>
+
           <Textarea
             placeholder={'Cole o JSON aqui...\n\nFormato 1 (array): [{ "titulo": "...", "ano": 2024, "url": "/slug.html" }, ...]\nFormato 2 (objeto): { "id": { "titulo": "...", "ano": "...", "players": {...} }, ... }'}
             value={jsonText}
@@ -283,6 +293,15 @@ export default function BulkImport() {
         </div>
       ) : (
         <div className="space-y-4">
+          {/* Mode indicator */}
+          <div className={cn(
+            "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium",
+            skipTmdb ? "bg-yellow-500/10 text-yellow-600 border border-yellow-500/20" : "bg-primary/10 text-primary border border-primary/20"
+          )}>
+            {skipTmdb ? <Zap className="w-4 h-4" /> : <Search className="w-4 h-4" />}
+            {skipTmdb ? 'Modo: Importação Direta (sem API)' : 'Modo: Importação com TMDB'}
+          </div>
+
           {/* Stats */}
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             <div className="bg-card border rounded-xl p-3 text-center">
@@ -333,6 +352,22 @@ export default function BulkImport() {
               </Button>
             )}
           </div>
+
+          {/* Preview first items with vid= */}
+          {!isImporting && processed === 0 && (
+            <div className="bg-muted/50 border rounded-xl p-4 space-y-2">
+              <p className="text-sm font-medium">Preview dos primeiros 5 itens (vid=):</p>
+              {items.slice(0, 5).map((item, idx) => {
+                const vidParam = item.embed_url.split('vid=')[1] || '';
+                return (
+                  <div key={idx} className="text-xs font-mono bg-card p-2 rounded flex flex-col gap-1">
+                    <span className="text-foreground">{item.title} ({item.year || 'N/A'})</span>
+                    <span className="text-muted-foreground break-all">vid={vidParam}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
 
           {/* Items list */}
           <div className="bg-card border rounded-xl max-h-[400px] overflow-y-auto">
