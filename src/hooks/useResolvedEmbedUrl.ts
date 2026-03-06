@@ -28,11 +28,16 @@ export function useResolvedEmbedUrl(rawUrl: string | null | undefined): State {
       return;
     }
 
-    const localEmbed = toEmbedUrl(input) ?? input;
-    setState({ url: localEmbed, isLoading: false, error: null });
+    const needsRemote = shouldResolveRemotely(input);
 
-    if (!shouldResolveRemotely(input)) return;
+    // Fast path: local normalization only
+    if (!needsRemote) {
+      const localEmbed = toEmbedUrl(input) ?? input;
+      setState({ url: localEmbed, isLoading: false, error: null });
+      return;
+    }
 
+    // Remote path
     const cached = cacheRef.current.get(input);
     if (cached) {
       setState({ url: cached, isLoading: false, error: null });
@@ -42,10 +47,10 @@ export function useResolvedEmbedUrl(rawUrl: string | null | undefined): State {
     const controller = new AbortController();
     abortRef.current = controller;
 
+    setState({ url: null, isLoading: true, error: null });
+
     (async () => {
       try {
-        setState((prev) => ({ ...prev, isLoading: true, error: null }));
-
         const { data, error } = await supabase.functions.invoke('resolve-video-url', {
           body: { url: input },
         });
@@ -53,7 +58,7 @@ export function useResolvedEmbedUrl(rawUrl: string | null | undefined): State {
         if (controller.signal.aborted) return;
 
         if (error) {
-          setState((prev) => ({ ...prev, isLoading: false, error: error.message }));
+          setState({ url: null, isLoading: false, error: error.message });
           return;
         }
 
@@ -64,11 +69,11 @@ export function useResolvedEmbedUrl(rawUrl: string | null | undefined): State {
           return;
         }
 
-        // If backend can't resolve, keep local URL
-        setState((prev) => ({ ...prev, isLoading: false }));
+        const backendError = data?.error || 'Não foi possível resolver o link para reprodução incorporada';
+        setState({ url: null, isLoading: false, error: backendError });
       } catch (e) {
         if (controller.signal.aborted) return;
-        setState((prev) => ({ ...prev, isLoading: false, error: String(e) }));
+        setState({ url: null, isLoading: false, error: String(e) });
       }
     })();
 

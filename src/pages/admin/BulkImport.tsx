@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Upload, Play, CheckCircle, XCircle, AlertCircle, Loader2, FileJson, Zap, Search } from 'lucide-react';
+import { Upload, Play, CheckCircle, XCircle, AlertCircle, Loader2, FileJson, Zap, Search, Clapperboard, Tv } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Progress } from '@/components/ui/progress';
@@ -8,10 +8,13 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
+type ContentType = 'movie' | 'series';
+
 interface ParsedItem {
   title: string;
   year: string;
   embed_url: string;
+  content_type: ContentType;
   status?: 'pending' | 'processing' | 'added' | 'exists' | 'not_found' | 'error';
   tmdbTitle?: string;
 }
@@ -20,16 +23,43 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const BATCH_SIZE = 5;
 const PLAYER_BASE = 'https://redecanais.cafe/player3/server.php?server=RCServer26&subfolder=ondemand&vid=';
 
-/**
- * Abbreviate a title to build the redecanais vid= parameter.
- * Rule: strip accents, remove lowercase 'e' (and accented variants),
- * remove spaces/special chars, uppercase.
- */
-function titleToVid(titulo: string): string {
-  let t = titulo.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+const URL_CLEANUP_TOKENS = new Set([
+  'dublado',
+  'legendado',
+  'nacional',
+  'dual',
+  'audio',
+  'dual-audio',
+  'filme',
+  'ova',
+]);
+
+function titleToVid(title: string): string {
+  let t = title.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
   t = t.replace(/e/g, '');
   t = t.replace(/[^A-Za-z0-9]/g, '');
   return t.toUpperCase();
+}
+
+function relativeUrlToVid(relativeUrl: string): string {
+  if (!relativeUrl) return '';
+
+  const rawPath = relativeUrl
+    .replace(/^https?:\/\/[^/]+/i, '')
+    .replace(/^\//, '')
+    .replace(/\.html$/i, '')
+    .replace(/_[a-f0-9]+$/i, '');
+
+  const cleanedSlug = rawPath
+    .split('-')
+    .filter(Boolean)
+    .filter((token) => !URL_CLEANUP_TOKENS.has(token.toLowerCase()))
+    .filter((token) => !/^\d{4}$/.test(token))
+    .filter((token) => !/^\d{3,4}p$/i.test(token))
+    .join(' ')
+    .trim();
+
+  return titleToVid(cleanedSlug);
 }
 
 function cleanTitle(titulo: string, ano?: string): string {
@@ -45,7 +75,7 @@ function cleanTitle(titulo: string, ano?: string): string {
   return t;
 }
 
-function parseJSON(raw: string): ParsedItem[] {
+function parseJSON(raw: string, forcedType: ContentType): ParsedItem[] {
   const data = JSON.parse(raw);
   const items: ParsedItem[] = [];
 
@@ -75,13 +105,16 @@ function parseJSON(raw: string): ParsedItem[] {
       title = cleanTitle(title, ano);
       if (!title) continue;
 
-      const vid = titleToVid(title);
+      // 1) Try from URL slug (more accurate for this source)
+      // 2) Fallback to title-based conversion
+      const vid = relativeUrlToVid(relativeUrl) || titleToVid(title);
       const embed_url = vid ? `${PLAYER_BASE}${vid}` : '';
 
       items.push({
         title,
         year: ano,
         embed_url,
+        content_type: forcedType,
         status: 'pending',
       });
     }
@@ -106,7 +139,7 @@ function parseJSON(raw: string): ParsedItem[] {
         }
       }
 
-      items.push({ title, year: entry.ano, embed_url, status: 'pending' });
+      items.push({ title, year: entry.ano, embed_url, content_type: forcedType, status: 'pending' });
     }
   }
 
@@ -120,12 +153,13 @@ export default function BulkImport() {
   const [isImporting, setIsImporting] = useState(false);
   const [processed, setProcessed] = useState(0);
   const [stats, setStats] = useState({ added: 0, exists: 0, notFound: 0, errors: 0 });
-  const [skipTmdb, setSkipTmdb] = useState(false);
+  const [skipTmdb, setSkipTmdb] = useState(true);
+  const [contentType, setContentType] = useState<ContentType>('movie');
   const abortRef = useRef(false);
 
   const handleParse = () => {
     try {
-      const parsed = parseJSON(jsonText);
+      const parsed = parseJSON(jsonText, contentType);
       if (parsed.length === 0) {
         toast({ title: 'Nenhum item encontrado no JSON', variant: 'destructive' });
         return;
@@ -173,8 +207,14 @@ export default function BulkImport() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            items: batch.map(b => ({ title: b.title, year: b.year, embed_url: b.embed_url })),
+            items: batch.map((b) => ({
+              title: b.title,
+              year: b.year,
+              embed_url: b.embed_url,
+              content_type: b.content_type,
+            })),
             skipTmdb,
+            contentType,
           }),
         });
 
@@ -246,7 +286,7 @@ export default function BulkImport() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Abastecer Site</h1>
-        <p className="text-muted-foreground mt-1">Cole um JSON com filmes/séries para importar automaticamente</p>
+        <p className="text-muted-foreground mt-1">Importe em massa como filme ou série, com ou sem API externa</p>
       </div>
 
       {items.length === 0 ? (
@@ -263,6 +303,29 @@ export default function BulkImport() {
             </Button>
           </div>
 
+          {/* Content type selector */}
+          <div className="p-4 bg-card border rounded-xl space-y-2">
+            <p className="text-sm font-medium">Tipo do conteúdo para importar:</p>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant={contentType === 'movie' ? 'default' : 'outline'}
+                onClick={() => setContentType('movie')}
+                className="gap-2"
+              >
+                <Clapperboard className="w-4 h-4" /> Filme
+              </Button>
+              <Button
+                type="button"
+                variant={contentType === 'series' ? 'default' : 'outline'}
+                onClick={() => setContentType('series')}
+                className="gap-2"
+              >
+                <Tv className="w-4 h-4" /> Série
+              </Button>
+            </div>
+          </div>
+
           {/* Import mode toggle */}
           <div className="flex items-center gap-3 p-4 bg-card border rounded-xl">
             <Switch id="skip-tmdb" checked={skipTmdb} onCheckedChange={setSkipTmdb} />
@@ -270,13 +333,13 @@ export default function BulkImport() {
               <div className="flex items-center gap-2">
                 {skipTmdb ? <Zap className="w-4 h-4 text-yellow-500" /> : <Search className="w-4 h-4 text-primary" />}
                 <span className="font-medium">
-                  {skipTmdb ? 'Importação Direta (sem API)' : 'Importação com TMDB (metadados completos)'}
+                  {skipTmdb ? 'Importação Direta (sem API)' : 'Importação com API de metadados'}
                 </span>
               </div>
               <p className="text-xs text-muted-foreground mt-1">
                 {skipTmdb
-                  ? 'Importa apenas título, ano e link do player. Muito mais rápido, sem necessidade de API externa.'
-                  : 'Busca capa, descrição, categoria e classificação no TMDB. Mais lento mas dados completos.'}
+                  ? 'Sem API externa: importa dados básicos e link de player.'
+                  : 'Busca metadados completos automaticamente (capa, descrição, categoria).'}
               </p>
             </Label>
           </div>
@@ -295,11 +358,13 @@ export default function BulkImport() {
         <div className="space-y-4">
           {/* Mode indicator */}
           <div className={cn(
-            "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium",
-            skipTmdb ? "bg-yellow-500/10 text-yellow-600 border border-yellow-500/20" : "bg-primary/10 text-primary border border-primary/20"
+            'flex flex-wrap items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border',
+            skipTmdb ? 'bg-yellow-500/10 text-yellow-600 border-yellow-500/20' : 'bg-primary/10 text-primary border-primary/20'
           )}>
             {skipTmdb ? <Zap className="w-4 h-4" /> : <Search className="w-4 h-4" />}
-            {skipTmdb ? 'Modo: Importação Direta (sem API)' : 'Modo: Importação com TMDB'}
+            {skipTmdb ? 'Modo sem API' : 'Modo com API'}
+            <span>•</span>
+            {contentType === 'movie' ? 'Tipo: Filme' : 'Tipo: Série'}
           </div>
 
           {/* Stats */}
@@ -360,8 +425,8 @@ export default function BulkImport() {
               {items.slice(0, 5).map((item, idx) => {
                 const vidParam = item.embed_url.split('vid=')[1] || '';
                 return (
-                  <div key={idx} className="text-xs font-mono bg-card p-2 rounded flex flex-col gap-1">
-                    <span className="text-foreground">{item.title} ({item.year || 'N/A'})</span>
+                  <div key={`${item.title}-${idx}`} className="text-xs font-mono bg-card p-2 rounded flex flex-col gap-1">
+                    <span className="text-foreground">{item.title} ({item.year || 'N/A'}) • {item.content_type === 'movie' ? 'Filme' : 'Série'}</span>
                     <span className="text-muted-foreground break-all">vid={vidParam}</span>
                   </div>
                 );
@@ -373,13 +438,14 @@ export default function BulkImport() {
           <div className="bg-card border rounded-xl max-h-[400px] overflow-y-auto">
             <div className="divide-y divide-border">
               {items.map((item, idx) => (
-                <div key={idx} className={cn(
-                  "flex items-center gap-3 px-4 py-2 text-sm",
-                  item.status === 'processing' && "bg-primary/5"
+                <div key={`${item.title}-${item.content_type}-${idx}`} className={cn(
+                  'flex items-center gap-3 px-4 py-2 text-sm',
+                  item.status === 'processing' && 'bg-primary/5'
                 )}>
                   {statusIcon(item.status)}
                   <span className="flex-1 truncate">{item.tmdbTitle || item.title}</span>
                   <span className="text-muted-foreground text-xs">{item.year}</span>
+                  <span className="text-muted-foreground text-xs">{item.content_type === 'movie' ? 'filme' : 'série'}</span>
                   <span className="text-xs text-muted-foreground capitalize">{item.status || 'pendente'}</span>
                 </div>
               ))}
