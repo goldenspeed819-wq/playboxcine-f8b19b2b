@@ -139,7 +139,7 @@ serve(async (req) => {
     let resolvedUrl = resp.url || input;
 
     const normalizedFinal = toEmbedUrl(resolvedUrl);
-    if (normalizedFinal.embedUrl) {
+    if (normalizedFinal.embedUrl && !isChallengeOrBlockedUrl(normalizedFinal.embedUrl)) {
       return new Response(
         JSON.stringify({ success: true, embedUrl: normalizedFinal.embedUrl, provider: normalizedFinal.provider, resolvedUrl }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -177,11 +177,16 @@ serve(async (req) => {
       for (const candidate of candidates) {
         try {
           const abs = new URL(candidate, resolvedUrl).toString();
+          if (isChallengeOrBlockedUrl(abs)) continue;
+
           const normalizedCandidate = toEmbedUrl(abs);
+          const finalUrl = normalizedCandidate.embedUrl || abs;
+          if (isChallengeOrBlockedUrl(finalUrl)) continue;
+
           return new Response(
             JSON.stringify({
               success: true,
-              embedUrl: normalizedCandidate.embedUrl || abs,
+              embedUrl: finalUrl,
               provider: normalizedCandidate.provider,
               resolvedUrl,
             }),
