@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
 type KnownProvider = 'mixdrop' | 'doodstream' | 'streamtape' | 'unknown';
@@ -64,14 +64,49 @@ function toEmbedUrl(inputUrl: string): { embedUrl: string | null; provider: Know
   return { embedUrl: null, provider };
 }
 
-function extractFirstIframeSrc(html: string): string | null {
-  const m = html.match(/<iframe[^>]+src=["']([^"']+)["']/i);
-  return m?.[1] ?? null;
+function extractCandidatesFromHtml(html: string): string[] {
+  const candidates: string[] = [];
+
+  const pushRegexMatches = (re: RegExp) => {
+    for (const m of html.matchAll(re)) {
+      if (m[1]) candidates.push(m[1]);
+    }
+  };
+
+  // iframe/src
+  pushRegexMatches(/<iframe[^>]+src=["']([^"']+)["']/gi);
+  // video source
+  pushRegexMatches(/<source[^>]+src=["']([^"']+)["']/gi);
+  // JS assignments (file/src/source: '...')
+  pushRegexMatches(/(?:file|src|source)\s*[:=]\s*["']([^"']+)["']/gi);
+  // direct media links
+  pushRegexMatches(/(https?:\/\/[^\s"'<>]+\.(?:m3u8|mp4)(?:\?[^\s"'<>]*)?)/gi);
+  // known provider links
+  pushRegexMatches(/(https?:\/\/[^\s"'<>]*(?:mixdrop|dood|streamtape)[^\s"'<>]*)/gi);
+
+  return [...new Set(candidates.filter(Boolean))];
 }
 
-function extractFirstSourceSrc(html: string): string | null {
-  const m = html.match(/<source[^>]+src=["']([^"']+)["']/i);
-  return m?.[1] ?? null;
+function isLikelyBlockedChallengeHtml(html: string): boolean {
+  const lower = html.toLowerCase();
+  return lower.includes('carregando...') && lower.includes('deu errado pra voce');
+}
+
+async function fetchPage(url: string, extraHeaders: Record<string, string> = {}) {
+  return fetch(url, {
+    method: 'GET',
+    redirect: 'follow',
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      'Accept-Language': 'pt-BR,pt;q=0.9,en;q=0.8',
+      ...extraHeaders,
+    },
+  });
+}
+
+function isChallengeOrBlockedUrl(url: string): boolean {
+  return /\/cdn-cgi\/challenge-platform\//i.test(url);
 }
 
 serve(async (req) => {
@@ -99,47 +134,67 @@ serve(async (req) => {
       );
     }
 
-    // 2) Follow redirects server-side (avoids browser CORS issues)
-    const resp = await fetch(input, {
-      method: 'GET',
-      redirect: 'follow',
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; LovableBot/1.0)',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-      },
-    });
+    // 2) Fetch page and follow redirects server-side
+    let resp = await fetchPage(input);
+    let resolvedUrl = resp.url || input;
 
-    const resolvedUrl = resp.url || input;
-
-    // 3) If the final URL is a known provider, normalize to embed
     const normalizedFinal = toEmbedUrl(resolvedUrl);
-    if (normalizedFinal.embedUrl) {
+    if (normalizedFinal.embedUrl && !isChallengeOrBlockedUrl(normalizedFinal.embedUrl)) {
       return new Response(
         JSON.stringify({ success: true, embedUrl: normalizedFinal.embedUrl, provider: normalizedFinal.provider, resolvedUrl }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // 4) Last resort: parse HTML and look for iframe/src hints
     const contentType = resp.headers.get('content-type') || '';
-    if (contentType.includes('text/html')) {
-      const html = await resp.text();
-      const iframeSrc = extractFirstIframeSrc(html);
-      const sourceSrc = extractFirstSourceSrc(html);
+    let html = contentType.includes('text/html') ? await resp.text() : '';
 
-      const candidate = iframeSrc || sourceSrc;
-      if (candidate) {
-        const abs = new URL(candidate, resolvedUrl).toString();
-        const normalizedCandidate = toEmbedUrl(abs);
-        return new Response(
-          JSON.stringify({
-            success: true,
-            embedUrl: normalizedCandidate.embedUrl || abs,
-            provider: normalizedCandidate.provider,
-            resolvedUrl,
-          }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+    // Retry with referer/origin for sources that gate content by headers
+    if (html && isLikelyBlockedChallengeHtml(html)) {
+      try {
+        const u = new URL(input);
+        const retry = await fetchPage(input, {
+          'Referer': `${u.protocol}//${u.host}/`,
+          'Origin': `${u.protocol}//${u.host}`,
+        });
+
+        if (retry.ok) {
+          const retryType = retry.headers.get('content-type') || '';
+          if (retryType.includes('text/html')) {
+            html = await retry.text();
+            resolvedUrl = retry.url || resolvedUrl;
+          }
+        }
+      } catch {
+        // ignore retry errors
+      }
+    }
+
+    // 3) Parse HTML looking for iframe/source/media candidates
+    if (html) {
+      const candidates = extractCandidatesFromHtml(html);
+
+      for (const candidate of candidates) {
+        try {
+          const abs = new URL(candidate, resolvedUrl).toString();
+          if (isChallengeOrBlockedUrl(abs)) continue;
+
+          const normalizedCandidate = toEmbedUrl(abs);
+          const finalUrl = normalizedCandidate.embedUrl || abs;
+          if (isChallengeOrBlockedUrl(finalUrl)) continue;
+
+          return new Response(
+            JSON.stringify({
+              success: true,
+              embedUrl: finalUrl,
+              provider: normalizedCandidate.provider,
+              resolvedUrl,
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        } catch {
+          // continue
+        }
       }
     }
 

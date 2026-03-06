@@ -1,4 +1,4 @@
-export type KnownProvider = 'mixdrop' | 'doodstream' | 'streamtape' | 'unknown';
+export type KnownProvider = 'mixdrop' | 'doodstream' | 'streamtape' | 'redecanais' | 'unknown';
 
 export function normalizeHttpUrl(input: string): string {
   const trimmed = input.trim();
@@ -28,6 +28,7 @@ export function detectProvider(url: string): KnownProvider {
     if (host.includes('mixdrop')) return 'mixdrop';
     if (host.includes('dood') || host.includes('doodstream')) return 'doodstream';
     if (host.includes('streamtape') || host.includes('stape')) return 'streamtape';
+    if (host.includes('redecanais')) return 'redecanais';
     return 'unknown';
   } catch {
     return 'unknown';
@@ -76,7 +77,7 @@ export function toEmbedUrl(inputUrl: string): string | null {
 }
 
 /**
- * Some URLs are known redirectors (e.g. redirect.php) that usually need backend resolution.
+ * Some URLs are known redirectors/player wrappers that need backend resolution.
  */
 export function shouldResolveRemotely(inputUrl: string): boolean {
   const url = normalizeHttpUrl(inputUrl);
@@ -89,6 +90,8 @@ export function shouldResolveRemotely(inputUrl: string): boolean {
     if (path.includes('redirect.php')) return true;
     // pobreflixtv pages need remote resolution to extract embed iframe
     if (host.includes('pobreflixtv')) return true;
+    // redecanais player/pages often wrap/redirect and need server-side extraction
+    if (host.includes('redecanais')) return true;
     // Any .html page is likely a player page that wraps an embed
     if (path.endsWith('.html') && detectProvider(url) === 'unknown') return true;
 

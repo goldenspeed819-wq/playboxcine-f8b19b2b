@@ -18,6 +18,7 @@ import { Movie } from '@/types/database';
 import { useAuth } from '@/contexts/AuthContext';
 import { getSourceType } from '@/utils/videoSource';
 import { useResolvedEmbedUrl } from '@/hooks/useResolvedEmbedUrl';
+import { shouldResolveRemotely } from '@/utils/externalEmbeds';
 
 interface SubtitleTrack {
   id: string;
@@ -121,7 +122,9 @@ const MovieDetail = () => {
 
   const hasPart2 = movie?.video_url_part2;
   const currentVideoUrl = currentPart === 1 ? movie?.video_url : movie?.video_url_part2;
-  const { url: resolvedIframeUrl } = useResolvedEmbedUrl(currentVideoUrl);
+  const { url: resolvedIframeUrl, isLoading: resolvingIframe, error: resolveError } = useResolvedEmbedUrl(currentVideoUrl);
+  const iframeNeedsRemoteResolve = !!currentVideoUrl && shouldResolveRemotely(currentVideoUrl);
+  const iframeSrc = iframeNeedsRemoteResolve ? resolvedIframeUrl : (resolvedIframeUrl || currentVideoUrl);
 
   const handleNextPart = () => {
     if (currentPart === 1 && hasPart2) {
@@ -218,7 +221,22 @@ const MovieDetail = () => {
 
               {/* Video Player */}
               {currentVideoUrl && getSourceType(currentVideoUrl) === 'iframe' ? (
-                <IframePlayer src={resolvedIframeUrl || currentVideoUrl} originalUrl={currentVideoUrl} />
+                iframeSrc ? (
+                  <IframePlayer src={iframeSrc} originalUrl={currentVideoUrl} />
+                ) : (
+                  <div className="aspect-video rounded-xl border bg-card p-6 flex items-center justify-center text-center">
+                    <div className="space-y-3">
+                      <p className="text-sm text-muted-foreground">
+                        {resolvingIframe
+                          ? 'Resolvendo player externo...'
+                          : (resolveError || 'Não foi possível incorporar este link neste site.')}
+                      </p>
+                      <Button onClick={() => window.open(currentVideoUrl, '_blank', 'noopener,noreferrer')}>
+                        Abrir no provedor
+                      </Button>
+                    </div>
+                  </div>
+                )
               ) : (
                 <VideoPlayer
                   src={currentVideoUrl || null}
