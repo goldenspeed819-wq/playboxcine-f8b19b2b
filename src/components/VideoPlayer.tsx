@@ -74,7 +74,7 @@ export function VideoPlayer({ src, poster, title, subtitles = [], nextLabel, onN
   const [isLoading, setIsLoading] = useState(true);
   const [activeSubtitle, setActiveSubtitle] = useState<string | null>(null);
   
-  const controlsTimeoutRef = useRef<NodeJS.Timeout>();
+  const controlsTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
   // Inject subtitle styles
   useEffect(() => {

@@ -20,9 +20,7 @@ export function Header() {
   const { isAdmin, profile, signOut } = useAuth();
 
   useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 50);
-    };
+    const handleScroll = () => setIsScrolled(window.scrollY > 50);
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
@@ -46,118 +44,88 @@ export function Header() {
     }
   };
 
-
   const handleAdminClick = () => {
-    if (isAdmin) {
-      navigate('/admin');
-    } else {
-      toast({
-        title: 'Acesso negado',
-        description: '',
-        variant: 'destructive',
-      });
-    }
+    if (isAdmin) navigate('/admin');
+    else toast({ title: 'Acesso negado', description: '', variant: 'destructive' });
   };
 
   const navLinks = [
-    { href: '/browse', label: 'INÍCIO', icon: Home },
-    { href: '/movies', label: 'FILMES', icon: Film },
-    { href: '/series', label: 'SÉRIES', icon: Popcorn },
-    { href: '/live', label: 'AO VIVO', icon: Tv },
+    { href: '/browse', label: 'Início', icon: Home },
+    { href: '/movies', label: 'Filmes', icon: Film },
+    { href: '/series', label: 'Séries', icon: Popcorn },
+    { href: '/live', label: 'Ao Vivo', icon: Tv },
   ];
 
   return (
-    <header
-      className={cn(
-        'fixed top-0 left-0 right-0 z-50 transition-all duration-300',
-        isScrolled
-          ? 'bg-background/95 backdrop-blur-lg border-b border-border shadow-lg'
-          : 'bg-gradient-to-b from-background/80 to-transparent'
-      )}
-    >
+    <header className={cn(
+      'fixed top-0 left-0 right-0 z-50 transition-all duration-500',
+      isScrolled
+        ? 'bg-background/90 backdrop-blur-xl border-b border-border/50'
+        : 'bg-gradient-to-b from-background/60 to-transparent'
+    )}>
       <div className="container mx-auto px-3 sm:px-4">
-        <div className="flex items-center justify-between h-14 sm:h-16 md:h-20">
+        <div className="flex items-center justify-between h-14 sm:h-16 md:h-18">
           {/* Logo */}
-          <Link to="/browse" className="flex items-center gap-2 sm:gap-3 group flex-shrink-0">
-            <div className="relative">
-              <div className="absolute inset-0 bg-primary/20 rounded-full blur-md group-hover:bg-primary/30 transition-colors" />
-              <img 
-                src={logo} 
-                alt="Rynex Cine" 
-                className="h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 rounded-lg object-contain ring-2 ring-primary/50 group-hover:ring-primary transition-all relative z-10"
-              />
-            </div>
-            <span className="hidden sm:block font-display text-base sm:text-lg md:text-xl font-bold text-foreground group-hover:text-primary transition-colors">
-              Rynex<span className="text-primary">Cine</span>
+          <Link to="/browse" className="flex items-center gap-2.5 group flex-shrink-0">
+            <img 
+              src={logo} 
+              alt="Rynex Cine" 
+              className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg object-contain ring-1 ring-primary/30 group-hover:ring-primary/60 transition-all"
+            />
+            <span className="hidden sm:block font-display text-xl sm:text-2xl tracking-wider">
+              <span className="gradient-text">RYNEX</span>
+              <span className="text-foreground/80">CINE</span>
             </span>
           </Link>
 
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-4 lg:gap-8">
+          {/* Desktop Nav */}
+          <nav className="hidden md:flex items-center gap-1">
             {navLinks.map((link) => {
-              const Icon = link.icon;
+              const isActive = location.pathname === link.href;
               return (
-                <Link
-                  key={link.href}
-                  to={link.href}
+                <Link key={link.href} to={link.href}
                   className={cn(
-                    'flex items-center gap-2 font-body font-semibold text-sm tracking-wider transition-all relative group',
-                    location.pathname === link.href
-                      ? 'text-primary'
-                      : 'text-muted-foreground hover:text-foreground'
-                  )}
-                >
-                  <Icon className={cn(
-                    'w-4 h-4 transition-transform group-hover:scale-110',
-                    location.pathname === link.href && 'text-primary'
-                  )} />
-                  <span>{link.label}</span>
-                  {location.pathname === link.href && (
-                    <span className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary rounded-full" />
-                  )}
+                    'px-4 py-2 rounded-lg text-sm font-medium transition-all relative',
+                    isActive
+                      ? 'text-primary bg-primary/10'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
+                  )}>
+                  {link.label}
                 </Link>
               );
             })}
           </nav>
 
-          {/* Search & Actions */}
+          {/* Actions */}
           <div className="flex items-center gap-1">
             {/* Search */}
             <div className="flex items-center">
               <form onSubmit={handleSearch} className={cn(
                 'transition-all duration-300 overflow-hidden',
-                searchOpen ? 'w-32 sm:w-40 md:w-56' : 'w-0'
+                searchOpen ? 'w-36 sm:w-48 md:w-56' : 'w-0'
               )}>
                 <Input
                   placeholder="Buscar..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="bg-secondary/80 border-border/50 focus:border-primary h-8 text-sm rounded-full px-3 sm:px-4"
+                  className="bg-secondary/60 border-border/30 focus:border-primary h-8 text-sm rounded-lg px-3"
                   autoFocus={searchOpen}
                 />
               </form>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleSearchClick}
-                className="text-muted-foreground hover:text-foreground hover:bg-secondary/50 h-8 w-8 sm:h-9 sm:w-9 rounded-full"
-              >
+              <Button variant="ghost" size="icon" onClick={handleSearchClick}
+                className="text-muted-foreground hover:text-foreground h-8 w-8 rounded-lg">
                 <Search className="w-4 h-4" />
               </Button>
             </div>
 
-            {/* Divider - Hidden on mobile */}
-            <div className="hidden sm:block h-5 w-px bg-border/50 mx-1" />
+            <div className="hidden sm:block h-4 w-px bg-border/40 mx-1" />
 
-            {/* User Profile - Hidden on mobile */}
+            {/* Profile chip */}
             {profile && (
-              <div className="hidden md:flex items-center gap-2 px-2 py-1.5 rounded-full bg-secondary/30 hover:bg-secondary/50 transition-colors">
+              <div className="hidden md:flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-default">
                 {profile.avatar_url && (
-                  <img 
-                    src={profile.avatar_url} 
-                    alt="Avatar" 
-                    className="w-6 h-6 sm:w-7 sm:h-7 rounded-full object-cover ring-2 ring-primary/20"
-                  />
+                  <img src={profile.avatar_url} alt="Avatar" 
+                    className="w-6 h-6 rounded-full object-cover ring-1 ring-primary/20" />
                 )}
                 <span className="text-xs font-medium text-foreground max-w-[70px] truncate">
                   {profile.username || profile.user_code}
@@ -165,77 +133,38 @@ export function Header() {
               </div>
             )}
 
-            {/* Action Buttons */}
             <div className="flex items-center">
-              {/* Notifications */}
-              <div className="hidden sm:flex">
-                <EpisodeNotifications />
-              </div>
-              
-              {/* Theme Toggle */}
-              <div className="hidden sm:flex">
-                <ThemeToggle />
-              </div>
-
-              {/* Favorites Link */}
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => navigate('/favorites')}
-                className="hidden sm:flex text-muted-foreground hover:text-foreground hover:bg-secondary/50 h-8 w-8 rounded-full"
-                title="Favoritos"
-              >
+              <div className="hidden sm:flex"><EpisodeNotifications /></div>
+              <div className="hidden sm:flex"><ThemeToggle /></div>
+              <Button variant="ghost" size="icon" onClick={() => navigate('/favorites')}
+                className="hidden sm:flex text-muted-foreground hover:text-primary h-8 w-8 rounded-lg" title="Favoritos">
                 <Heart className="w-4 h-4" />
               </Button>
-
               {isAdmin && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleAdminClick}
-                  className="hidden sm:flex text-muted-foreground hover:text-foreground hover:bg-secondary/50 h-8 w-8 rounded-full"
-                  title="Painel Admin"
-                >
+                <Button variant="ghost" size="icon" onClick={handleAdminClick}
+                  className="hidden sm:flex text-muted-foreground hover:text-primary h-8 w-8 rounded-lg" title="Admin">
                   <MoreVertical className="w-4 h-4" />
                 </Button>
               )}
               {profile && (
                 <>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => navigate('/history')}
-                    className="hidden sm:flex text-muted-foreground hover:text-foreground hover:bg-secondary/50 h-8 w-8 rounded-full"
-                    title="Histórico"
-                  >
+                  <Button variant="ghost" size="icon" onClick={() => navigate('/history')}
+                    className="hidden sm:flex text-muted-foreground hover:text-foreground h-8 w-8 rounded-lg" title="Histórico">
                     <History className="w-4 h-4" />
                   </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => navigate('/settings')}
-                    className="hidden sm:flex text-muted-foreground hover:text-foreground hover:bg-secondary/50 h-8 w-8 rounded-full"
-                    title="Configurações"
-                  >
+                  <Button variant="ghost" size="icon" onClick={() => navigate('/settings')}
+                    className="hidden sm:flex text-muted-foreground hover:text-foreground h-8 w-8 rounded-lg" title="Configurações">
                     <Settings className="w-4 h-4" />
                   </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={signOut}
-                    className="hidden sm:flex text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-8 w-8 rounded-full"
-                    title="Sair"
-                  >
+                  <Button variant="ghost" size="icon" onClick={signOut}
+                    className="hidden sm:flex text-muted-foreground hover:text-destructive h-8 w-8 rounded-lg" title="Sair">
                     <LogOut className="w-4 h-4" />
                   </Button>
                 </>
               )}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="md:hidden text-muted-foreground hover:text-foreground hover:bg-secondary/50 h-8 w-8 rounded-full"
-                onClick={() => setIsMenuOpen(!isMenuOpen)}
-              >
+              <Button variant="ghost" size="icon"
+                className="md:hidden text-muted-foreground hover:text-foreground h-8 w-8 rounded-lg"
+                onClick={() => setIsMenuOpen(!isMenuOpen)}>
                 {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
               </Button>
             </div>
@@ -243,92 +172,58 @@ export function Header() {
         </div>
 
         {/* Mobile Menu */}
-        <div
-          className={cn(
-            'md:hidden overflow-hidden transition-all duration-300',
-            isMenuOpen ? 'max-h-[400px] pb-4' : 'max-h-0'
-          )}
-        >
-          {/* User Profile Mobile */}
+        <div className={cn(
+          'md:hidden overflow-hidden transition-all duration-300',
+          isMenuOpen ? 'max-h-[500px] pb-4' : 'max-h-0'
+        )}>
           {profile && (
-            <div className="flex items-center gap-3 px-3 py-3 mb-2 rounded-xl bg-secondary/30">
+            <div className="flex items-center gap-3 px-3 py-3 mb-2 rounded-xl bg-secondary/20 border border-border/30">
               {profile.avatar_url && (
-                <img 
-                  src={profile.avatar_url} 
-                  alt="Avatar" 
-                  className="w-10 h-10 rounded-full object-cover ring-2 ring-primary/30"
-                />
+                <img src={profile.avatar_url} alt="Avatar" className="w-10 h-10 rounded-full object-cover ring-1 ring-primary/30" />
               )}
               <div className="flex-1 min-w-0">
-                <p className="font-semibold text-foreground truncate">
-                  {profile.username || 'Usuário'}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  #{profile.user_code}
-                </p>
+                <p className="font-medium text-foreground truncate">{profile.username || 'Usuário'}</p>
+                <p className="text-xs text-muted-foreground">#{profile.user_code}</p>
               </div>
             </div>
           )}
 
-          {/* Navigation Links */}
-          <nav className="flex flex-col gap-1">
+          <nav className="flex flex-col gap-0.5">
             {navLinks.map((link) => {
               const Icon = link.icon;
               return (
-                <Link
-                  key={link.href}
-                  to={link.href}
-                  onClick={() => setIsMenuOpen(false)}
+                <Link key={link.href} to={link.href} onClick={() => setIsMenuOpen(false)}
                   className={cn(
-                    'flex items-center gap-3 font-body font-semibold py-3 px-4 rounded-xl transition-colors',
-                    location.pathname === link.href
-                      ? 'bg-primary/20 text-primary'
-                      : 'text-muted-foreground hover:bg-secondary active:bg-secondary'
-                  )}
-                >
+                    'flex items-center gap-3 py-3 px-4 rounded-xl transition-colors',
+                    location.pathname === link.href ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-secondary/50'
+                  )}>
                   <Icon className="w-5 h-5" />
-                  <span>{link.label}</span>
+                  <span className="font-medium">{link.label}</span>
                 </Link>
               );
             })}
-            
-            {/* Divider */}
-            <div className="h-px bg-border/50 my-2" />
-            
-            {/* Additional Links */}
-            <Link
-              to="/history"
-              onClick={() => setIsMenuOpen(false)}
-              className="flex items-center gap-3 font-body font-semibold py-3 px-4 rounded-xl text-muted-foreground hover:bg-secondary active:bg-secondary"
-            >
-              <History className="w-5 h-5" />
-              <span>Histórico</span>
+            <div className="h-px bg-border/30 my-2" />
+            <Link to="/favorites" onClick={() => setIsMenuOpen(false)}
+              className="flex items-center gap-3 py-3 px-4 rounded-xl text-muted-foreground hover:bg-secondary/50">
+              <Heart className="w-5 h-5" /><span className="font-medium">Favoritos</span>
             </Link>
-            <Link
-              to="/settings"
-              onClick={() => setIsMenuOpen(false)}
-              className="flex items-center gap-3 font-body font-semibold py-3 px-4 rounded-xl text-muted-foreground hover:bg-secondary active:bg-secondary"
-            >
-              <Settings className="w-5 h-5" />
-              <span>Configurações</span>
+            <Link to="/history" onClick={() => setIsMenuOpen(false)}
+              className="flex items-center gap-3 py-3 px-4 rounded-xl text-muted-foreground hover:bg-secondary/50">
+              <History className="w-5 h-5" /><span className="font-medium">Histórico</span>
+            </Link>
+            <Link to="/settings" onClick={() => setIsMenuOpen(false)}
+              className="flex items-center gap-3 py-3 px-4 rounded-xl text-muted-foreground hover:bg-secondary/50">
+              <Settings className="w-5 h-5" /><span className="font-medium">Configurações</span>
             </Link>
             {isAdmin && (
-              <button
-                onClick={() => { setIsMenuOpen(false); handleAdminClick(); }}
-                className="flex items-center gap-3 font-body font-semibold py-3 px-4 rounded-xl text-muted-foreground hover:bg-secondary active:bg-secondary w-full text-left"
-              >
-                <MoreVertical className="w-5 h-5" />
-                <span>Painel Admin</span>
+              <button onClick={() => { setIsMenuOpen(false); handleAdminClick(); }}
+                className="flex items-center gap-3 py-3 px-4 rounded-xl text-muted-foreground hover:bg-secondary/50 w-full text-left">
+                <MoreVertical className="w-5 h-5" /><span className="font-medium">Painel Admin</span>
               </button>
             )}
-            
-            {/* Logout */}
-            <button
-              onClick={() => { setIsMenuOpen(false); signOut(); }}
-              className="flex items-center gap-3 font-body font-semibold py-3 px-4 rounded-xl text-destructive hover:bg-destructive/10 active:bg-destructive/10 w-full text-left mt-1"
-            >
-              <LogOut className="w-5 h-5" />
-              <span>Sair</span>
+            <button onClick={() => { setIsMenuOpen(false); signOut(); }}
+              className="flex items-center gap-3 py-3 px-4 rounded-xl text-destructive hover:bg-destructive/10 w-full text-left mt-1">
+              <LogOut className="w-5 h-5" /><span className="font-medium">Sair</span>
             </button>
           </nav>
         </div>
