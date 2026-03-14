@@ -14,8 +14,9 @@ export default {
     },
     extend: {
       fontFamily: {
-        display: ['Orbitron', 'sans-serif'],
-        body: ['Rajdhani', 'sans-serif'],
+        display: ['Bebas Neue', 'sans-serif'],
+        body: ['DM Sans', 'sans-serif'],
+        heading: ['Space Grotesk', 'sans-serif'],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -51,13 +52,18 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        neon: {
-          red: "hsl(var(--neon-red))",
-          glow: "hsl(var(--neon-red-glow))",
+        gold: {
+          DEFAULT: "hsl(var(--gold))",
+          glow: "hsl(var(--gold-glow))",
         },
         surface: {
           dark: "hsl(var(--dark-surface))",
           darker: "hsl(var(--darker-surface))",
+        },
+        // Keep neon aliases for backward compat
+        neon: {
+          red: "hsl(var(--gold))",
+          glow: "hsl(var(--gold-glow))",
         },
       },
       borderRadius: {
@@ -116,14 +122,18 @@ export default {
       },
       backgroundImage: {
         "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",
-        "hero-gradient": "linear-gradient(135deg, hsl(0 85% 15%) 0%, hsl(0 0% 3%) 50%, hsl(0 0% 3%) 100%)",
-        "card-gradient": "linear-gradient(180deg, hsl(0 0% 10%) 0%, hsl(0 0% 5%) 100%)",
-        "neon-gradient": "linear-gradient(90deg, hsl(0 100% 50%) 0%, hsl(0 100% 70%) 50%, hsl(0 100% 50%) 100%)",
+        "hero-gradient": "var(--gradient-hero)",
+        "card-gradient": "var(--gradient-card)",
+        "gold-gradient": "var(--gradient-gold)",
       },
       boxShadow: {
-        neon: "0 0 20px hsl(0 100% 50% / 0.5), 0 0 40px hsl(0 100% 50% / 0.3)",
-        "neon-sm": "0 0 10px hsl(0 100% 50% / 0.4)",
-        glow: "0 0 60px hsl(0 100% 50% / 0.2)",
+        gold: "var(--shadow-gold)",
+        "gold-sm": "var(--shadow-gold-sm)",
+        glow: "var(--shadow-glow)",
+        elegant: "var(--shadow-elegant)",
+        // Keep neon aliases
+        neon: "var(--shadow-gold)",
+        "neon-sm": "var(--shadow-gold-sm)",
       },
     },
   },
