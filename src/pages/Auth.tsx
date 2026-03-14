@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Lock, Eye, EyeOff, AlertCircle, User, FileText, Shield, Check } from 'lucide-react';
+import { Lock, Eye, EyeOff, AlertCircle, User, FileText, Shield, Check, Play, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
+import logo from '@/assets/logo.png';
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -16,13 +17,7 @@ const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [acceptedTerms, setAcceptedTerms] = useState(false);
-  const {
-    signIn,
-    signUp,
-    user,
-    profile,
-    isLoading: authLoading
-  } = useAuth();
+  const { signIn, signUp, user, profile, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -40,7 +35,6 @@ const Auth = () => {
     setError('');
     setIsLoading(true);
 
-    // Validate username format
     if (username.trim().length < 3) {
       setError('O nome de usuário deve ter pelo menos 3 caracteres.');
       setIsLoading(false);
@@ -63,10 +57,7 @@ const Auth = () => {
             setError(error.message);
           }
         } else {
-          toast({
-            title: 'Bem-vindo!',
-            description: 'Login realizado com sucesso.'
-          });
+          toast({ title: 'Bem-vindo!', description: 'Login realizado com sucesso.' });
           navigate('/');
         }
       } else {
@@ -83,10 +74,7 @@ const Auth = () => {
             setError(error.message);
           }
         } else {
-          toast({
-            title: 'Conta criada!',
-            description: 'Agora configure seu perfil.'
-          });
+          toast({ title: 'Conta criada!', description: 'Agora configure seu perfil.' });
           navigate('/profile-setup');
         }
       }
@@ -105,161 +93,205 @@ const Auth = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
-      </div>
-
-      <div className="w-full max-w-md relative">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 mb-4">
-            <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center neon-glow">
-              <span className="font-display font-bold text-xl text-primary-foreground">Rc</span>
-            </div>
+    <div className="min-h-screen bg-background flex relative overflow-hidden">
+      {/* Left decorative panel - hidden on mobile */}
+      <div className="hidden lg:flex flex-col justify-center items-center w-1/2 relative">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-background to-background" />
+        <div className="absolute top-1/4 left-1/3 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px]" />
+        <div className="absolute bottom-1/3 right-1/4 w-[300px] h-[300px] bg-primary/8 rounded-full blur-[80px]" />
+        
+        <div className="relative z-10 max-w-md px-12 space-y-8">
+          <div className="flex items-center gap-3">
+            <img src={logo} alt="RynexCine" className="h-14 w-14 rounded-2xl object-contain ring-2 ring-primary/30" />
             <div>
-              <h1 className="font-display font-bold text-xl">
-                <span className="text-primary">Ryn</span>
-                <span className="text-foreground">ex</span>
+              <h1 className="font-display text-5xl tracking-wide">
+                <span className="gradient-text">RYNEX</span>
+                <span className="text-foreground">CINE</span>
               </h1>
-              <p className="text-[10px] text-muted-foreground tracking-widest uppercase">Cine</p>
             </div>
           </div>
-          <h2 className="font-display text-2xl font-bold mb-2">
-            {isLogin ? 'Entrar' : 'Criar Conta'}
-          </h2>
-          <p className="text-muted-foreground text-sm">
-            {isLogin ? 'Entre com seu nome de usuário' : 'Escolha um nome de usuário único'}
-          </p>
+          
+          <div className="space-y-6">
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <Play className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <h3 className="font-heading font-semibold text-foreground">Streaming Premium</h3>
+                <p className="text-sm text-muted-foreground mt-1">Milhares de filmes e séries em alta qualidade, sem anúncios.</p>
+              </div>
+            </div>
+            
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <Sparkles className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <h3 className="font-heading font-semibold text-foreground">Experiência Exclusiva</h3>
+                <p className="text-sm text-muted-foreground mt-1">Lançamentos, séries completas e conteúdo curado para você.</p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <Shield className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <h3 className="font-heading font-semibold text-foreground">Seguro & Privado</h3>
+                <p className="text-sm text-muted-foreground mt-1">Seus dados protegidos, controle parental e perfis seguros.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Right form panel */}
+      <div className="flex-1 flex items-center justify-center p-6 lg:p-12">
+        <div className="absolute inset-0 lg:hidden overflow-hidden pointer-events-none">
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/8 rounded-full blur-[100px]" />
+          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-primary/4 rounded-full blur-[80px]" />
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="p-6 bg-card rounded-2xl border border-border space-y-4">
-            {error && (
-              <div className="p-3 bg-destructive/10 border border-destructive/50 rounded-lg flex items-center gap-2 text-destructive text-sm">
-                <AlertCircle className="w-4 h-4" />
-                {error}
+        <div className="w-full max-w-md relative">
+          {/* Mobile logo */}
+          <div className="text-center mb-8 lg:hidden">
+            <div className="inline-flex items-center gap-3 mb-4">
+              <img src={logo} alt="RynexCine" className="h-12 w-12 rounded-xl object-contain ring-2 ring-primary/30" />
+              <h1 className="font-display text-4xl tracking-wide">
+                <span className="gradient-text">RYNEX</span>
+                <span className="text-foreground">CINE</span>
+              </h1>
+            </div>
+          </div>
+
+          <div className="text-center lg:text-left mb-8">
+            <h2 className="font-display text-4xl lg:text-5xl tracking-wide mb-2">
+              {isLogin ? 'BEM-VINDO' : 'CRIAR CONTA'}
+            </h2>
+            <p className="text-muted-foreground">
+              {isLogin ? 'Entre com seu nome de usuário' : 'Escolha um nome de usuário único'}
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="p-6 premium-card space-y-4">
+              {error && (
+                <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-xl flex items-center gap-2 text-destructive text-sm">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  {error}
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="username" className="text-sm font-heading font-medium">
+                  Nome de Usuário
+                </Label>
+                <div className="relative">
+                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    id="username"
+                    type="text"
+                    value={username}
+                    onChange={e => setUsername(e.target.value)}
+                    placeholder="seu_usuario"
+                    className="pl-10 h-12 bg-input border-border/50 focus:border-primary rounded-xl"
+                    required
+                    minLength={3}
+                    maxLength={30}
+                    autoComplete="username"
+                  />
+                </div>
+                {!isLogin && (
+                  <p className="text-xs text-muted-foreground">
+                    Letras, números, pontos, hífens e underscores. Mínimo 3 caracteres.
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="password" className="text-sm font-heading font-medium">
+                  Senha
+                </Label>
+                <div className="relative">
+                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="pl-10 pr-10 h-12 bg-input border-border/50 focus:border-primary rounded-xl"
+                    required
+                    minLength={6}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Terms */}
+            {!isLogin && (
+              <div className="p-4 premium-card space-y-3">
+                <div className="flex items-start gap-3">
+                  <Checkbox
+                    id="terms"
+                    checked={acceptedTerms}
+                    onCheckedChange={checked => setAcceptedTerms(checked as boolean)}
+                    className="mt-1"
+                  />
+                  <label htmlFor="terms" className="text-sm text-muted-foreground leading-relaxed cursor-pointer">
+                    Li e aceito os{' '}
+                    <Link to="/terms" target="_blank" className="text-primary hover:underline inline-flex items-center gap-1">
+                      <FileText className="w-3 h-3" />
+                      Termos de Uso
+                    </Link>
+                    {' '}e a{' '}
+                    <Link to="/privacy" target="_blank" className="text-primary hover:underline inline-flex items-center gap-1">
+                      <Shield className="w-3 h-3" />
+                      Política de Privacidade
+                    </Link>
+                  </label>
+                </div>
+                {acceptedTerms && (
+                  <div className="flex items-center gap-2 text-sm" style={{ color: 'hsl(var(--success))' }}>
+                    <Check className="w-4 h-4" />
+                    Termos aceitos
+                  </div>
+                )}
               </div>
             )}
 
-            <div className="space-y-2">
-              <Label htmlFor="username" className="text-sm font-semibold">
-                Nome de Usuário
-              </Label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  id="username"
-                  type="text"
-                  value={username}
-                  onChange={e => setUsername(e.target.value)}
-                  placeholder="seu_usuario"
-                  className="pl-10 bg-secondary/50 border-border focus:border-primary"
-                  required
-                  minLength={3}
-                  maxLength={30}
-                  autoComplete="username"
-                />
+            {isLogin && (
+              <div className="p-3 bg-muted/30 rounded-xl text-xs text-muted-foreground text-center border border-border/30">
+                Se você se cadastrou por email, use seu <strong className="text-foreground">nome de usuário</strong> (definido no perfil) para entrar.
               </div>
-              {!isLogin && (
-                <p className="text-xs text-muted-foreground">
-                  Letras, números, pontos, hífens e underscores. Mínimo 3 caracteres.
-                </p>
-              )}
-            </div>
+            )}
 
-            <div className="space-y-2">
-              <Label htmlFor="password" className="text-sm font-semibold">
-                Senha
-              </Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="pl-10 pr-10 bg-secondary/50 border-border focus:border-primary"
-                  required
-                  minLength={6}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Terms and Privacy for signup */}
-          {!isLogin && (
-            <div className="p-4 bg-card rounded-xl border border-border space-y-3">
-              <div className="flex items-start gap-3">
-                <Checkbox
-                  id="terms"
-                  checked={acceptedTerms}
-                  onCheckedChange={checked => setAcceptedTerms(checked as boolean)}
-                  className="mt-1"
-                />
-                <label htmlFor="terms" className="text-sm text-muted-foreground leading-relaxed cursor-pointer">
-                  Li e aceito os{' '}
-                  <Link to="/terms" target="_blank" className="text-primary hover:underline inline-flex items-center gap-1">
-                    <FileText className="w-3 h-3" />
-                    Termos de Uso
-                  </Link>
-                  {' '}e a{' '}
-                  <Link to="/privacy" target="_blank" className="text-primary hover:underline inline-flex items-center gap-1">
-                    <Shield className="w-3 h-3" />
-                    Política de Privacidade
-                  </Link>
-                </label>
-              </div>
-              
-              {acceptedTerms && (
-                <div className="flex items-center gap-2 text-green-500 text-sm">
-                  <Check className="w-4 h-4" />
-                  Termos aceitos
-                </div>
-              )}
-            </div>
-          )}
-
-          {isLogin && (
-            <div className="p-3 bg-muted/50 rounded-lg text-xs text-muted-foreground text-center">
-              Se você se cadastrou por email, use seu <strong>nome de usuário</strong> (definido no perfil) para entrar.
-            </div>
-          )}
-
-          <Button
-            type="submit"
-            className="w-full h-12 font-semibold neon-glow"
-            disabled={isLoading || (!isLogin && !acceptedTerms)}
-          >
-            {isLoading ? 'Aguarde...' : isLogin ? 'Entrar' : 'Criar Conta'}
-          </Button>
-
-          <div className="text-center space-y-2">
-            <button
-              type="button"
-              onClick={() => {
-                setIsLogin(!isLogin);
-                setError('');
-              }}
-              className="text-sm text-muted-foreground hover:text-primary transition-colors"
+            <Button
+              type="submit"
+              className="w-full h-12 font-heading font-semibold text-base rounded-xl premium-glow"
+              disabled={isLoading || (!isLogin && !acceptedTerms)}
             >
-              {isLogin ? 'Não tem conta? Criar agora' : 'Já tem conta? Entrar'}
-            </button>
-            <p className="text-center text-sm text-muted-foreground">
-              <a href="/browse" className="hover:text-primary transition-colors">
-                ← Voltar ao site
-              </a>
-            </p>
-          </div>
-        </form>
+              {isLoading ? 'Aguarde...' : isLogin ? 'Entrar' : 'Criar Conta'}
+            </Button>
+
+            <div className="text-center space-y-2">
+              <button
+                type="button"
+                onClick={() => { setIsLogin(!isLogin); setError(''); }}
+                className="text-sm text-muted-foreground hover:text-primary transition-colors"
+              >
+                {isLogin ? 'Não tem conta? Criar agora' : 'Já tem conta? Entrar'}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );

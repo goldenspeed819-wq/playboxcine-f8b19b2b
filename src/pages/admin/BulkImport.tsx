@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Upload, Play, CheckCircle, XCircle, AlertCircle, Loader2, FileJson, Zap, Search, Clapperboard, Tv } from 'lucide-react';
+import { Upload, Play, CheckCircle, XCircle, AlertCircle, Loader2, FileJson, Zap, Search, Clapperboard, Tv, FolderOpen, ShieldCheck, Globe } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Progress } from '@/components/ui/progress';
@@ -15,8 +15,9 @@ interface ParsedItem {
   year: string;
   embed_url: string;
   content_type: ContentType;
-  status?: 'pending' | 'processing' | 'added' | 'exists' | 'not_found' | 'error';
+  status?: 'pending' | 'processing' | 'added' | 'exists' | 'not_found' | 'error' | 'valid' | 'invalid';
   tmdbTitle?: string;
+  fileName?: string;
 }
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
@@ -24,14 +25,7 @@ const BATCH_SIZE = 5;
 const PLAYER_BASE = 'https://redecanais.cafe/player3/server.php?server=RCServer26&subfolder=ondemand&vid=';
 
 const URL_CLEANUP_TOKENS = new Set([
-  'dublado',
-  'legendado',
-  'nacional',
-  'dual',
-  'audio',
-  'dual-audio',
-  'filme',
-  'ova',
+  'dublado', 'legendado', 'nacional', 'dual', 'audio', 'dual-audio', 'filme', 'ova',
 ]);
 
 function titleToVid(title: string): string {
@@ -43,22 +37,8 @@ function titleToVid(title: string): string {
 
 function relativeUrlToVid(relativeUrl: string): string {
   if (!relativeUrl) return '';
-
-  const rawPath = relativeUrl
-    .replace(/^https?:\/\/[^/]+/i, '')
-    .replace(/^\//, '')
-    .replace(/\.html$/i, '')
-    .replace(/_[a-f0-9]+$/i, '');
-
-  const cleanedSlug = rawPath
-    .split('-')
-    .filter(Boolean)
-    .filter((token) => !URL_CLEANUP_TOKENS.has(token.toLowerCase()))
-    .filter((token) => !/^\d{4}$/.test(token))
-    .filter((token) => !/^\d{3,4}p$/i.test(token))
-    .join(' ')
-    .trim();
-
+  const rawPath = relativeUrl.replace(/^https?:\/\/[^/]+/i, '').replace(/^\//, '').replace(/\.html$/i, '').replace(/_[a-f0-9]+$/i, '');
+  const cleanedSlug = rawPath.split('-').filter(Boolean).filter(t => !URL_CLEANUP_TOKENS.has(t.toLowerCase())).filter(t => !/^\d{4}$/.test(t)).filter(t => !/^\d{3,4}p$/i.test(t)).join(' ').trim();
   return titleToVid(cleanedSlug);
 }
 
@@ -75,6 +55,31 @@ function cleanTitle(titulo: string, ano?: string): string {
   return t;
 }
 
+function extractTitleFromFileName(fileName: string): { title: string; year: string; season?: number; episode?: number } {
+  let name = fileName.replace(/\.(mp4|mkv|avi|ts|mts|webm|mov|wmv)$/i, '');
+  
+  // Extract S01E01 pattern for series
+  const seMatch = name.match(/[Ss](\d{1,2})[Ee](\d{1,3})/);
+  let season: number | undefined;
+  let episode: number | undefined;
+  if (seMatch) {
+    season = parseInt(seMatch[1]);
+    episode = parseInt(seMatch[2]);
+    name = name.replace(seMatch[0], '');
+  }
+
+  // Extract year
+  const yearMatch = name.match(/[\.\s\-_\(]?((?:19|20)\d{2})[\.\s\-_\)]?/);
+  const year = yearMatch ? yearMatch[1] : '';
+  if (yearMatch) name = name.replace(yearMatch[0], '');
+
+  // Clean quality/codec tags
+  name = name.replace(/[\.\-_](720p|1080p|2160p|4k|x264|x265|h264|h265|hevc|aac|dts|bluray|brrip|hdrip|webrip|web-dl|dvdrip|hdtv|remux|dual|dublado|legendado|nacional)/gi, '');
+  name = name.replace(/[\.\-_]/g, ' ').replace(/\s+/g, ' ').trim();
+
+  return { title: name, year, season, episode };
+}
+
 function parseJSON(raw: string, forcedType: ContentType): ParsedItem[] {
   const data = JSON.parse(raw);
   const items: ParsedItem[] = [];
@@ -89,34 +94,18 @@ function parseJSON(raw: string, forcedType: ContentType): ParsedItem[] {
 
       let title = titulo;
       if (!title) {
-        const slug = relativeUrl
-          .replace(/\.html$/, '')
-          .replace(/_[a-f0-9]+$/, '')
-          .replace(/^\//, '');
-        const cleaned = slug
-          .replace(/-(dublado|legendado|nacional|dual-audio)/gi, '')
-          .replace(/-\d{4}/, '')
-          .replace(/-\d{3,4}p/, '')
-          .replace(/-/g, ' ')
-          .trim();
+        const slug = relativeUrl.replace(/\.html$/, '').replace(/_[a-f0-9]+$/, '').replace(/^\//, '');
+        const cleaned = slug.replace(/-(dublado|legendado|nacional|dual-audio)/gi, '').replace(/-\d{4}/, '').replace(/-\d{3,4}p/, '').replace(/-/g, ' ').trim();
         title = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
       }
 
       title = cleanTitle(title, ano);
       if (!title) continue;
 
-      // 1) Try from URL slug (more accurate for this source)
-      // 2) Fallback to title-based conversion
       const vid = relativeUrlToVid(relativeUrl) || titleToVid(title);
       const embed_url = vid ? `${PLAYER_BASE}${vid}` : '';
 
-      items.push({
-        title,
-        year: ano,
-        embed_url,
-        content_type: forcedType,
-        status: 'pending',
-      });
+      items.push({ title, year: ano, embed_url, content_type: forcedType, status: 'pending' });
     }
     return items;
   }
@@ -124,12 +113,11 @@ function parseJSON(raw: string, forcedType: ContentType): ParsedItem[] {
   if (typeof data === 'object' && data !== null) {
     for (const key of Object.keys(data)) {
       const entry = data[key];
-      if (!entry.titulo || !entry.ano) continue;
+      if (!entry.titulo && !entry.title) continue;
 
-      const title = cleanTitle(entry.titulo, entry.ano);
-
-      let embed_url = '';
-      if (entry.players) {
+      const title = cleanTitle(entry.titulo || entry.title, entry.ano);
+      let embed_url = entry.embed_url || '';
+      if (!embed_url && entry.players) {
         for (const provider of Object.keys(entry.players)) {
           const players = entry.players[provider];
           if (Array.isArray(players) && players.length > 0 && players[0].embed_url) {
@@ -139,7 +127,7 @@ function parseJSON(raw: string, forcedType: ContentType): ParsedItem[] {
         }
       }
 
-      items.push({ title, year: entry.ano, embed_url, content_type: forcedType, status: 'pending' });
+      items.push({ title, year: entry.ano || '', embed_url, content_type: forcedType, status: 'pending' });
     }
   }
 
@@ -151,11 +139,14 @@ export default function BulkImport() {
   const [jsonText, setJsonText] = useState('');
   const [items, setItems] = useState<ParsedItem[]>([]);
   const [isImporting, setIsImporting] = useState(false);
+  const [isValidating, setIsValidating] = useState(false);
   const [processed, setProcessed] = useState(0);
   const [stats, setStats] = useState({ added: 0, exists: 0, notFound: 0, errors: 0 });
   const [skipTmdb, setSkipTmdb] = useState(true);
   const [contentType, setContentType] = useState<ContentType>('movie');
+  const [validationStats, setValidationStats] = useState({ valid: 0, invalid: 0, total: 0 });
   const abortRef = useRef(false);
+  const folderInputRef = useRef<HTMLInputElement>(null);
 
   const handleParse = () => {
     try {
@@ -167,6 +158,7 @@ export default function BulkImport() {
       setItems(parsed);
       setProcessed(0);
       setStats({ added: 0, exists: 0, notFound: 0, errors: 0 });
+      setValidationStats({ valid: 0, invalid: 0, total: 0 });
       toast({ title: `${parsed.length} itens detectados` });
     } catch (e) {
       toast({ title: 'JSON inválido', description: String(e), variant: 'destructive' });
@@ -182,6 +174,97 @@ export default function BulkImport() {
     } catch {
       toast({ title: 'Erro ao carregar arquivo embutido', variant: 'destructive' });
     }
+  };
+
+  // FOLDER UPLOAD
+  const handleFolderUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const videoExtensions = /\.(mp4|mkv|avi|ts|mts|webm|mov|wmv)$/i;
+    const videoFiles = Array.from(files).filter(f => videoExtensions.test(f.name));
+
+    if (videoFiles.length === 0) {
+      toast({ title: 'Nenhum arquivo de vídeo encontrado na pasta', variant: 'destructive' });
+      return;
+    }
+
+    const parsed: ParsedItem[] = videoFiles.map(f => {
+      const { title, year, season, episode } = extractTitleFromFileName(f.name);
+      const vid = titleToVid(title);
+      const isEpisode = season !== undefined && episode !== undefined;
+      
+      return {
+        title: isEpisode ? `${title} S${String(season).padStart(2,'0')}E${String(episode).padStart(2,'0')}` : title,
+        year,
+        embed_url: `${PLAYER_BASE}${vid}`,
+        content_type: isEpisode ? 'series' as ContentType : contentType,
+        status: 'pending' as const,
+        fileName: f.name,
+      };
+    });
+
+    setItems(parsed);
+    setProcessed(0);
+    setStats({ added: 0, exists: 0, notFound: 0, errors: 0 });
+    setValidationStats({ valid: 0, invalid: 0, total: 0 });
+    toast({ title: `${parsed.length} vídeos detectados na pasta` });
+  };
+
+  // BATCH VALIDATION
+  const handleValidate = async () => {
+    setIsValidating(true);
+    abortRef.current = false;
+    let valid = 0, invalid = 0;
+
+    for (let i = 0; i < items.length; i++) {
+      if (abortRef.current) break;
+
+      const item = items[i];
+      if (!item.embed_url) {
+        setItems(prev => {
+          const next = [...prev];
+          next[i] = { ...next[i], status: 'invalid' };
+          return next;
+        });
+        invalid++;
+        continue;
+      }
+
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 8000);
+        
+        const res = await fetch(item.embed_url, {
+          method: 'HEAD',
+          mode: 'no-cors',
+          signal: controller.signal,
+        });
+        clearTimeout(timeout);
+
+        // no-cors always returns opaque, so we just check it didn't throw
+        setItems(prev => {
+          const next = [...prev];
+          next[i] = { ...next[i], status: 'valid' };
+          return next;
+        });
+        valid++;
+      } catch {
+        setItems(prev => {
+          const next = [...prev];
+          next[i] = { ...next[i], status: 'invalid' };
+          return next;
+        });
+        invalid++;
+      }
+
+      setValidationStats({ valid, invalid, total: i + 1 });
+
+      if (i % 10 === 0) await new Promise(r => setTimeout(r, 100));
+    }
+
+    setIsValidating(false);
+    toast({ title: 'Validação concluída', description: `${valid} válidos, ${invalid} inválidos` });
   };
 
   const handleImport = async () => {
@@ -207,19 +290,13 @@ export default function BulkImport() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            items: batch.map((b) => ({
-              title: b.title,
-              year: b.year,
-              embed_url: b.embed_url,
-              content_type: b.content_type,
-            })),
+            items: batch.map(b => ({ title: b.title, year: b.year, embed_url: b.embed_url, content_type: b.content_type })),
             skipTmdb,
             contentType,
           }),
         });
 
         const data = await res.json();
-
         if (data.results) {
           setItems(prev => {
             const next = [...prev];
@@ -239,10 +316,7 @@ export default function BulkImport() {
       } catch {
         setItems(prev => {
           const next = [...prev];
-          batch.forEach((_, j) => {
-            if (next[i + j]) next[i + j] = { ...next[i + j], status: 'error' };
-            errors++;
-          });
+          batch.forEach((_, j) => { if (next[i + j]) { next[i + j] = { ...next[i + j], status: 'error' }; errors++; } });
           return next;
         });
       }
@@ -255,27 +329,26 @@ export default function BulkImport() {
     toast({ title: 'Importação concluída', description: `${added} adicionados, ${exists} já existiam, ${notFound} não encontrados, ${errors} erros` });
   };
 
-  const handleStop = () => {
-    abortRef.current = true;
-  };
+  const handleStop = () => { abortRef.current = true; };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (ev) => {
-      setJsonText(ev.target?.result as string);
-    };
+    reader.onload = (ev) => setJsonText(ev.target?.result as string);
     reader.readAsText(file);
   };
 
   const progress = items.length > 0 ? (processed / items.length) * 100 : 0;
+  const validationProgress = items.length > 0 ? (validationStats.total / items.length) * 100 : 0;
 
   const statusIcon = (status?: string) => {
     switch (status) {
       case 'added': return <CheckCircle className="w-4 h-4 text-green-500" />;
+      case 'valid': return <ShieldCheck className="w-4 h-4 text-green-500" />;
       case 'exists': return <AlertCircle className="w-4 h-4 text-yellow-500" />;
       case 'not_found': return <XCircle className="w-4 h-4 text-orange-500" />;
+      case 'invalid':
       case 'error': return <XCircle className="w-4 h-4 text-destructive" />;
       case 'processing': return <Loader2 className="w-4 h-4 text-primary animate-spin" />;
       default: return <div className="w-4 h-4 rounded-full bg-muted" />;
@@ -285,70 +358,95 @@ export default function BulkImport() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Abastecer Site</h1>
-        <p className="text-muted-foreground mt-1">Importe em massa como filme ou série, com ou sem API externa</p>
+        <h1 className="text-2xl font-bold font-heading">Abastecer Site</h1>
+        <p className="text-muted-foreground mt-1">Importe via JSON, pasta de vídeos ou arquivo embutido</p>
       </div>
 
       {items.length === 0 ? (
         <div className="space-y-4">
-          <div className="flex gap-2 flex-wrap">
+          {/* Source buttons */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <label className="cursor-pointer">
               <input type="file" accept=".json" className="hidden" onChange={handleFileUpload} />
-              <Button variant="outline" asChild>
-                <span><FileJson className="w-4 h-4 mr-2" /> Carregar arquivo JSON</span>
-              </Button>
+              <div className="flex items-center gap-3 p-4 premium-card hover:border-primary/30 transition-colors cursor-pointer">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <FileJson className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <p className="font-heading font-semibold text-sm">Arquivo JSON</p>
+                  <p className="text-xs text-muted-foreground">Carregar .json do PC</p>
+                </div>
+              </div>
             </label>
-            <Button variant="outline" onClick={handleLoadBuiltIn}>
-              <FileJson className="w-4 h-4 mr-2" /> Usar filmes.json embutido
-            </Button>
+
+            <div className="cursor-pointer" onClick={() => folderInputRef.current?.click()}>
+              <input
+                ref={folderInputRef}
+                type="file"
+                className="hidden"
+                onChange={handleFolderUpload}
+                {...({ webkitdirectory: 'true', directory: 'true', multiple: true } as any)}
+              />
+              <div className="flex items-center gap-3 p-4 premium-card hover:border-primary/30 transition-colors cursor-pointer">
+                <div className="w-10 h-10 rounded-xl bg-violet-500/10 flex items-center justify-center">
+                  <FolderOpen className="w-5 h-5 text-violet-500" />
+                </div>
+                <div>
+                  <p className="font-heading font-semibold text-sm">Upload de Pasta</p>
+                  <p className="text-xs text-muted-foreground">Detecta pelo nome do arquivo</p>
+                </div>
+              </div>
+            </div>
+
+            <div onClick={handleLoadBuiltIn} className="cursor-pointer">
+              <div className="flex items-center gap-3 p-4 premium-card hover:border-primary/30 transition-colors cursor-pointer">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                  <Globe className="w-5 h-5 text-emerald-500" />
+                </div>
+                <div>
+                  <p className="font-heading font-semibold text-sm">JSON Embutido</p>
+                  <p className="text-xs text-muted-foreground">Usar filmes.json do site</p>
+                </div>
+              </div>
+            </div>
           </div>
 
-          {/* Content type selector */}
-          <div className="p-4 bg-card border rounded-xl space-y-2">
-            <p className="text-sm font-medium">Tipo do conteúdo para importar:</p>
+          {/* Content type */}
+          <div className="p-4 premium-card space-y-2">
+            <p className="text-sm font-heading font-medium">Tipo do conteúdo:</p>
             <div className="flex gap-2">
-              <Button
-                type="button"
-                variant={contentType === 'movie' ? 'default' : 'outline'}
-                onClick={() => setContentType('movie')}
-                className="gap-2"
-              >
+              <Button type="button" variant={contentType === 'movie' ? 'default' : 'outline'}
+                onClick={() => setContentType('movie')} className="gap-2">
                 <Clapperboard className="w-4 h-4" /> Filme
               </Button>
-              <Button
-                type="button"
-                variant={contentType === 'series' ? 'default' : 'outline'}
-                onClick={() => setContentType('series')}
-                className="gap-2"
-              >
+              <Button type="button" variant={contentType === 'series' ? 'default' : 'outline'}
+                onClick={() => setContentType('series')} className="gap-2">
                 <Tv className="w-4 h-4" /> Série
               </Button>
             </div>
           </div>
 
-          {/* Import mode toggle */}
-          <div className="flex items-center gap-3 p-4 bg-card border rounded-xl">
+          {/* Import mode */}
+          <div className="flex items-center gap-3 p-4 premium-card">
             <Switch id="skip-tmdb" checked={skipTmdb} onCheckedChange={setSkipTmdb} />
             <Label htmlFor="skip-tmdb" className="flex-1 cursor-pointer">
               <div className="flex items-center gap-2">
-                {skipTmdb ? <Zap className="w-4 h-4 text-yellow-500" /> : <Search className="w-4 h-4 text-primary" />}
-                <span className="font-medium">
+                {skipTmdb ? <Zap className="w-4 h-4 text-primary" /> : <Search className="w-4 h-4 text-primary" />}
+                <span className="font-heading font-medium">
                   {skipTmdb ? 'Importação Direta (sem API)' : 'Importação com API de metadados'}
                 </span>
               </div>
               <p className="text-xs text-muted-foreground mt-1">
-                {skipTmdb
-                  ? 'Sem API externa: importa dados básicos e link de player.'
-                  : 'Busca metadados completos automaticamente (capa, descrição, categoria).'}
+                {skipTmdb ? 'Importa dados básicos e link de player.' : 'Busca metadados completos (capa, descrição, categoria).'}
               </p>
             </Label>
           </div>
 
           <Textarea
-            placeholder={'Cole o JSON aqui...\n\nFormato 1 (array): [{ "titulo": "...", "ano": 2024, "url": "/slug.html" }, ...]\nFormato 2 (objeto): { "id": { "titulo": "...", "ano": "...", "players": {...} }, ... }'}
+            placeholder={'Cole o JSON aqui...\n\nFormato: [{ "titulo": "...", "ano": 2024, "url": "/slug.html" }, ...]'}
             value={jsonText}
             onChange={e => setJsonText(e.target.value)}
-            className="min-h-[300px] font-mono text-xs"
+            className="min-h-[250px] font-mono text-xs bg-input border-border/50"
           />
           <Button onClick={handleParse} disabled={!jsonText.trim()} className="gap-2">
             <Upload className="w-4 h-4" /> Analisar JSON
@@ -358,52 +456,63 @@ export default function BulkImport() {
         <div className="space-y-4">
           {/* Mode indicator */}
           <div className={cn(
-            'flex flex-wrap items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border',
-            skipTmdb ? 'bg-yellow-500/10 text-yellow-600 border-yellow-500/20' : 'bg-primary/10 text-primary border-primary/20'
+            'flex flex-wrap items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-heading font-medium border',
+            'bg-primary/10 text-primary border-primary/20'
           )}>
             {skipTmdb ? <Zap className="w-4 h-4" /> : <Search className="w-4 h-4" />}
             {skipTmdb ? 'Modo sem API' : 'Modo com API'}
-            <span>•</span>
+            <span className="text-muted-foreground">•</span>
             {contentType === 'movie' ? 'Tipo: Filme' : 'Tipo: Série'}
+            <span className="text-muted-foreground">•</span>
+            {items.length} itens
           </div>
 
           {/* Stats */}
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-            <div className="bg-card border rounded-xl p-3 text-center">
-              <p className="text-2xl font-bold">{items.length}</p>
-              <p className="text-xs text-muted-foreground">Total</p>
-            </div>
-            <div className="bg-card border rounded-xl p-3 text-center">
-              <p className="text-2xl font-bold text-green-500">{stats.added}</p>
-              <p className="text-xs text-muted-foreground">Adicionados</p>
-            </div>
-            <div className="bg-card border rounded-xl p-3 text-center">
-              <p className="text-2xl font-bold text-yellow-500">{stats.exists}</p>
-              <p className="text-xs text-muted-foreground">Já existem</p>
-            </div>
-            <div className="bg-card border rounded-xl p-3 text-center">
-              <p className="text-2xl font-bold text-orange-500">{stats.notFound}</p>
-              <p className="text-xs text-muted-foreground">Não encontrados</p>
-            </div>
-            <div className="bg-card border rounded-xl p-3 text-center">
-              <p className="text-2xl font-bold text-destructive">{stats.errors}</p>
-              <p className="text-xs text-muted-foreground">Erros</p>
-            </div>
+            {[
+              { label: 'Total', value: items.length, color: 'text-foreground' },
+              { label: 'Adicionados', value: stats.added, color: 'text-green-500' },
+              { label: 'Já existem', value: stats.exists, color: 'text-yellow-500' },
+              { label: 'Não encontrados', value: stats.notFound, color: 'text-orange-500' },
+              { label: 'Erros', value: stats.errors, color: 'text-destructive' },
+            ].map(s => (
+              <div key={s.label} className="premium-card p-3 text-center">
+                <p className={cn('text-2xl font-bold font-heading', s.color)}>{s.value}</p>
+                <p className="text-xs text-muted-foreground">{s.label}</p>
+              </div>
+            ))}
           </div>
 
           {/* Progress */}
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm text-muted-foreground">
-              <span>{processed} / {items.length} processados</span>
-              <span>{Math.round(progress)}%</span>
+          {(isImporting || processed > 0) && (
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm text-muted-foreground">
+                <span>{processed} / {items.length} processados</span>
+                <span>{Math.round(progress)}%</span>
+              </div>
+              <Progress value={progress} />
             </div>
-            <Progress value={progress} />
-          </div>
+          )}
+
+          {/* Validation progress */}
+          {isValidating && (
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm text-muted-foreground">
+                <span>Validando: {validationStats.total} / {items.length}</span>
+                <span className="text-green-500">{validationStats.valid} válidos</span>
+                <span className="text-destructive">{validationStats.invalid} inválidos</span>
+              </div>
+              <Progress value={validationProgress} className="bg-muted" />
+            </div>
+          )}
 
           {/* Actions */}
-          <div className="flex gap-2">
-            {!isImporting ? (
+          <div className="flex gap-2 flex-wrap">
+            {!isImporting && !isValidating ? (
               <>
+                <Button onClick={handleValidate} variant="outline" className="gap-2">
+                  <ShieldCheck className="w-4 h-4" /> Validar Links
+                </Button>
                 <Button onClick={handleImport} className="gap-2">
                   <Play className="w-4 h-4" /> Iniciar Importação
                 </Button>
@@ -412,22 +521,21 @@ export default function BulkImport() {
                 </Button>
               </>
             ) : (
-              <Button variant="destructive" onClick={handleStop}>
-                Parar
-              </Button>
+              <Button variant="destructive" onClick={handleStop}>Parar</Button>
             )}
           </div>
 
-          {/* Preview first items with vid= */}
-          {!isImporting && processed === 0 && (
-            <div className="bg-muted/50 border rounded-xl p-4 space-y-2">
-              <p className="text-sm font-medium">Preview dos primeiros 5 itens (vid=):</p>
+          {/* Preview */}
+          {!isImporting && !isValidating && processed === 0 && (
+            <div className="premium-card p-4 space-y-2">
+              <p className="text-sm font-heading font-medium">Preview (5 primeiros):</p>
               {items.slice(0, 5).map((item, idx) => {
                 const vidParam = item.embed_url.split('vid=')[1] || '';
                 return (
-                  <div key={`${item.title}-${idx}`} className="text-xs font-mono bg-card p-2 rounded flex flex-col gap-1">
+                  <div key={`${item.title}-${idx}`} className="text-xs font-mono bg-input p-2.5 rounded-lg flex flex-col gap-1">
                     <span className="text-foreground">{item.title} ({item.year || 'N/A'}) • {item.content_type === 'movie' ? 'Filme' : 'Série'}</span>
                     <span className="text-muted-foreground break-all">vid={vidParam}</span>
+                    {item.fileName && <span className="text-muted-foreground">📁 {item.fileName}</span>}
                   </div>
                 );
               })}
@@ -435,18 +543,21 @@ export default function BulkImport() {
           )}
 
           {/* Items list */}
-          <div className="bg-card border rounded-xl max-h-[400px] overflow-y-auto">
-            <div className="divide-y divide-border">
+          <div className="premium-card max-h-[400px] overflow-y-auto">
+            <div className="divide-y divide-border/30">
               {items.map((item, idx) => (
                 <div key={`${item.title}-${item.content_type}-${idx}`} className={cn(
-                  'flex items-center gap-3 px-4 py-2 text-sm',
+                  'flex items-center gap-3 px-4 py-2.5 text-sm',
                   item.status === 'processing' && 'bg-primary/5'
                 )}>
                   {statusIcon(item.status)}
                   <span className="flex-1 truncate">{item.tmdbTitle || item.title}</span>
                   <span className="text-muted-foreground text-xs">{item.year}</span>
                   <span className="text-muted-foreground text-xs">{item.content_type === 'movie' ? 'filme' : 'série'}</span>
-                  <span className="text-xs text-muted-foreground capitalize">{item.status || 'pendente'}</span>
+                  <span className={cn('text-xs capitalize', 
+                    item.status === 'valid' && 'text-green-500',
+                    item.status === 'invalid' && 'text-destructive',
+                  )}>{item.status || 'pendente'}</span>
                 </div>
               ))}
             </div>
