@@ -43,6 +43,7 @@ import ManageNotifications from "./pages/admin/ManageNotifications";
 import SiteSettings from "./pages/admin/SiteSettings";
 import ManageVIP from "./pages/admin/ManageVIP";
 import BulkImport from "./pages/admin/BulkImport";
+import QuickImport from "./pages/admin/QuickImport";
 
 const queryClient = new QueryClient({
   defaultOptions: {
