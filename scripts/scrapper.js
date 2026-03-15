@@ -246,6 +246,7 @@ async function main() {
   const output = getArg('output') || `scrapped_${type}_${Date.now()}.json`;
   const top = parseInt(getArg('top') || '100');
   const query = getArg('query');
+  const limit = parseInt(getArg('limit') || '0'); // 0 = sem limite
 
   let results = [];
 
