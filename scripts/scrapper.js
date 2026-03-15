@@ -3,8 +3,8 @@
  * RynexCine Scrapper - Extrai filmes e séries de múltiplas fontes em JSON
  * 
  * USO:
- *   node scripts/scrapper.js --source tmdb --type movie --pages 5
- *   node scripts/scrapper.js --source tmdb --type tv --pages 3
+ *   node scripts/scrapper.js --source tmdb --type movie --pages 5 --limit 15
+ *   node scripts/scrapper.js --source tmdb --type tv --pages 3 --limit 10
  *   node scripts/scrapper.js --source redecanais --output filmes.json
  *   node scripts/scrapper.js --source imdb --type movie --top 250
  * 
