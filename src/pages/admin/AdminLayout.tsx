@@ -73,10 +73,6 @@ const AdminLayout = () => {
       label: 'Adicionar Série',
       href: '/admin/series/add'
     }, {
-      icon: Plus,
-      label: 'Adicionar Série',
-      href: '/admin/series/add'
-    }, {
       icon: Radio,
       label: 'Canais ao Vivo',
       href: '/admin/live-channels'
