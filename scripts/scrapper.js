@@ -269,6 +269,12 @@ async function main() {
       process.exit(1);
   }
 
+  // Apply global limit
+  if (limit > 0 && results.length > limit) {
+    results = results.slice(0, limit);
+    console.log(`✂️  Limitado a ${limit} itens (--limit)`);
+  }
+
   // Save output
   const outputPath = path.resolve(output);
   fs.writeFileSync(outputPath, JSON.stringify(results, null, 2), 'utf8');

@@ -90,8 +90,8 @@ export function shouldResolveRemotely(inputUrl: string): boolean {
     if (path.includes('redirect.php')) return true;
     // pobreflixtv pages need remote resolution to extract embed iframe
     if (host.includes('pobreflixtv')) return true;
-    // redecanais player/pages often wrap/redirect and need server-side extraction
-    if (host.includes('redecanais')) return true;
+    // redecanais pages need resolution EXCEPT direct player URLs (server.php?vid=)
+    if (host.includes('redecanais') && !path.includes('/player') && !path.includes('server.php')) return true;
     // Any .html page is likely a player page that wraps an embed
     if (path.endsWith('.html') && detectProvider(url) === 'unknown') return true;
 
