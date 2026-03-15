@@ -43,6 +43,7 @@ import ManageNotifications from "./pages/admin/ManageNotifications";
 import SiteSettings from "./pages/admin/SiteSettings";
 import ManageVIP from "./pages/admin/ManageVIP";
 import BulkImport from "./pages/admin/BulkImport";
+import QuickImport from "./pages/admin/QuickImport";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -101,6 +102,7 @@ const App = () => (
                   <Route path="notifications" element={<ManageNotifications />} />
                   <Route path="vip" element={<ManageVIP />} />
                   <Route path="bulk-import" element={<BulkImport />} />
+                  <Route path="quick-import" element={<QuickImport />} />
                 </Route>
 
                 {/* 404 */}
