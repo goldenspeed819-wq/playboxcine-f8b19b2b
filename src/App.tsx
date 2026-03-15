@@ -102,6 +102,7 @@ const App = () => (
                   <Route path="notifications" element={<ManageNotifications />} />
                   <Route path="vip" element={<ManageVIP />} />
                   <Route path="bulk-import" element={<BulkImport />} />
+                  <Route path="quick-import" element={<QuickImport />} />
                 </Route>
 
                 {/* 404 */}

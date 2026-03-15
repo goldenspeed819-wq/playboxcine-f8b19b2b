@@ -84,6 +84,10 @@ const AdminLayout = () => {
       icon: Database,
       label: 'Abastecer Site',
       href: '/admin/bulk-import'
+    }, {
+      icon: Zap,
+      label: 'Importação Rápida',
+      href: '/admin/quick-import'
     }]
   }];
   const mainItems: MenuItem[] = [{
