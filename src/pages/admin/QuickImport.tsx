@@ -28,6 +28,11 @@ interface MovieImportResult {
 export default function QuickImport() {
   const { toast } = useToast();
 
+  // Server config
+  const [playerDomain, setPlayerDomain] = useState('redecanais.cafe');
+  const [serverNum, setServerNum] = useState('21');
+  const PLAYER_BASE = buildPlayerBase(playerDomain, serverNum);
+
   // Series state
   const [seriesTitle, setSeriesTitle] = useState('');
   const [seriesAbbreviation, setSeriesAbbreviation] = useState('');
