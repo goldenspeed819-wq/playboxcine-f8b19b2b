@@ -269,6 +269,19 @@ export default function QuickImport() {
         <p className="text-muted-foreground mt-1">Adicione conteúdo por abreviação ou atualize domínios em massa</p>
       </div>
 
+      {/* Server Config */}
+      <div className="premium-card p-4 flex flex-wrap items-end gap-4">
+        <div className="space-y-1">
+          <Label className="text-xs">Domínio do Player</Label>
+          <Input value={playerDomain} onChange={e => setPlayerDomain(e.target.value)} className="w-48 font-mono text-sm" placeholder="redecanais.cafe" />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">Nº do Server (RCServer...)</Label>
+          <Input value={serverNum} onChange={e => setServerNum(e.target.value)} className="w-20 font-mono text-sm" placeholder="21" />
+        </div>
+        <p className="text-xs text-muted-foreground pb-2">Base: <code className="text-primary">{PLAYER_BASE}...</code></p>
+      </div>
+
       <Tabs defaultValue="series" className="space-y-4">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="series" className="gap-2"><Tv className="w-4 h-4" /> Série</TabsTrigger>
