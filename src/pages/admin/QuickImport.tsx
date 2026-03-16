@@ -8,7 +8,8 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 
-const PLAYER_BASE = 'https://redecanais.cafe/player3/server.php?server=RCServer26&subfolder=ondemand&vid=';
+const buildPlayerBase = (domain: string, serverNum: string) =>
+  `https://${domain}/player3/server.php?server=RCServer${serverNum}&subfolder=ondemand&vid=`;
 
 interface SeriesImportResult {
   season: number;
@@ -26,6 +27,11 @@ interface MovieImportResult {
 
 export default function QuickImport() {
   const { toast } = useToast();
+
+  // Server config
+  const [playerDomain, setPlayerDomain] = useState('redecanais.cafe');
+  const [serverNum, setServerNum] = useState('21');
+  const PLAYER_BASE = buildPlayerBase(playerDomain, serverNum);
 
   // Series state
   const [seriesTitle, setSeriesTitle] = useState('');
@@ -261,6 +267,19 @@ export default function QuickImport() {
       <div>
         <h1 className="text-2xl font-bold font-heading">Importação Rápida</h1>
         <p className="text-muted-foreground mt-1">Adicione conteúdo por abreviação ou atualize domínios em massa</p>
+      </div>
+
+      {/* Server Config */}
+      <div className="premium-card p-4 flex flex-wrap items-end gap-4">
+        <div className="space-y-1">
+          <Label className="text-xs">Domínio do Player</Label>
+          <Input value={playerDomain} onChange={e => setPlayerDomain(e.target.value)} className="w-48 font-mono text-sm" placeholder="redecanais.cafe" />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">Nº do Server (RCServer...)</Label>
+          <Input value={serverNum} onChange={e => setServerNum(e.target.value)} className="w-20 font-mono text-sm" placeholder="21" />
+        </div>
+        <p className="text-xs text-muted-foreground pb-2">Base: <code className="text-primary">{PLAYER_BASE}...</code></p>
       </div>
 
       <Tabs defaultValue="series" className="space-y-4">
