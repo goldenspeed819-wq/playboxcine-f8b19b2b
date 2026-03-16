@@ -6,7 +6,6 @@ import { Footer } from '@/components/Footer';
 import { VideoPlayer } from '@/components/VideoPlayer';
 import IframePlayer from '@/components/IframePlayer';
 import { CommentSection } from '@/components/CommentSection';
-import { ChatangoWidget } from '@/components/ChatangoWidget';
 import { PageLoader } from '@/components/LoadingSpinner';
 import { ContinueWatchingDialog } from '@/components/ContinueWatchingDialog';
 import { FavoriteButton } from '@/components/FavoriteButton';

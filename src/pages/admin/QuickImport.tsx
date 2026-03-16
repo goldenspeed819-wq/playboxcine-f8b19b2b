@@ -18,9 +18,9 @@ const sanitizeDomain = (value: string) => value.trim().replace(/^https?:\/\//i, 
 const buildPlayerUrl = (template: string, domain: string, serverNum: string, vid: string) => {
   const safeTemplate = template.trim() || DEFAULT_PLAYER_TEMPLATE;
   return safeTemplate
-    .replaceAll('{DOMAIN}', sanitizeDomain(domain) || 'redecanais.cafe')
-    .replaceAll('{SERVER}', serverNum.trim() || '21')
-    .replaceAll('{VID}', vid.trim());
+    .replace(/\{DOMAIN\}/g, sanitizeDomain(domain) || 'redecanais.cafe')
+    .replace(/\{SERVER\}/g, serverNum.trim() || '21')
+    .replace(/\{VID\}/g, vid.trim());
 };
 
 const buildSeriesVid = (abbreviation: string, season: number, episode: number) => {
