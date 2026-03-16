@@ -315,7 +315,7 @@ export default function QuickImport() {
     const url = generatedMovieUrl;
 
     try {
-      let metadata: Record<string, unknown> = { title: movieTitle };
+      let metadata: any = { title: movieTitle };
 
       try {
         const { data, error } = await supabase.functions.invoke('tmdb-search', {
@@ -339,10 +339,12 @@ export default function QuickImport() {
         // segue sem enriquecer se o TMDB falhar
       }
 
-      const { error } = await supabase.from('movies').insert({
+      const payload: any = {
         ...metadata,
         video_url: url,
-      });
+      };
+
+      const { error } = await supabase.from('movies').insert(payload);
 
       if (error) throw error;
 

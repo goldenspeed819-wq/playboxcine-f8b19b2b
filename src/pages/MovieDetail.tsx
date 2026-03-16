@@ -293,10 +293,6 @@ const MovieDetail = () => {
                 <p className="text-muted-foreground text-sm sm:text-base leading-relaxed">
                   {movie.description || 'Sem descrição disponível.'}
                 </p>
-
-                <div className="mt-6">
-                  <ChatangoWidget variant="inline" />
-                </div>
               </div>
 
               {/* Comments */}

@@ -395,10 +395,6 @@ const SeriesDetail = () => {
                 <p className="text-muted-foreground leading-relaxed">
                   {series.description || 'Sem descrição disponível.'}
                 </p>
-
-                <div className="mt-6">
-                  <ChatangoWidget variant="inline" />
-                </div>
               </div>
 
               {/* Episodes List */}

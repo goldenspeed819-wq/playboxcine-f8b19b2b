@@ -75,14 +75,17 @@ function extractCandidatesFromHtml(html: string): string[] {
 
   // iframe/src
   pushRegexMatches(/<iframe[^>]+src=["']([^"']+)["']/gi);
+  // links/buttons that open embed/player pages
+  pushRegexMatches(/<a[^>]+href=["']([^"']*(?:embed|player|server\.php)[^"']*)["']/gi);
+  pushRegexMatches(/data-(?:src|url|embed)=["']([^"']+)["']/gi);
   // video source
   pushRegexMatches(/<source[^>]+src=["']([^"']+)["']/gi);
-  // JS assignments (file/src/source: '...')
-  pushRegexMatches(/(?:file|src|source)\s*[:=]\s*["']([^"']+)["']/gi);
+  // JS assignments (file/src/source/embed: '...')
+  pushRegexMatches(/(?:file|src|source|embed)\s*[:=]\s*["']([^"']+)["']/gi);
   // direct media links
   pushRegexMatches(/(https?:\/\/[^\s"'<>]+\.(?:m3u8|mp4)(?:\?[^\s"'<>]*)?)/gi);
   // known provider links
-  pushRegexMatches(/(https?:\/\/[^\s"'<>]*(?:mixdrop|dood|streamtape)[^\s"'<>]*)/gi);
+  pushRegexMatches(/(https?:\/\/[^\s"'<>]*(?:mixdrop|dood|streamtape|redecanais)[^\s"'<>]*)/gi);
 
   return [...new Set(candidates.filter(Boolean))];
 }
