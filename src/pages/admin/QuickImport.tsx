@@ -8,7 +8,8 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 
-const PLAYER_BASE = 'https://redecanais.cafe/player3/server.php?server=RCServer26&subfolder=ondemand&vid=';
+const buildPlayerBase = (domain: string, serverNum: string) =>
+  `https://${domain}/player3/server.php?server=RCServer${serverNum}&subfolder=ondemand&vid=`;
 
 interface SeriesImportResult {
   season: number;
