@@ -4,16 +4,13 @@ export function normalizeHttpUrl(input: string): string {
   const trimmed = input.trim();
   if (!trimmed) return '';
   if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return trimmed;
-  // If user pasted without protocol
   return `https://${trimmed}`;
 }
 
 function toIdEmbedUrl(origin: string, provider: KnownProvider, id: string) {
   switch (provider) {
     case 'mixdrop':
-      return `${origin}/e/${id}`;
     case 'doodstream':
-      return `${origin}/e/${id}`;
     case 'streamtape':
       return `${origin}/e/${id}`;
     default:
@@ -35,10 +32,6 @@ export function detectProvider(url: string): KnownProvider {
   }
 }
 
-/**
- * Best-effort conversion of a provider URL to an embeddable URL.
- * This does NOT bypass protections; it only normalizes common URL patterns.
- */
 export function toEmbedUrl(inputUrl: string): string | null {
   const url = normalizeHttpUrl(inputUrl);
   if (!url) return null;
@@ -54,45 +47,37 @@ export function toEmbedUrl(inputUrl: string): string | null {
   const origin = u.origin;
   const path = u.pathname;
 
-  // Mixdrop patterns: /f/{id}, /d/{id} -> /e/{id}
   if (provider === 'mixdrop') {
-    const m = path.match(/^\/(?:f|d|v|embed)\/?([A-Za-z0-9]+)(?:\/|$)/i);
-    if (m?.[1]) return toIdEmbedUrl(origin, provider, m[1]);
+    const match = path.match(/^\/(?:f|d|v|embed)\/?([A-Za-z0-9]+)(?:\/|$)/i);
+    if (match?.[1]) return toIdEmbedUrl(origin, provider, match[1]);
     if (path.match(/^\/e\//i)) return url;
   }
 
-  // Doodstream patterns: /d/{id}, /v/{id} -> /e/{id}
   if (provider === 'doodstream') {
-    const m = path.match(/^\/(?:d|v|f|download|e)\/?([A-Za-z0-9]+)(?:\/|$)/i);
-    if (m?.[1]) return toIdEmbedUrl(origin, provider, m[1]);
+    const match = path.match(/^\/(?:d|v|f|download|e)\/?([A-Za-z0-9]+)(?:\/|$)/i);
+    if (match?.[1]) return toIdEmbedUrl(origin, provider, match[1]);
   }
 
-  // Streamtape patterns: /v/{id} -> /e/{id}
   if (provider === 'streamtape') {
-    const m = path.match(/^\/(?:v|e)\/?([A-Za-z0-9_\-]+)(?:\/|$)/i);
-    if (m?.[1]) return toIdEmbedUrl(origin, provider, m[1]);
+    const match = path.match(/^\/(?:v|e)\/?([A-Za-z0-9_\-]+)(?:\/|$)/i);
+    if (match?.[1]) return toIdEmbedUrl(origin, provider, match[1]);
   }
 
   return null;
 }
 
-/**
- * Some URLs are known redirectors/player wrappers that need backend resolution.
- */
 export function shouldResolveRemotely(inputUrl: string): boolean {
   const url = normalizeHttpUrl(inputUrl);
   if (!url) return false;
+
   try {
     const u = new URL(url);
     const host = u.hostname.toLowerCase();
     const path = u.pathname.toLowerCase();
 
     if (path.includes('redirect.php')) return true;
-    // pobreflixtv pages need remote resolution to extract embed iframe
     if (host.includes('pobreflixtv')) return true;
-    // redecanais pages need resolution EXCEPT direct player URLs (server.php?vid=)
-    if (host.includes('redecanais') && !path.includes('/player') && !path.includes('server.php')) return true;
-    // Any .html page is likely a player page that wraps an embed
+    if (host.includes('redecanais')) return true;
     if (path.endsWith('.html') && detectProvider(url) === 'unknown') return true;
 
     return false;
