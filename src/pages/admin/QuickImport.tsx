@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 import IframePlayer from '@/components/IframePlayer';
 import { useResolvedEmbedUrl } from '@/hooks/useResolvedEmbedUrl';
 import { getSourceType } from '@/utils/videoSource';
+import { buildSeriesEpisodeCode, normalizeRedeCanaisUrl, normalizeSeriesBaseCode } from '@/utils/playerUrl';
 
 const DEFAULT_PLAYER_TEMPLATE = '//{DOMAIN}/player3/server.php?server=RCServer{SERVER}&subfolder=ondemand&vid={VID}';
 
@@ -21,12 +22,6 @@ const buildPlayerUrl = (template: string, domain: string, serverNum: string, vid
     .replace(/\{DOMAIN\}/g, sanitizeDomain(domain) || 'redecanais.cafe')
     .replace(/\{SERVER\}/g, serverNum.trim() || '21')
     .replace(/\{VID\}/g, vid.trim());
-};
-
-const buildSeriesVid = (abbreviation: string, season: number, episode: number) => {
-  const seasonStr = String(season).padStart(2, '0');
-  const episodeStr = String(episode).padStart(2, '0');
-  return `${abbreviation.toUpperCase()}RT${seasonStr}EP${episodeStr}`;
 };
 
 interface SeriesImportResult {
@@ -67,7 +62,8 @@ function PreviewPlayer({
   isLoading: boolean;
   error: string | null;
 }) {
-  const previewUrl = resolvedUrl || inputValue;
+  const previewUrl = normalizeRedeCanaisUrl(inputValue) || inputValue;
+  const autoDetectedUrl = resolvedUrl && resolvedUrl !== previewUrl ? resolvedUrl : null;
   const sourceType = previewUrl ? getSourceType(previewUrl) : 'unknown';
 
   return (
@@ -81,11 +77,24 @@ function PreviewPlayer({
           placeholder="Cole ou ajuste a URL do preview"
         />
         <p className="text-xs text-muted-foreground break-all">
-          Preview resolvido: <code className="text-primary">{previewUrl || 'aguardando URL...'}</code>
+          URL usada no preview: <code className="text-primary">{previewUrl || 'aguardando URL...'}</code>
         </p>
+        {autoDetectedUrl && (
+          <p className="text-xs text-muted-foreground break-all">
+            URL detectada automaticamente: <code>{autoDetectedUrl}</code>
+          </p>
+        )}
       </div>
 
-      {isLoading ? (
+      {previewUrl ? (
+        sourceType === 'video' ? (
+          <div className="aspect-video overflow-hidden rounded-xl border border-border bg-card">
+            <video src={previewUrl} controls className="w-full h-full bg-black object-contain" />
+          </div>
+        ) : (
+          <IframePlayer src={previewUrl} originalUrl={previewUrl} />
+        )
+      ) : isLoading ? (
         <div className="aspect-video rounded-xl border border-border bg-card flex items-center justify-center">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="w-4 h-4 animate-spin" />
@@ -99,14 +108,6 @@ function PreviewPlayer({
             <p className="text-xs text-muted-foreground">{error}</p>
           </div>
         </div>
-      ) : previewUrl ? (
-        sourceType === 'video' ? (
-          <div className="aspect-video overflow-hidden rounded-xl border border-border bg-card">
-            <video src={previewUrl} controls className="w-full h-full bg-black object-contain" />
-          </div>
-        ) : (
-          <IframePlayer src={previewUrl} originalUrl={inputValue} />
-        )
       ) : null}
     </div>
   );
@@ -142,7 +143,7 @@ export default function QuickImport() {
 
   const seriesPreviewVid = useMemo(() => {
     if (!seriesAbbreviation.trim()) return '';
-    return buildSeriesVid(
+    return buildSeriesEpisodeCode(
       seriesAbbreviation,
       Number(seriesPreviewSeason) || 1,
       Number(seriesPreviewEpisode) || 1,
@@ -159,8 +160,8 @@ export default function QuickImport() {
     return buildPlayerUrl(playerUrlTemplate, playerDomain, serverNum, movieAbbreviation.toUpperCase());
   }, [playerUrlTemplate, playerDomain, serverNum, movieAbbreviation]);
 
-  const effectiveSeriesPreviewUrl = seriesPreviewUrl.trim() || defaultSeriesPreviewUrl;
-  const effectiveMoviePreviewUrl = moviePreviewUrl.trim() || generatedMovieUrl;
+  const effectiveSeriesPreviewUrl = normalizeRedeCanaisUrl(seriesPreviewUrl.trim() || defaultSeriesPreviewUrl) || '';
+  const effectiveMoviePreviewUrl = normalizeRedeCanaisUrl(moviePreviewUrl.trim() || generatedMovieUrl) || '';
 
   const seriesPreviewState = useResolvedEmbedUrl(effectiveSeriesPreviewUrl);
   const moviePreviewState = useResolvedEmbedUrl(effectiveMoviePreviewUrl);
@@ -174,7 +175,7 @@ export default function QuickImport() {
     const results: SeriesImportResult[] = [];
     for (const season of tmdbInfo.seasons) {
       for (let ep = 1; ep <= season.episode_count; ep++) {
-        const vid = buildSeriesVid(seriesAbbreviation, season.season_number, ep);
+        const vid = buildSeriesEpisodeCode(seriesAbbreviation, season.season_number, ep);
         results.push({
           season: season.season_number,
           episode: ep,
@@ -311,8 +312,8 @@ export default function QuickImport() {
     if (!movieTitle.trim() || !movieAbbreviation.trim()) return;
     setIsImportingMovie(true);
 
-    const vid = movieAbbreviation.toUpperCase();
-    const url = generatedMovieUrl;
+    const vid = movieAbbreviation.trim().toUpperCase();
+    const url = normalizeRedeCanaisUrl(effectiveMoviePreviewUrl || generatedMovieUrl) || '';
 
     try {
       let metadata: any = { title: movieTitle };
@@ -475,9 +476,9 @@ export default function QuickImport() {
               <div className="space-y-2">
                 <Label>Abreviação (RedeCanais)</Label>
                 <Input
-                  placeholder="Ex: ONPCEAS"
+                  placeholder="Ex: ONEPC"
                   value={seriesAbbreviation}
-                  onChange={(e) => setSeriesAbbreviation(e.target.value.toUpperCase())}
+                  onChange={(e) => setSeriesAbbreviation(normalizeSeriesBaseCode(e.target.value))}
                   className="uppercase font-mono"
                 />
               </div>
@@ -485,7 +486,8 @@ export default function QuickImport() {
 
             <div className="p-3 rounded-xl bg-muted/50 text-xs text-muted-foreground space-y-1">
               <p className="font-medium text-foreground">Como funciona:</p>
-              <p>• O padrão gerado será: <code className="text-primary">{seriesAbbreviation || 'ABREV'}RT01EP01</code></p>
+              <p>• O padrão gerado será: <code className="text-primary">{seriesAbbreviation || 'ABREV'}T01EP01</code></p>
+              <p>• Informe só a base da sigla, sem adicionar <code>T01EP01</code></p>
               <p>• O backend consulta o TMDB para descobrir temporadas e episódios</p>
               <p>• Você pode alterar a URL do preview antes de importar</p>
             </div>
@@ -543,7 +545,7 @@ export default function QuickImport() {
                     </div>
                     <div className="col-span-2 lg:col-span-1 flex items-end">
                       <div className="w-full rounded-xl bg-muted/50 p-3 text-xs text-muted-foreground">
-                        VID atual: <code className="text-primary">{seriesPreviewVid || 'ABREVRT01EP01'}</code>
+                        VID atual: <code className="text-primary">{seriesPreviewVid || 'ABREVT01EP01'}</code>
                       </div>
                     </div>
                   </div>

@@ -18,6 +18,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { getSourceType } from '@/utils/videoSource';
 import { useResolvedEmbedUrl } from '@/hooks/useResolvedEmbedUrl';
 import { shouldResolveRemotely } from '@/utils/externalEmbeds';
+import { normalizeRedeCanaisUrl } from '@/utils/playerUrl';
 
 interface SubtitleTrack {
   id: string;
@@ -120,7 +121,8 @@ const MovieDetail = () => {
   };
 
   const hasPart2 = movie?.video_url_part2;
-  const currentVideoUrl = currentPart === 1 ? movie?.video_url : movie?.video_url_part2;
+  const rawCurrentVideoUrl = currentPart === 1 ? movie?.video_url : movie?.video_url_part2;
+  const currentVideoUrl = normalizeRedeCanaisUrl(rawCurrentVideoUrl);
   const { url: resolvedIframeUrl, isLoading: resolvingIframe, error: resolveError } = useResolvedEmbedUrl(currentVideoUrl);
   const iframeNeedsRemoteResolve = !!currentVideoUrl && shouldResolveRemotely(currentVideoUrl);
   const iframeSrc = iframeNeedsRemoteResolve ? resolvedIframeUrl : (resolvedIframeUrl || currentVideoUrl);

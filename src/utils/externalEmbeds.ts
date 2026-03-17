@@ -66,6 +66,8 @@ export function toEmbedUrl(inputUrl: string): string | null {
   return null;
 }
 
+/** Returns true only for URLs that need server-side scraping to find the real embed.
+ *  RedeCanais server.php player URLs are already embeddable iframes — skip them. */
 export function shouldResolveRemotely(inputUrl: string): boolean {
   const url = normalizeHttpUrl(inputUrl);
   if (!url) return false;
@@ -74,6 +76,11 @@ export function shouldResolveRemotely(inputUrl: string): boolean {
     const u = new URL(url);
     const host = u.hostname.toLowerCase();
     const path = u.pathname.toLowerCase();
+
+    // RedeCanais server.php player URLs are direct iframe players — never resolve
+    if (host.includes('redecanais') && path.includes('server.php')) return false;
+    // RedeCanais /player/ or /player3/ paths with query params are also direct players
+    if (host.includes('redecanais') && path.match(/\/player\d*\//)) return false;
 
     if (path.includes('redirect.php')) return true;
     if (host.includes('pobreflixtv')) return true;

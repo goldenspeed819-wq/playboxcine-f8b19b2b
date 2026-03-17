@@ -19,6 +19,7 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { getSourceType } from '@/utils/videoSource';
 import { useResolvedEmbedUrl } from '@/hooks/useResolvedEmbedUrl';
+import { normalizeRedeCanaisUrl } from '@/utils/playerUrl';
 
 interface SubtitleTrack {
   id: string;
@@ -48,7 +49,8 @@ const SeriesDetail = () => {
   const [initialTime, setInitialTime] = useState<number>(0);
   const lastSavedTimeRef = useRef<number>(0);
 
-  const { url: resolvedEpisodeIframeUrl } = useResolvedEmbedUrl(selectedEpisode?.video_url);
+  const normalizedEpisodeUrl = normalizeRedeCanaisUrl(selectedEpisode?.video_url);
+  const { url: resolvedEpisodeIframeUrl } = useResolvedEmbedUrl(normalizedEpisodeUrl);
 
   useEffect(() => {
     if (id) {
@@ -330,14 +332,14 @@ const SeriesDetail = () => {
             {/* Main Content */}
             <div className="lg:col-span-2 space-y-8">
               {/* Video Player */}
-              {selectedEpisode?.video_url && getSourceType(selectedEpisode.video_url) === 'iframe' ? (
+              {normalizedEpisodeUrl && getSourceType(normalizedEpisodeUrl) === 'iframe' ? (
                 <IframePlayer
-                  src={resolvedEpisodeIframeUrl || selectedEpisode.video_url}
-                  originalUrl={selectedEpisode.video_url}
+                  src={resolvedEpisodeIframeUrl || normalizedEpisodeUrl}
+                  originalUrl={normalizedEpisodeUrl}
                 />
               ) : (
                 <VideoPlayer
-                  src={selectedEpisode?.video_url || null}
+                  src={normalizedEpisodeUrl || null}
                   poster={selectedEpisode?.thumbnail || series.thumbnail}
                   title={
                     selectedEpisode
