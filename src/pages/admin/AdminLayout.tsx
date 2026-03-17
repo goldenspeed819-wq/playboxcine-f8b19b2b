@@ -84,6 +84,10 @@ const AdminLayout = () => {
       icon: Zap,
       label: 'Importação Rápida',
       href: '/admin/quick-import'
+    }, {
+      icon: Link2,
+      label: 'Editor de URLs',
+      href: '/admin/bulk-url-editor'
     }]
   }];
   const mainItems: MenuItem[] = [{
