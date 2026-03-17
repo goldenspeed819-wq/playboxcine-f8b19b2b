@@ -44,6 +44,7 @@ import SiteSettings from "./pages/admin/SiteSettings";
 import ManageVIP from "./pages/admin/ManageVIP";
 import BulkImport from "./pages/admin/BulkImport";
 import QuickImport from "./pages/admin/QuickImport";
+import BulkUrlEditor from "./pages/admin/BulkUrlEditor";
 
 const queryClient = new QueryClient({
   defaultOptions: {
