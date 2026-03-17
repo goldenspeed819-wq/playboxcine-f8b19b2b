@@ -11,7 +11,7 @@ import IframePlayer from '@/components/IframePlayer';
 import { useResolvedEmbedUrl } from '@/hooks/useResolvedEmbedUrl';
 import { getSourceType } from '@/utils/videoSource';
 
-const DEFAULT_PLAYER_TEMPLATE = 'https://{DOMAIN}/player3/server.php?server=RCServer{SERVER}&subfolder=ondemand&vid={VID}';
+const DEFAULT_PLAYER_TEMPLATE = '//{DOMAIN}/player3/server.php?server=RCServer{SERVER}&subfolder=ondemand&vid={VID}';
 
 const sanitizeDomain = (value: string) => value.trim().replace(/^https?:\/\//i, '').replace(/\/$/, '');
 
