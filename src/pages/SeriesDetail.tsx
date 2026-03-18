@@ -62,6 +62,18 @@ const SeriesDetail = () => {
     }
   }, [id]);
 
+  // F1 key listener for episode panel
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'F1') {
+        e.preventDefault();
+        setShowEpisodePanel(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   useEffect(() => {
     if (user && episodes.length > 0) {
       fetchWatchedEpisodes();
