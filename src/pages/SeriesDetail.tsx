@@ -311,9 +311,7 @@ const SeriesDetail = () => {
   const seasonEpisodes = episodes.filter((e) => e.season === selectedSeason);
   const watchedInSeason = seasonEpisodes.filter(e => watchedEpisodes.has(e.id)).length;
 
-  const handleAutoplayCancel = useCallback(() => {
-    setShowAutoplay(false);
-  }, []);
+
 
   return (
     <div className="min-h-screen bg-background">
