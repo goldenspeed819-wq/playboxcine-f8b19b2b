@@ -436,6 +436,26 @@ const SeriesDetail = () => {
                   <FavoriteButton seriesId={series.id} showLabel variant="outline" />
                   <FollowSeriesButton seriesId={series.id} showLabel variant="outline" />
                   <ShareButtons title={series.title} description={series.description || ''} showLabel variant="outline" />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowEpisodePanel(true)}
+                    className="gap-2"
+                  >
+                    <List className="w-4 h-4" />
+                    Episódios (F1)
+                  </Button>
+                  {nextEpisode && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleNextEpisode}
+                      className="gap-2"
+                    >
+                      <Play className="w-3 h-3" />
+                      Próximo Ep.
+                    </Button>
+                  )}
                   <div className="flex items-center gap-2 px-3 py-2 bg-secondary/50 rounded-lg">
                     <RatingStars seriesId={series.id} size="default" />
                   </div>
