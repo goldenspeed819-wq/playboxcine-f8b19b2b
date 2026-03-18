@@ -50,6 +50,9 @@ const SeriesDetail = () => {
   const [initialTime, setInitialTime] = useState<number>(0);
   const lastSavedTimeRef = useRef<number>(0);
 
+  const [showAutoplay, setShowAutoplay] = useState(false);
+  const [showEpisodePanel, setShowEpisodePanel] = useState(false);
+
   const normalizedEpisodeUrl = normalizeRedeCanaisUrl(selectedEpisode?.video_url);
   const { url: resolvedEpisodeIframeUrl } = useResolvedEmbedUrl(normalizedEpisodeUrl);
 
