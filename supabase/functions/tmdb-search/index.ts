@@ -227,8 +227,33 @@ serve(async (req) => {
       );
     }
 
+    // Season details - returns episode list with thumbnails/titles
+    if (action === 'season-details' && id && season !== null) {
+      const seasonUrl = `${TMDB_BASE_URL}/tv/${id}/season/${season}?api_key=${TMDB_API_KEY}&language=pt-BR`;
+      const response = await fetch(seasonUrl);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.status_message || 'TMDB API error');
+      }
+
+      return new Response(JSON.stringify({
+        season_number: data.season_number,
+        episodes: (data.episodes || []).map((ep: any) => ({
+          episode_number: ep.episode_number,
+          name: ep.name,
+          overview: ep.overview,
+          still_path: ep.still_path,
+          air_date: ep.air_date,
+          vote_average: ep.vote_average,
+        })),
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     return new Response(
-      JSON.stringify({ error: 'Invalid action. Use action=search&query=... or action=details&id=...' }),
+      JSON.stringify({ error: 'Invalid action. Use action=search&query=... or action=details&id=... or action=season-details&id=...&season=1' }),
       { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
   } catch (error) {
