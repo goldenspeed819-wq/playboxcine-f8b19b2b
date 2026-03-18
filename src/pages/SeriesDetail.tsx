@@ -317,6 +317,27 @@ const SeriesDetail = () => {
     <div className="min-h-screen bg-background">
       <Header />
 
+      {/* Autoplay Overlay */}
+      <AutoplayOverlay
+        nextEpisode={nextEpisode}
+        seriesTitle={series?.title || ''}
+        onPlayNext={handleAutoplayNext}
+        onCancel={handleAutoplayCancel}
+        visible={showAutoplay}
+      />
+
+      {/* Episode Panel (F1) */}
+      <EpisodePanel
+        episodes={episodes}
+        currentEpisodeId={selectedEpisode?.id || null}
+        seriesTitle={series?.title || ''}
+        watchedEpisodes={watchedEpisodes}
+        seasons={seasons}
+        onSelectEpisode={handleEpisodeSelect}
+        onClose={() => setShowEpisodePanel(false)}
+        visible={showEpisodePanel}
+      />
+
       {/* Continue Watching Dialog */}
       <ContinueWatchingDialog
         open={showContinueDialog}
