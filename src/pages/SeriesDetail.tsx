@@ -250,6 +250,42 @@ const SeriesDetail = () => {
     setShowContinueDialog(false);
   };
 
+  const getNextEpisode = useCallback(() => {
+    if (!selectedEpisode) return null;
+    const currentIndex = episodes.findIndex((e) => e.id === selectedEpisode.id);
+    if (currentIndex === -1 || currentIndex === episodes.length - 1) return null;
+    return episodes[currentIndex + 1];
+  }, [selectedEpisode, episodes]);
+
+  const nextEpisode = getNextEpisode();
+
+  const handleNextEpisode = useCallback(() => {
+    const next = getNextEpisode();
+    if (next) {
+      handleEpisodeSelect(next);
+      setSelectedSeason(next.season);
+    }
+  }, [getNextEpisode]);
+
+  const handleVideoEnded = useCallback(() => {
+    if (user && selectedEpisode) {
+      markAsWatched(selectedEpisode.id);
+    }
+    const next = getNextEpisode();
+    if (next) {
+      setShowAutoplay(true);
+    }
+  }, [user, selectedEpisode, getNextEpisode]);
+
+  const handleAutoplayNext = useCallback(() => {
+    setShowAutoplay(false);
+    handleNextEpisode();
+  }, [handleNextEpisode]);
+
+  const handleAutoplayCancel = useCallback(() => {
+    setShowAutoplay(false);
+  }, []);
+
   if (isLoading) {
     return <PageLoader />;
   }
@@ -274,41 +310,6 @@ const SeriesDetail = () => {
   const seasons = [...new Set(episodes.map((e) => e.season))].sort((a, b) => a - b);
   const seasonEpisodes = episodes.filter((e) => e.season === selectedSeason);
   const watchedInSeason = seasonEpisodes.filter(e => watchedEpisodes.has(e.id)).length;
-
-  // Get next episode
-  const getNextEpisode = () => {
-    if (!selectedEpisode) return null;
-    const currentIndex = episodes.findIndex((e) => e.id === selectedEpisode.id);
-    if (currentIndex === -1 || currentIndex === episodes.length - 1) return null;
-    return episodes[currentIndex + 1];
-  };
-
-  const nextEpisode = getNextEpisode();
-
-  const handleNextEpisode = () => {
-    if (nextEpisode) {
-      handleEpisodeSelect(nextEpisode);
-      setSelectedSeason(nextEpisode.season);
-    }
-  };
-
-  const handleVideoEnded = () => {
-    // Mark current episode as completed
-    if (user && selectedEpisode) {
-      markAsWatched(selectedEpisode.id);
-    }
-    // Show autoplay overlay instead of instant switch
-    if (nextEpisode) {
-      setShowAutoplay(true);
-    }
-  };
-
-  const handleAutoplayNext = useCallback(() => {
-    setShowAutoplay(false);
-    if (nextEpisode) {
-      handleNextEpisode();
-    }
-  }, [nextEpisode]);
 
   const handleAutoplayCancel = useCallback(() => {
     setShowAutoplay(false);
