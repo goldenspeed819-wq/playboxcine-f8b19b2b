@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Calendar, Tag, Play, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Calendar, Tag, Play, CheckCircle2, List } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { VideoPlayer } from '@/components/VideoPlayer';
@@ -12,6 +12,7 @@ import { FavoriteButton } from '@/components/FavoriteButton';
 import { RatingStars } from '@/components/RatingStars';
 import { ShareButtons } from '@/components/ShareButtons';
 import { FollowSeriesButton } from '@/components/FollowSeriesButton';
+import { AutoplayOverlay, EpisodePanel } from '@/components/AutoplayOverlay';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { Series, Episode } from '@/types/database';
