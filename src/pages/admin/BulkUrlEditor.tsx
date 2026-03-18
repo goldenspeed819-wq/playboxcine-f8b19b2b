@@ -45,7 +45,10 @@ export default function BulkUrlEditor() {
   const [replaceText, setReplaceText] = useState('');
   const [isReplacing, setIsReplacing] = useState(false);
   const [replaceStats, setReplaceStats] = useState<{ count: number } | null>(null);
+  const [episodeFormat, setEpisodeFormat] = useState<EpisodeFormat>('2');
 
+  // Reformat episode numbers
+  const [isReformatting, setIsReformatting] = useState(false);
   // Load series list
   useEffect(() => {
     (async () => {
