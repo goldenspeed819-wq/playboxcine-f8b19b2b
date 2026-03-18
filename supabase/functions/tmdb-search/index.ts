@@ -139,8 +139,8 @@ serve(async (req) => {
       });
     }
 
-    const { action, query, id, type } = await parseRequest(req);
-    console.log(`TMDB request: action=${action}, query=${query}, id=${id}, type=${type}`);
+    const { action, query, id, type, season } = await parseRequest(req);
+    console.log(`TMDB request: action=${action}, query=${query}, id=${id}, type=${type}, season=${season}`);
 
     if (action === 'search' && query) {
       const searchUrl = `${TMDB_BASE_URL}/search/${type}?api_key=${TMDB_API_KEY}&language=pt-BR&query=${encodeURIComponent(query)}&page=1`;
