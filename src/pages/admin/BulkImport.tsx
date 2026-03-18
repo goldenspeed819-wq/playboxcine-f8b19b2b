@@ -105,7 +105,15 @@ function parseJSON(raw: string, forcedType: ContentType): ParsedItem[] {
       const vid = relativeUrlToVid(relativeUrl) || titleToVid(title);
       const embed_url = vid ? `${PLAYER_BASE}${vid}` : '';
 
-      items.push({ title, year: ano, embed_url, content_type: forcedType, status: 'pending' });
+      // Detect type from JSON if mixed mode
+      const itemType = entry.type || entry.tipo;
+      const detectedType: ContentType = itemType === 'serie' || itemType === 'series' || itemType === 'tv' 
+        ? 'series' 
+        : itemType === 'movie' || itemType === 'filme' 
+          ? 'movie' 
+          : forcedType;
+
+      items.push({ title, year: ano, embed_url, content_type: detectedType, status: 'pending' });
     }
     return items;
   }
