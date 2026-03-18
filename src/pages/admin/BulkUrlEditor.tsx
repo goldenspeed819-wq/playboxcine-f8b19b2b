@@ -300,6 +300,56 @@ export default function BulkUrlEditor() {
               {replaceStats.count} URL(s) atualizadas com sucesso.
             </div>
           )}
+
+          {/* Episode format converter */}
+          <div className="border-t border-border pt-4 space-y-3">
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <Hash className="w-4 h-4" /> Formato de Episódio
+            </div>
+            <div className="flex items-center gap-4">
+              <Select value={episodeFormat} onValueChange={(v) => setEpisodeFormat(v as EpisodeFormat)}>
+                <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="2">2 dígitos (01)</SelectItem>
+                  <SelectItem value="3">3 dígitos (001)</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button
+                onClick={async () => {
+                  setIsReformatting(true);
+                  let count = 0;
+                  const pad = parseInt(episodeFormat);
+                  for (const record of records) {
+                    if (record.type !== 'episode' || !record.video_url) continue;
+                    // Match T01EP01 or T001EP001 patterns
+                    const match = record.video_url.match(/(T)(\d{2,3})(EP)(\d{2,3})/i);
+                    if (!match) continue;
+                    const s = String(parseInt(match[2])).padStart(pad, '0');
+                    const e = String(parseInt(match[4])).padStart(pad, '0');
+                    const newUrl = record.video_url.replace(match[0], `${match[1]}${s}${match[3]}${e}`);
+                    if (newUrl !== record.video_url) {
+                      await supabase.from('episodes').update({ video_url: newUrl }).eq('id', record.id);
+                      record.video_url = newUrl;
+                      record.label = `T${s}E${e}`;
+                      count++;
+                    }
+                  }
+                  setRecords([...records]);
+                  setIsReformatting(false);
+                  toast({ title: `${count} URL(s) reformatadas para ${pad} dígitos` });
+                }}
+                disabled={isReformatting || records.filter(r => r.type === 'episode').length === 0}
+                variant="outline"
+                className="gap-2"
+              >
+                {isReformatting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Hash className="w-4 h-4" />}
+                Aplicar formato
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Converte T01EP01 ↔ T001EP001 nas URLs dos episódios filtrados.
+            </p>
+          </div>
         </div>
       )}
 
