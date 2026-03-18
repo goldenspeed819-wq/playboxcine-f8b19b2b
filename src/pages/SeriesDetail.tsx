@@ -297,11 +297,22 @@ const SeriesDetail = () => {
     if (user && selectedEpisode) {
       markAsWatched(selectedEpisode.id);
     }
-    // Autoplay next episode
+    // Show autoplay overlay instead of instant switch
+    if (nextEpisode) {
+      setShowAutoplay(true);
+    }
+  };
+
+  const handleAutoplayNext = useCallback(() => {
+    setShowAutoplay(false);
     if (nextEpisode) {
       handleNextEpisode();
     }
-  };
+  }, [nextEpisode]);
+
+  const handleAutoplayCancel = useCallback(() => {
+    setShowAutoplay(false);
+  }, []);
 
   return (
     <div className="min-h-screen bg-background">
