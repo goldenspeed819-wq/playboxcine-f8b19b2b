@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Search, RefreshCw, Loader2, CheckCircle, Film, Tv, Filter } from 'lucide-react';
+import { Search, RefreshCw, Loader2, CheckCircle, Film, Tv, Filter, Hash } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 
 type ContentType = 'all' | 'movies' | 'series';
+type EpisodeFormat = '2' | '3'; // 01 or 001
 
 interface UrlRecord {
   id: string;
