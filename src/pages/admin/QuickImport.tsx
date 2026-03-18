@@ -238,6 +238,7 @@ export default function QuickImport() {
         poster: detailData?.posterUrl || show.posterUrl || '',
         year: detailData?.releaseYear ? String(detailData.releaseYear) : '',
         genres: detailData?.genres || show.genres || [],
+        tmdbId: show.id || null,
       });
       setSeriesPreviewSeason(String(seasons[0].season_number));
       setSeriesPreviewEpisode('1');
