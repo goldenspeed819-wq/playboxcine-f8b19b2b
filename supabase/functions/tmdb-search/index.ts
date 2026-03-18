@@ -90,6 +90,7 @@ async function parseRequest(req: Request) {
   const query = body.query ?? url.searchParams.get('query');
   const id = body.id ?? body.tmdbId ?? url.searchParams.get('id');
   const type = body.type ?? url.searchParams.get('type') ?? 'movie';
+  const season = body.season ?? url.searchParams.get('season');
 
   const inferredAction = action || (query ? 'search' : id ? 'details' : null);
   return {
@@ -97,6 +98,7 @@ async function parseRequest(req: Request) {
     query,
     id: id ? String(id) : null,
     type: String(type),
+    season: season ? Number(season) : null,
   };
 }
 
