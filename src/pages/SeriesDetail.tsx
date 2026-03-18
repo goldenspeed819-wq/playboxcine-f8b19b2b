@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Calendar, Tag, Play, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Calendar, Tag, Play, CheckCircle2, List } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { VideoPlayer } from '@/components/VideoPlayer';
@@ -12,6 +12,7 @@ import { FavoriteButton } from '@/components/FavoriteButton';
 import { RatingStars } from '@/components/RatingStars';
 import { ShareButtons } from '@/components/ShareButtons';
 import { FollowSeriesButton } from '@/components/FollowSeriesButton';
+import { AutoplayOverlay, EpisodePanel } from '@/components/AutoplayOverlay';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { Series, Episode } from '@/types/database';
@@ -49,6 +50,9 @@ const SeriesDetail = () => {
   const [initialTime, setInitialTime] = useState<number>(0);
   const lastSavedTimeRef = useRef<number>(0);
 
+  const [showAutoplay, setShowAutoplay] = useState(false);
+  const [showEpisodePanel, setShowEpisodePanel] = useState(false);
+
   const normalizedEpisodeUrl = normalizeRedeCanaisUrl(selectedEpisode?.video_url);
   const { url: resolvedEpisodeIframeUrl } = useResolvedEmbedUrl(normalizedEpisodeUrl);
 
@@ -57,6 +61,18 @@ const SeriesDetail = () => {
       fetchSeriesAndEpisodes();
     }
   }, [id]);
+
+  // F1 key listener for episode panel
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'F1') {
+        e.preventDefault();
+        setShowEpisodePanel(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   useEffect(() => {
     if (user && episodes.length > 0) {
@@ -234,6 +250,42 @@ const SeriesDetail = () => {
     setShowContinueDialog(false);
   };
 
+  const getNextEpisode = useCallback(() => {
+    if (!selectedEpisode) return null;
+    const currentIndex = episodes.findIndex((e) => e.id === selectedEpisode.id);
+    if (currentIndex === -1 || currentIndex === episodes.length - 1) return null;
+    return episodes[currentIndex + 1];
+  }, [selectedEpisode, episodes]);
+
+  const nextEpisode = getNextEpisode();
+
+  const handleNextEpisode = useCallback(() => {
+    const next = getNextEpisode();
+    if (next) {
+      handleEpisodeSelect(next);
+      setSelectedSeason(next.season);
+    }
+  }, [getNextEpisode]);
+
+  const handleVideoEnded = useCallback(() => {
+    if (user && selectedEpisode) {
+      markAsWatched(selectedEpisode.id);
+    }
+    const next = getNextEpisode();
+    if (next) {
+      setShowAutoplay(true);
+    }
+  }, [user, selectedEpisode, getNextEpisode]);
+
+  const handleAutoplayNext = useCallback(() => {
+    setShowAutoplay(false);
+    handleNextEpisode();
+  }, [handleNextEpisode]);
+
+  const handleAutoplayCancel = useCallback(() => {
+    setShowAutoplay(false);
+  }, []);
+
   if (isLoading) {
     return <PageLoader />;
   }
@@ -259,37 +311,32 @@ const SeriesDetail = () => {
   const seasonEpisodes = episodes.filter((e) => e.season === selectedSeason);
   const watchedInSeason = seasonEpisodes.filter(e => watchedEpisodes.has(e.id)).length;
 
-  // Get next episode
-  const getNextEpisode = () => {
-    if (!selectedEpisode) return null;
-    const currentIndex = episodes.findIndex((e) => e.id === selectedEpisode.id);
-    if (currentIndex === -1 || currentIndex === episodes.length - 1) return null;
-    return episodes[currentIndex + 1];
-  };
 
-  const nextEpisode = getNextEpisode();
-
-  const handleNextEpisode = () => {
-    if (nextEpisode) {
-      handleEpisodeSelect(nextEpisode);
-      setSelectedSeason(nextEpisode.season);
-    }
-  };
-
-  const handleVideoEnded = () => {
-    // Mark current episode as completed
-    if (user && selectedEpisode) {
-      markAsWatched(selectedEpisode.id);
-    }
-    // Autoplay next episode
-    if (nextEpisode) {
-      handleNextEpisode();
-    }
-  };
 
   return (
     <div className="min-h-screen bg-background">
       <Header />
+
+      {/* Autoplay Overlay */}
+      <AutoplayOverlay
+        nextEpisode={nextEpisode}
+        seriesTitle={series?.title || ''}
+        onPlayNext={handleAutoplayNext}
+        onCancel={handleAutoplayCancel}
+        visible={showAutoplay}
+      />
+
+      {/* Episode Panel (F1) */}
+      <EpisodePanel
+        episodes={episodes}
+        currentEpisodeId={selectedEpisode?.id || null}
+        seriesTitle={series?.title || ''}
+        watchedEpisodes={watchedEpisodes}
+        seasons={seasons}
+        onSelectEpisode={handleEpisodeSelect}
+        onClose={() => setShowEpisodePanel(false)}
+        visible={showEpisodePanel}
+      />
 
       {/* Continue Watching Dialog */}
       <ContinueWatchingDialog
@@ -389,6 +436,26 @@ const SeriesDetail = () => {
                   <FavoriteButton seriesId={series.id} showLabel variant="outline" />
                   <FollowSeriesButton seriesId={series.id} showLabel variant="outline" />
                   <ShareButtons title={series.title} description={series.description || ''} showLabel variant="outline" />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowEpisodePanel(true)}
+                    className="gap-2"
+                  >
+                    <List className="w-4 h-4" />
+                    Episódios (F1)
+                  </Button>
+                  {nextEpisode && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleNextEpisode}
+                      className="gap-2"
+                    >
+                      <Play className="w-3 h-3" />
+                      Próximo Ep.
+                    </Button>
+                  )}
                   <div className="flex items-center gap-2 px-3 py-2 bg-secondary/50 rounded-lg">
                     <RatingStars seriesId={series.id} size="default" />
                   </div>

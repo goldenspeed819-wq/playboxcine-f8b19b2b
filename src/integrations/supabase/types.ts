@@ -578,6 +578,7 @@ export type Database = {
           release_year: number | null
           thumbnail: string | null
           title: string
+          tmdb_id: number | null
         }
         Insert: {
           category?: string | null
@@ -590,6 +591,7 @@ export type Database = {
           release_year?: number | null
           thumbnail?: string | null
           title: string
+          tmdb_id?: number | null
         }
         Update: {
           category?: string | null
@@ -602,6 +604,7 @@ export type Database = {
           release_year?: number | null
           thumbnail?: string | null
           title?: string
+          tmdb_id?: number | null
         }
         Relationships: []
       }

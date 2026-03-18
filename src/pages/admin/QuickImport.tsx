@@ -45,6 +45,7 @@ interface TmdbSeriesInfo {
   poster: string;
   year: string;
   genres: string[];
+  tmdbId: number | null;
 }
 
 function PreviewPlayer({
@@ -237,6 +238,7 @@ export default function QuickImport() {
         poster: detailData?.posterUrl || show.posterUrl || '',
         year: detailData?.releaseYear ? String(detailData.releaseYear) : '',
         genres: detailData?.genres || show.genres || [],
+        tmdbId: show.id || null,
       });
       setSeriesPreviewSeason(String(seasons[0].season_number));
       setSeriesPreviewEpisode('1');
@@ -268,24 +270,54 @@ export default function QuickImport() {
           release_year: tmdbInfo.year ? parseInt(tmdbInfo.year, 10) : null,
           category: tmdbInfo.genres.join(', '),
           rating: 'Livre',
-        })
+          tmdb_id: tmdbInfo.tmdbId || null,
+        } as any)
         .select()
         .single();
 
       if (seriesError) throw seriesError;
+
+      // Fetch episode metadata from TMDB for thumbnails/titles
+      const episodeMetadata = new Map<string, { title: string; thumbnail: string | null; description: string | null }>();
+      
+      if (tmdbInfo.tmdbId) {
+        for (const season of tmdbInfo.seasons) {
+          try {
+            const { data: seasonData } = await supabase.functions.invoke('tmdb-search', {
+              body: { action: 'season-details', id: tmdbInfo.tmdbId, season: season.season_number, type: 'tv' },
+            });
+            if (seasonData?.episodes) {
+              for (const ep of seasonData.episodes) {
+                episodeMetadata.set(`${season.season_number}-${ep.episode_number}`, {
+                  title: ep.name || `Episódio ${ep.episode_number}`,
+                  thumbnail: ep.still_path ? `https://image.tmdb.org/t/p/w500${ep.still_path}` : null,
+                  description: ep.overview || null,
+                });
+              }
+            }
+          } catch {
+            // Continue without metadata for this season
+          }
+        }
+      }
 
       const batchSize = 20;
       const updatedResults = [...seriesResults];
 
       for (let i = 0; i < seriesResults.length; i += batchSize) {
         const batch = seriesResults.slice(i, i + batchSize);
-        const episodes = batch.map((item) => ({
-          series_id: seriesData.id,
-          season: item.season,
-          episode: item.episode,
-          video_url: item.url,
-          title: `Episódio ${item.episode}`,
-        }));
+        const episodes = batch.map((item) => {
+          const meta = episodeMetadata.get(`${item.season}-${item.episode}`);
+          return {
+            series_id: seriesData.id,
+            season: item.season,
+            episode: item.episode,
+            video_url: item.url,
+            title: meta?.title || `Episódio ${item.episode}`,
+            thumbnail: meta?.thumbnail || null,
+            description: meta?.description || null,
+          };
+        });
 
         const { error } = await supabase.from('episodes').insert(episodes);
 

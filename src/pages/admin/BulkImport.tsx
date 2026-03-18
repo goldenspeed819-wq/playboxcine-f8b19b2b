@@ -105,7 +105,15 @@ function parseJSON(raw: string, forcedType: ContentType): ParsedItem[] {
       const vid = relativeUrlToVid(relativeUrl) || titleToVid(title);
       const embed_url = vid ? `${PLAYER_BASE}${vid}` : '';
 
-      items.push({ title, year: ano, embed_url, content_type: forcedType, status: 'pending' });
+      // Detect type from JSON if mixed mode
+      const itemType = entry.type || entry.tipo;
+      const detectedType: ContentType = itemType === 'serie' || itemType === 'series' || itemType === 'tv' 
+        ? 'series' 
+        : itemType === 'movie' || itemType === 'filme' 
+          ? 'movie' 
+          : forcedType;
+
+      items.push({ title, year: ano, embed_url, content_type: detectedType, status: 'pending' });
     }
     return items;
   }
@@ -414,7 +422,7 @@ export default function BulkImport() {
           {/* Content type */}
           <div className="p-4 premium-card space-y-2">
             <p className="text-sm font-heading font-medium">Tipo do conteúdo:</p>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <Button type="button" variant={contentType === 'movie' ? 'default' : 'outline'}
                 onClick={() => setContentType('movie')} className="gap-2">
                 <Clapperboard className="w-4 h-4" /> Filme
@@ -423,7 +431,15 @@ export default function BulkImport() {
                 onClick={() => setContentType('series')} className="gap-2">
                 <Tv className="w-4 h-4" /> Série
               </Button>
+              <Button type="button" variant={contentType === 'movie' && false ? 'default' : 'outline'}
+                onClick={() => setContentType('movie')} className="gap-2 border-dashed"
+                title="O JSON detecta automaticamente pelo campo 'type' ou 'tipo'">
+                <FileJson className="w-4 h-4" /> Misto (auto-detecta)
+              </Button>
             </div>
+            <p className="text-xs text-muted-foreground">
+              No modo Misto, cada item do JSON deve ter <code>"type": "movie"</code> ou <code>"type": "series"</code>.
+            </p>
           </div>
 
           {/* Import mode */}

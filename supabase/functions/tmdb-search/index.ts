@@ -90,6 +90,7 @@ async function parseRequest(req: Request) {
   const query = body.query ?? url.searchParams.get('query');
   const id = body.id ?? body.tmdbId ?? url.searchParams.get('id');
   const type = body.type ?? url.searchParams.get('type') ?? 'movie';
+  const season = body.season ?? url.searchParams.get('season');
 
   const inferredAction = action || (query ? 'search' : id ? 'details' : null);
   return {
@@ -97,6 +98,7 @@ async function parseRequest(req: Request) {
     query,
     id: id ? String(id) : null,
     type: String(type),
+    season: season ? Number(season) : null,
   };
 }
 
@@ -137,8 +139,8 @@ serve(async (req) => {
       });
     }
 
-    const { action, query, id, type } = await parseRequest(req);
-    console.log(`TMDB request: action=${action}, query=${query}, id=${id}, type=${type}`);
+    const { action, query, id, type, season } = await parseRequest(req);
+    console.log(`TMDB request: action=${action}, query=${query}, id=${id}, type=${type}, season=${season}`);
 
     if (action === 'search' && query) {
       const searchUrl = `${TMDB_BASE_URL}/search/${type}?api_key=${TMDB_API_KEY}&language=pt-BR&query=${encodeURIComponent(query)}&page=1`;
@@ -225,8 +227,33 @@ serve(async (req) => {
       );
     }
 
+    // Season details - returns episode list with thumbnails/titles
+    if (action === 'season-details' && id && season !== null) {
+      const seasonUrl = `${TMDB_BASE_URL}/tv/${id}/season/${season}?api_key=${TMDB_API_KEY}&language=pt-BR`;
+      const response = await fetch(seasonUrl);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.status_message || 'TMDB API error');
+      }
+
+      return new Response(JSON.stringify({
+        season_number: data.season_number,
+        episodes: (data.episodes || []).map((ep: any) => ({
+          episode_number: ep.episode_number,
+          name: ep.name,
+          overview: ep.overview,
+          still_path: ep.still_path,
+          air_date: ep.air_date,
+          vote_average: ep.vote_average,
+        })),
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     return new Response(
-      JSON.stringify({ error: 'Invalid action. Use action=search&query=... or action=details&id=...' }),
+      JSON.stringify({ error: 'Invalid action. Use action=search&query=... or action=details&id=... or action=season-details&id=...&season=1' }),
       { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
   } catch (error) {
