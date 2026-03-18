@@ -45,6 +45,7 @@ interface TmdbSeriesInfo {
   poster: string;
   year: string;
   genres: string[];
+  tmdbId: number | null;
 }
 
 function PreviewPlayer({
