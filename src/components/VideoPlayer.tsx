@@ -491,7 +491,6 @@ export function VideoPlayer({ src, poster, title, subtitles = [], nextLabel, onN
       <video
         ref={videoRef}
         poster={poster || undefined}
-        poster={poster || undefined}
         className={cn(
           "w-full h-full bg-black",
           isStretched ? "object-cover" : "object-contain"
