@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import Hls from 'hls.js';
 import {
   Play,
   Pause,
@@ -102,6 +103,72 @@ export function VideoPlayer({ src, poster, title, subtitles = [], nextLabel, onN
     setProgress(0);
     setCurrentTime(0);
     setDuration(0);
+  }, [src]);
+
+  // HLS.js support for .m3u8 streams
+  const hlsRef = useRef<Hls | null>(null);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !src) return;
+
+    // Cleanup previous HLS instance
+    if (hlsRef.current) {
+      hlsRef.current.destroy();
+      hlsRef.current = null;
+    }
+
+    const isHls = /\.m3u8(\?|$)/i.test(src);
+
+    if (isHls) {
+      if (Hls.isSupported()) {
+        const hls = new Hls({
+          enableWorker: true,
+          lowLatencyMode: false,
+        });
+        hlsRef.current = hls;
+        hls.loadSource(src);
+        hls.attachMedia(video);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          setIsLoading(false);
+          setVideoError(null);
+        });
+        hls.on(Hls.Events.ERROR, (_event, data) => {
+          if (data.fatal) {
+            switch (data.type) {
+              case Hls.ErrorTypes.NETWORK_ERROR:
+                setVideoError('Erro de rede ao carregar o stream HLS');
+                hls.startLoad();
+                break;
+              case Hls.ErrorTypes.MEDIA_ERROR:
+                setVideoError('Erro de mídia no stream HLS');
+                hls.recoverMediaError();
+                break;
+              default:
+                setVideoError('Erro fatal ao reproduzir o stream');
+                hls.destroy();
+                break;
+            }
+          }
+        });
+      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        // Native HLS support (Safari)
+        video.src = src;
+      } else {
+        setVideoError('Seu navegador não suporta reprodução de HLS');
+        setIsLoading(false);
+      }
+    } else {
+      // Normal video - set src directly
+      video.src = src;
+    }
+
+    return () => {
+      if (hlsRef.current) {
+        hlsRef.current.destroy();
+        hlsRef.current = null;
+      }
+    };
   }, [src]);
 
   useEffect(() => {
@@ -423,7 +490,6 @@ export function VideoPlayer({ src, poster, title, subtitles = [], nextLabel, onN
       {/* Video Element */}
       <video
         ref={videoRef}
-        src={src}
         poster={poster || undefined}
         className={cn(
           "w-full h-full bg-black",
@@ -461,7 +527,7 @@ export function VideoPlayer({ src, poster, title, subtitles = [], nextLabel, onN
               <AlertCircle className="w-8 h-8 text-destructive" />
             </div>
             <p className="text-destructive font-medium mb-2">{videoError}</p>
-            <p className="text-muted-foreground text-sm">Verifique se o vídeo está em formato compatível (MP4, WebM)</p>
+            <p className="text-muted-foreground text-sm">Verifique se o vídeo está em formato compatível (MP4, WebM, HLS/M3U8)</p>
           </div>
         </div>
       )}

@@ -1,8 +1,8 @@
 export function getSourceType(url: string) {
   if (!url) return 'unknown';
 
-  // 1️⃣ vídeo direto (mp4, webm, ogg) - including supabase storage
-  if (url.match(/\.(mp4|webm|ogg)(\?|$)/i)) {
+  // 1️⃣ vídeo direto (mp4, webm, ogg, m3u8, mpd) - including supabase storage
+  if (url.match(/\.(mp4|webm|ogg|m3u8|mpd)(\?|$)/i)) {
     return 'video';
   }
 
