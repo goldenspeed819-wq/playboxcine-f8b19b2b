@@ -41,6 +41,8 @@ interface ImportItem {
   type: 'movie' | 'series';
   titulo: string;
   videoUrl: string | null;
+  thumbnail: string | null;
+  description: string | null;
   status: 'pending' | 'importing' | 'success' | 'error';
   error?: string;
 }
