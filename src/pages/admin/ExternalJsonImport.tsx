@@ -47,9 +47,24 @@ interface ImportItem {
 
 function pickBestUrl(links: string[]): string | null {
   if (!links || links.length === 0) return null;
-  // Prefer master.m3u8 over index variants
   const master = links.find(l => l.includes('master.m3u8'));
   return master || links[0];
+}
+
+function pickBestUrlFromVideos(videos: { url: string; type: string }[]): string | null {
+  if (!videos || videos.length === 0) return null;
+  // Prefer HLS master, then any HLS, skip TS segments, blob:, and page URLs
+  const validVideos = videos.filter(v =>
+    v.url.startsWith('https://') &&
+    !v.url.includes('/seg-') &&
+    !v.url.startsWith('blob:') &&
+    v.type !== 'TS'
+  );
+  const master = validVideos.find(v => v.url.includes('master.m3u8'));
+  if (master) return master.url;
+  const hls = validVideos.find(v => v.type === 'HLS');
+  if (hls) return hls.url;
+  return null;
 }
 
 function extractYear(titulo: string): number | null {
