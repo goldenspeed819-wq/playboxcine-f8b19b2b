@@ -92,35 +92,41 @@ const ExternalJsonImport = () => {
   const handleParse = () => {
     try {
       const data: ExternalJson = JSON.parse(jsonText);
-      const parsed: ImportItem[] = [];
+      const parsedItems: ImportItem[] = [];
 
+      // Format 1: { filmes: [...], series: [...] }
       if (data.filmes) {
         for (const f of data.filmes) {
           const url = pickBestUrl(f.video_links);
-          parsed.push({
-            type: 'movie',
-            titulo: f.titulo,
-            videoUrl: url,
-            status: url ? 'pending' : 'error',
-            error: url ? undefined : 'Sem link de vídeo',
+          parsedItems.push({
+            type: 'movie', titulo: f.titulo, videoUrl: url, thumbnail: null, description: null,
+            status: url ? 'pending' : 'error', error: url ? undefined : 'Sem link de vídeo',
           });
         }
       }
-
       if (data.series) {
         for (const s of data.series) {
-          parsed.push({
-            type: 'series',
-            titulo: s.titulo,
-            videoUrl: null,
+          parsedItems.push({ type: 'series', titulo: s.titulo, videoUrl: null, thumbnail: null, description: null, status: 'pending' });
+        }
+      }
+
+      // Format 2: { results: [...] } (scraper format)
+      if (data.results) {
+        for (const r of data.results) {
+          const url = pickBestUrlFromVideos(r.videos);
+          parsedItems.push({
+            type: 'movie', titulo: r.title, videoUrl: url,
+            thumbnail: r.thumb || null, description: r.description || null,
             status: 'pending',
           });
         }
       }
 
-      setItems(parsed);
+      setItems(parsedItems);
       setParsed(true);
-      toast({ title: `${parsed.length} itens encontrados`, description: `${data.filmes?.length || 0} filmes, ${data.series?.length || 0} séries` });
+      const movies = parsedItems.filter(i => i.type === 'movie').length;
+      const series = parsedItems.filter(i => i.type === 'series').length;
+      toast({ title: `${parsedItems.length} itens encontrados`, description: `${movies} filmes, ${series} séries` });
     } catch {
       toast({ title: 'JSON inválido', variant: 'destructive' });
     }
