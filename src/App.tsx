@@ -45,6 +45,7 @@ import ManageVIP from "./pages/admin/ManageVIP";
 import BulkImport from "./pages/admin/BulkImport";
 import QuickImport from "./pages/admin/QuickImport";
 import BulkUrlEditor from "./pages/admin/BulkUrlEditor";
+import ExternalJsonImport from "./pages/admin/ExternalJsonImport";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -105,6 +106,7 @@ const App = () => (
                   <Route path="bulk-import" element={<BulkImport />} />
                   <Route path="quick-import" element={<QuickImport />} />
                   <Route path="bulk-url-editor" element={<BulkUrlEditor />} />
+                  <Route path="external-import" element={<ExternalJsonImport />} />
                 </Route>
 
                 {/* 404 */}
