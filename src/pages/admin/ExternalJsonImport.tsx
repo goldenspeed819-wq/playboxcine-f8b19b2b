@@ -156,6 +156,8 @@ const ExternalJsonImport = () => {
         if (item.type === 'movie') {
           const { error } = await supabase.from('movies').insert({
             title,
+            description: item.description,
+            thumbnail: item.thumbnail,
             video_url: item.videoUrl,
             release_year: year,
             rating: 'Livre',
