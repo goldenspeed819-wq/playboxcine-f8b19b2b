@@ -490,7 +490,7 @@ export function VideoPlayer({ src, poster, title, subtitles = [], nextLabel, onN
       {/* Video Element */}
       <video
         ref={videoRef}
-        src={src}
+        poster={poster || undefined}
         poster={poster || undefined}
         className={cn(
           "w-full h-full bg-black",
