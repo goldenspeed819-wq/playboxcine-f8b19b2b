@@ -88,6 +88,10 @@ const AdminLayout = () => {
       icon: Link2,
       label: 'Editor de URLs',
       href: '/admin/bulk-url-editor'
+    }, {
+      icon: Upload,
+      label: 'JSON Externo',
+      href: '/admin/external-import'
     }]
   }];
   const mainItems: MenuItem[] = [{
