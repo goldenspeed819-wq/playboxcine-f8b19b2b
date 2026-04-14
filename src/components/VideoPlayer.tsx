@@ -527,7 +527,7 @@ export function VideoPlayer({ src, poster, title, subtitles = [], nextLabel, onN
               <AlertCircle className="w-8 h-8 text-destructive" />
             </div>
             <p className="text-destructive font-medium mb-2">{videoError}</p>
-            <p className="text-muted-foreground text-sm">Verifique se o vídeo está em formato compatível (MP4, WebM)</p>
+            <p className="text-muted-foreground text-sm">Verifique se o vídeo está em formato compatível (MP4, WebM, HLS/M3U8)</p>
           </div>
         </div>
       )}
