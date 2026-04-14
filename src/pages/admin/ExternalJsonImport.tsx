@@ -20,9 +20,19 @@ interface ExternalSeries {
   episodios: any[];
 }
 
+// Scraper format
+interface ScraperResult {
+  url: string;
+  title: string;
+  thumb?: string;
+  description?: string;
+  videos: { url: string; type: string }[];
+}
+
 interface ExternalJson {
   filmes?: ExternalMovie[];
   series?: ExternalSeries[];
+  results?: ScraperResult[];
   total_itens?: number;
   data_extracao?: string;
 }
@@ -31,15 +41,32 @@ interface ImportItem {
   type: 'movie' | 'series';
   titulo: string;
   videoUrl: string | null;
+  thumbnail: string | null;
+  description: string | null;
   status: 'pending' | 'importing' | 'success' | 'error';
   error?: string;
 }
 
 function pickBestUrl(links: string[]): string | null {
   if (!links || links.length === 0) return null;
-  // Prefer master.m3u8 over index variants
   const master = links.find(l => l.includes('master.m3u8'));
   return master || links[0];
+}
+
+function pickBestUrlFromVideos(videos: { url: string; type: string }[]): string | null {
+  if (!videos || videos.length === 0) return null;
+  // Prefer HLS master, then any HLS, skip TS segments, blob:, and page URLs
+  const validVideos = videos.filter(v =>
+    v.url.startsWith('https://') &&
+    !v.url.includes('/seg-') &&
+    !v.url.startsWith('blob:') &&
+    v.type !== 'TS'
+  );
+  const master = validVideos.find(v => v.url.includes('master.m3u8'));
+  if (master) return master.url;
+  const hls = validVideos.find(v => v.type === 'HLS');
+  if (hls) return hls.url;
+  return null;
 }
 
 function extractYear(titulo: string): number | null {
@@ -67,35 +94,41 @@ const ExternalJsonImport = () => {
   const handleParse = () => {
     try {
       const data: ExternalJson = JSON.parse(jsonText);
-      const parsed: ImportItem[] = [];
+      const parsedItems: ImportItem[] = [];
 
+      // Format 1: { filmes: [...], series: [...] }
       if (data.filmes) {
         for (const f of data.filmes) {
           const url = pickBestUrl(f.video_links);
-          parsed.push({
-            type: 'movie',
-            titulo: f.titulo,
-            videoUrl: url,
-            status: url ? 'pending' : 'error',
-            error: url ? undefined : 'Sem link de vídeo',
+          parsedItems.push({
+            type: 'movie', titulo: f.titulo, videoUrl: url, thumbnail: null, description: null,
+            status: url ? 'pending' : 'error', error: url ? undefined : 'Sem link de vídeo',
           });
         }
       }
-
       if (data.series) {
         for (const s of data.series) {
-          parsed.push({
-            type: 'series',
-            titulo: s.titulo,
-            videoUrl: null,
+          parsedItems.push({ type: 'series', titulo: s.titulo, videoUrl: null, thumbnail: null, description: null, status: 'pending' });
+        }
+      }
+
+      // Format 2: { results: [...] } (scraper format)
+      if (data.results) {
+        for (const r of data.results) {
+          const url = pickBestUrlFromVideos(r.videos);
+          parsedItems.push({
+            type: 'movie', titulo: r.title, videoUrl: url,
+            thumbnail: r.thumb || null, description: r.description || null,
             status: 'pending',
           });
         }
       }
 
-      setItems(parsed);
+      setItems(parsedItems);
       setParsed(true);
-      toast({ title: `${parsed.length} itens encontrados`, description: `${data.filmes?.length || 0} filmes, ${data.series?.length || 0} séries` });
+      const movies = parsedItems.filter(i => i.type === 'movie').length;
+      const series = parsedItems.filter(i => i.type === 'series').length;
+      toast({ title: `${parsedItems.length} itens encontrados`, description: `${movies} filmes, ${series} séries` });
     } catch {
       toast({ title: 'JSON inválido', variant: 'destructive' });
     }
@@ -123,6 +156,8 @@ const ExternalJsonImport = () => {
         if (item.type === 'movie') {
           const { error } = await supabase.from('movies').insert({
             title,
+            description: item.description,
+            thumbnail: item.thumbnail,
             video_url: item.videoUrl,
             release_year: year,
             rating: 'Livre',
