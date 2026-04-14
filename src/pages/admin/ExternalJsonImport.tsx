@@ -20,9 +20,19 @@ interface ExternalSeries {
   episodios: any[];
 }
 
+// Scraper format
+interface ScraperResult {
+  url: string;
+  title: string;
+  thumb?: string;
+  description?: string;
+  videos: { url: string; type: string }[];
+}
+
 interface ExternalJson {
   filmes?: ExternalMovie[];
   series?: ExternalSeries[];
+  results?: ScraperResult[];
   total_itens?: number;
   data_extracao?: string;
 }
