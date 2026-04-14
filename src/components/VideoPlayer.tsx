@@ -105,6 +105,72 @@ export function VideoPlayer({ src, poster, title, subtitles = [], nextLabel, onN
     setDuration(0);
   }, [src]);
 
+  // HLS.js support for .m3u8 streams
+  const hlsRef = useRef<Hls | null>(null);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !src) return;
+
+    // Cleanup previous HLS instance
+    if (hlsRef.current) {
+      hlsRef.current.destroy();
+      hlsRef.current = null;
+    }
+
+    const isHls = /\.m3u8(\?|$)/i.test(src);
+
+    if (isHls) {
+      if (Hls.isSupported()) {
+        const hls = new Hls({
+          enableWorker: true,
+          lowLatencyMode: false,
+        });
+        hlsRef.current = hls;
+        hls.loadSource(src);
+        hls.attachMedia(video);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          setIsLoading(false);
+          setVideoError(null);
+        });
+        hls.on(Hls.Events.ERROR, (_event, data) => {
+          if (data.fatal) {
+            switch (data.type) {
+              case Hls.ErrorTypes.NETWORK_ERROR:
+                setVideoError('Erro de rede ao carregar o stream HLS');
+                hls.startLoad();
+                break;
+              case Hls.ErrorTypes.MEDIA_ERROR:
+                setVideoError('Erro de mídia no stream HLS');
+                hls.recoverMediaError();
+                break;
+              default:
+                setVideoError('Erro fatal ao reproduzir o stream');
+                hls.destroy();
+                break;
+            }
+          }
+        });
+      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        // Native HLS support (Safari)
+        video.src = src;
+      } else {
+        setVideoError('Seu navegador não suporta reprodução de HLS');
+        setIsLoading(false);
+      }
+    } else {
+      // Normal video - set src directly
+      video.src = src;
+    }
+
+    return () => {
+      if (hlsRef.current) {
+        hlsRef.current.destroy();
+        hlsRef.current = null;
+      }
+    };
+  }, [src]);
+
   useEffect(() => {
     const hasIntro = introStartTime != null && introEndTime != null;
     if (hasIntro && currentTime >= introStartTime && currentTime < introEndTime) {
