@@ -12,6 +12,7 @@
   function isEmbed(u) {
     if (!u || typeof u !== 'string') return false;
     if (/disqus\.com|\/embed\/comments|comments\/?\?/i.test(u)) return false;
+    if (/\.(?:js|mjs|css|png|jpe?g|gif|webp|svg|ico|woff2?|ttf|eot|map|json|xml|txt|vtt|srt)(?:$|[?#])/i.test(u)) return false;
     return /server\.php\?/i.test(u) || /RCServer/i.test(u) || /\/player\d*\//i.test(u);
   }
   function abs(u) {
