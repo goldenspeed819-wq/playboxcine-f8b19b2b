@@ -46,6 +46,7 @@ import BulkImport from "./pages/admin/BulkImport";
 import QuickImport from "./pages/admin/QuickImport";
 import BulkUrlEditor from "./pages/admin/BulkUrlEditor";
 import ExternalJsonImport from "./pages/admin/ExternalJsonImport";
+import BrowserScraper from "./pages/admin/BrowserScraper";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -107,6 +108,7 @@ const App = () => (
                   <Route path="quick-import" element={<QuickImport />} />
                   <Route path="bulk-url-editor" element={<BulkUrlEditor />} />
                   <Route path="external-import" element={<ExternalJsonImport />} />
+                  <Route path="scraper" element={<BrowserScraper />} />
                 </Route>
 
                 {/* 404 */}
