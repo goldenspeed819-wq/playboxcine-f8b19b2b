@@ -194,12 +194,6 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
     [],
   );
 
-  /** True quando a tela está com um player externo (iframe) no lugar do player do Rynex. */
-  const hasExternalFrame = useCallback(
-    () => Boolean(document.querySelector('[data-rc-frame] iframe, iframe[data-rc-embed]')),
-    [],
-  );
-
   /**
    * Controla o vídeo dentro do embed (RedeCanais/Video.js) pela extensão:
    * o script roda dentro do iframe e mexe direto no elemento <video>.
