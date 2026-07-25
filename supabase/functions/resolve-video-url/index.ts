@@ -145,10 +145,6 @@ function unwrapGoogleRedirect(url: string): string | null {
   }
 }
 
-function unusedProxy(stream: string, referer: string): string {
-  const base = Deno.env.get('SUPABASE_URL') || '';
-  return `${base}/functions/v1/stream-proxy?url=${encodeURIComponent(stream)}&referer=${encodeURIComponent(referer)}`;
-}
 
 function iframeSrcs(html: string, baseUrl: string): string[] {
   const out: string[] = [];
