@@ -27,6 +27,7 @@ const buildPlayerUrl = (template: string, domain: string, serverNum: string, vid
 interface SeriesImportResult {
   season: number;
   episode: number;
+  urlEpisode: number;
   url: string;
   status: 'pending' | 'success' | 'error';
 }
