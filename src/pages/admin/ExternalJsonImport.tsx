@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Upload, Film, Tv, Loader2, CheckCircle, XCircle, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -88,9 +88,26 @@ function cleanTitle(titulo: string): string {
     .trim();
 }
 
+function readHashJson(): string {
+  if (typeof window === 'undefined') return '';
+  const m = window.location.hash.match(/^#json=([\s\S]+)$/);
+  if (!m) return '';
+  try {
+    return JSON.stringify(JSON.parse(decodeURIComponent(m[1])), null, 2);
+  } catch {
+    return '';
+  }
+}
+
 const ExternalJsonImport = () => {
   const { toast } = useToast();
-  const [jsonText, setJsonText] = useState('');
+  const [jsonText, setJsonText] = useState(readHashJson);
+
+  useEffect(() => {
+    if (window.location.hash.startsWith('#json=')) {
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+  }, []);
   const [items, setItems] = useState<ImportItem[]>([]);
   const [importing, setImporting] = useState(false);
   const [parsed, setParsed] = useState(false);

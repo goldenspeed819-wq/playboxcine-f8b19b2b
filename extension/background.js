@@ -1,80 +1,198 @@
 // Rynex Scraper - background service worker
-const found = {}; // tabId -> { embeds:Set-like array, streams:[] }
-const opener = {}; // abas abertas pelo botão EMBED -> aba original
-const autoClose = {}; // abas que devemos fechar após capturar
+const found = {};      // tabId -> { embeds: [], streams: [] }
+const opener = {};     // aba filha -> aba original
+const closeAt = {};    // aba filha -> timestamp para fechar
+const metaByTab = {};  // tabId -> meta
+
+const EMBED_RE = /(server\.php\?[^"'\s<>]+|RCServer[^"'\s<>]*|\/player\d*\/[^"'\s<>]+)/i;
+const BLOCKED_EMBED_RE = /disqus\.com|\/embed\/comments|comments\/?\?|redirect\.api|embed\.api/i;
+const ASSET_RE = /\.(?:js|mjs|css|png|jpe?g|gif|webp|svg|ico|woff2?|ttf|eot|map|json|xml|txt|vtt|srt)(?:$|[?#])/i;
 
 function bucket(tabId) {
   if (!found[tabId]) found[tabId] = { embeds: [], streams: [] };
   return found[tabId];
 }
-
-const EMBED_RE = /(server\.php\?[^"'\s<>]+|RCServer[^"'\s<>]*|\/player\d*\/[^"'\s<>]+)/i;
-const BLOCKED_EMBED_RE = /disqus\.com|\/embed\/comments|comments\/?\?/i;
-const ASSET_RE = /\.(?:js|mjs|css|png|jpe?g|gif|webp|svg|ico|woff2?|ttf|eot|map|json|xml|txt|vtt|srt)(?:$|[?#])/i;
-
-function push(list, url) {
-  if (!url) return;
-  if (BLOCKED_EMBED_RE.test(url)) return;
-  if (ASSET_RE.test(url)) return;
-  if (!list.includes(url)) list.push(url);
-}
-
 const owner = (tabId) => opener[tabId] || tabId;
 
-// Sniff network for embeds / streams
+function persist(tabId) {
+  const b = bucket(tabId);
+  chrome.storage.local.set({
+    last: { tabId, embeds: b.embeds, streams: b.streams, meta: metaByTab[tabId] || null, at: Date.now() },
+  });
+}
+
+function push(tabId, kind, url) {
+  if (!url) return false;
+  if (kind === "embeds" && (BLOCKED_EMBED_RE.test(url) || ASSET_RE.test(url) || !EMBED_RE.test(url))) return false;
+  const list = bucket(tabId)[kind];
+  if (list.includes(url)) return false;
+  list.push(url);
+  persist(tabId);
+  return true;
+}
+
 chrome.webRequest.onBeforeRequest.addListener(
   (d) => {
     if (d.tabId < 0) return;
-    const b = bucket(owner(d.tabId));
-    if (EMBED_RE.test(d.url)) push(b.embeds, d.url);
-    else if (/\.m3u8(\?|$)|\.mp4(\?|$)/i.test(d.url) && !/\.ts(\?|$)/i.test(d.url)) push(b.streams, d.url);
+    const t = owner(d.tabId);
+    if (EMBED_RE.test(d.url)) push(t, "embeds", d.url);
+    else if (/\.m3u8(\?|$)|\.mp4(\?|$)/i.test(d.url) && !/\.ts(\?|$)/i.test(d.url)) push(t, "streams", d.url);
   },
   { urls: ["<all_urls>"] }
 );
 
-// O botão EMBED abre uma nova aba onde a URL final é gerada em tempo real
 chrome.tabs.onCreated.addListener((tab) => {
   if (tab.openerTabId != null) {
     opener[tab.id] = owner(tab.openerTabId);
-    autoClose[tab.id] = Date.now();
+    closeAt[tab.id] = Date.now() + 12000;
   }
 });
 
 chrome.tabs.onRemoved.addListener((id) => {
   delete found[id];
   delete opener[id];
-  delete autoClose[id];
+  delete closeAt[id];
+  delete metaByTab[id];
 });
 
-chrome.tabs.onUpdated.addListener((id, info, tab) => {
+// Extrai o embed dentro da aba aberta pelo botão EMBED (iframe / textarea / html)
+async function harvest(tabId) {
+  try {
+    const res = await chrome.scripting.executeScript({
+      target: { tabId, allFrames: true },
+      func: () => {
+        const out = [];
+        const RE = /https?:\/\/[^"'\s<>\\]*(?:server\.php\?[^"'\s<>\\]*|\/player\d*\/[^"'\s<>\\]+)/gi;
+        const html = document.documentElement ? document.documentElement.innerHTML : "";
+        (html.match(RE) || []).forEach((u) => out.push(u));
+        document.querySelectorAll("iframe[src]").forEach((f) => out.push(f.src));
+        document.querySelectorAll("textarea, input").forEach((el) => {
+          const v = el.value || "";
+          (v.match(RE) || []).forEach((u) => out.push(u));
+          if (/^https?:\/\//.test(v)) out.push(v);
+        });
+        out.push(location.href);
+        return out;
+      },
+    });
+    (res || []).forEach((r) => (r.result || []).forEach((u) => push(owner(tabId), "embeds", u)));
+  } catch (e) {}
+}
+
+chrome.tabs.onUpdated.addListener(async (id, info, tab) => {
   const url = info.url || tab?.url || "";
   if (opener[id]) {
-    if (url && EMBED_RE.test(url)) push(bucket(opener[id]).embeds, url);
-    // fecha a aba auxiliar depois de capturar
-    if (autoClose[id] && url && /server\.php\?|RCServer/i.test(url)) {
-      delete autoClose[id];
-      setTimeout(() => chrome.tabs.remove(id).catch(() => {}), 400);
+    if (url) push(opener[id], "embeds", url);
+    if (info.status === "complete") {
+      await harvest(id);
+      const parent = opener[id];
+      setTimeout(() => {
+        chrome.tabs.remove(id).catch(() => {});
+      }, 1200);
+      persist(parent);
     }
     return;
   }
-  if (info.status === "loading" && info.url) delete found[id];
+  if (info.status === "loading" && info.url) {
+    delete found[id];
+    delete metaByTab[id];
+  }
 });
+
+// limpa abas auxiliares esquecidas
+setInterval(() => {
+  const now = Date.now();
+  Object.keys(closeAt).forEach((id) => {
+    if (closeAt[id] < now) {
+      delete closeAt[id];
+      chrome.tabs.remove(Number(id)).catch(() => {});
+    }
+  });
+}, 5000);
+
+async function grabMeta(tabId) {
+  try {
+    const [r] = await chrome.scripting.executeScript({
+      target: { tabId },
+      func: () => {
+        const g = (s) => document.querySelector(s)?.content || "";
+        return {
+          url: location.href,
+          title: (g('meta[property="og:title"]') || document.querySelector("h1")?.textContent || document.title || "")
+            .replace(/\s+/g, " ")
+            .trim(),
+          thumb: g('meta[property="og:image"]'),
+          description: g('meta[property="og:description"]') || g('meta[name="description"]'),
+        };
+      },
+    });
+    if (r?.result) metaByTab[tabId] = r.result;
+  } catch (e) {}
+}
+
+async function clickEmbed(tabId) {
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId, allFrames: true },
+      func: () => {
+        const fire = (el) => {
+          ["pointerover", "mouseover", "pointerdown", "mousedown", "pointerup", "mouseup", "click"].forEach((t) => {
+            try {
+              el.dispatchEvent(new MouseEvent(t, { bubbles: true, cancelable: true, view: window }));
+            } catch (e) {}
+          });
+          try { el.click(); } catch (e) {}
+        };
+        const link = [...document.querySelectorAll("a[href]")].find((a) =>
+          /redirect\.api\?|embed\.api\?embed=/i.test(a.getAttribute("href") || "")
+        );
+        if (link) { fire(link); return 1; }
+        const textOf = (el) =>
+          ((el.textContent || "") + " " + (el.id || "") + " " +
+            (["aria-label", "alt", "title", "onclick"].map((a) => (el.getAttribute && el.getAttribute(a)) || "").join(" "))
+          ).toLowerCase();
+        let n = 0;
+        [...document.querySelectorAll('a,button,div,span,li,td,img,[role="button"],[onclick]')].forEach((el) => {
+          const txt = textOf(el).trim();
+          const r = el.getBoundingClientRect();
+          if (!/\bembed\b/.test(txt)) return;
+          if (r.width <= 0 || r.height <= 0 || r.width > 500 || r.height > 220) return;
+          if (el.children && el.children.length > 5) return;
+          fire(el);
+          n += 1;
+        });
+        return n;
+      },
+    });
+  } catch (e) {}
+}
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   const tabId = msg.tabId ?? sender.tab?.id;
   if (msg.type === "FOUND") {
-    const b = bucket(tabId);
-    (msg.embeds || []).forEach((u) => push(b.embeds, u));
-    (msg.streams || []).forEach((u) => push(b.streams, u));
+    const t = owner(tabId);
+    (msg.embeds || []).forEach((u) => push(t, "embeds", u));
+    (msg.streams || []).forEach((u) => push(t, "streams", u));
     sendResponse({ ok: true });
     return true;
   }
   if (msg.type === "GET") {
-    sendResponse(bucket(tabId));
+    sendResponse({ ...bucket(tabId), meta: metaByTab[tabId] || null });
+    return true;
+  }
+  if (msg.type === "CAPTURE") {
+    (async () => {
+      await grabMeta(tabId);
+      await clickEmbed(tabId);
+      persist(tabId);
+      sendResponse({ ok: true });
+    })();
     return true;
   }
   if (msg.type === "CLEAR_TAB") {
     delete found[tabId];
+    delete metaByTab[tabId];
+    chrome.storage.local.remove("last");
     sendResponse({ ok: true });
     return true;
   }
