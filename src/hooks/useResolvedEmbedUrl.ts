@@ -4,16 +4,19 @@ import { normalizeHttpUrl, shouldResolveRemotely, toEmbedUrl } from '@/utils/ext
 
 type State = {
   url: string | null;
+  streamUrl: string | null;
   isLoading: boolean;
   error: string | null;
 };
 
 export function useResolvedEmbedUrl(rawUrl: string | null | undefined): State {
   const cacheRef = useRef<Map<string, string>>(new Map());
+  const streamCacheRef = useRef<Map<string, string>>(new Map());
   const abortRef = useRef<AbortController | null>(null);
 
   const [state, setState] = useState<State>({
     url: null,
+    streamUrl: null,
     isLoading: false,
     error: null,
   });
@@ -24,30 +27,32 @@ export function useResolvedEmbedUrl(rawUrl: string | null | undefined): State {
 
     const input = rawUrl ? normalizeHttpUrl(rawUrl) : '';
     if (!input) {
-      setState({ url: null, isLoading: false, error: null });
+      setState({ url: null, streamUrl: null, isLoading: false, error: null });
       return;
     }
 
     const needsRemote = shouldResolveRemotely(input);
+    const localEmbed = toEmbedUrl(input) ?? input;
 
-    // Fast path: local normalization only
-    if (!needsRemote) {
-      const localEmbed = toEmbedUrl(input) ?? input;
-      setState({ url: localEmbed, isLoading: false, error: null });
+    // Cached results
+    const cachedStream = streamCacheRef.current.get(input);
+    if (cachedStream) {
+      setState({ url: cacheRef.current.get(input) ?? localEmbed, streamUrl: cachedStream, isLoading: false, error: null });
       return;
     }
 
-    // Remote path
     const cached = cacheRef.current.get(input);
-    if (cached) {
-      setState({ url: cached, isLoading: false, error: null });
+    if (cached && !needsRemote) {
+      setState({ url: cached, streamUrl: null, isLoading: false, error: null });
       return;
     }
 
     const controller = new AbortController();
     abortRef.current = controller;
 
-    setState({ url: null, isLoading: true, error: null });
+    // Always try remotely: we want a direct stream so the native player can be used.
+    // While resolving, keep the local embed available as fallback when it already works.
+    setState({ url: needsRemote ? null : localEmbed, streamUrl: null, isLoading: true, error: null });
 
     (async () => {
       try {
@@ -58,22 +63,34 @@ export function useResolvedEmbedUrl(rawUrl: string | null | undefined): State {
         if (controller.signal.aborted) return;
 
         if (error) {
-          setState({ url: null, isLoading: false, error: error.message });
+          setState({ url: needsRemote ? null : localEmbed, streamUrl: null, isLoading: false, error: needsRemote ? error.message : null });
+          return;
+        }
+
+        const streamUrl: string | undefined = data?.streamUrl;
+        if (streamUrl) {
+          streamCacheRef.current.set(input, streamUrl);
+          setState({ url: cacheRef.current.get(input) ?? localEmbed, streamUrl, isLoading: false, error: null });
           return;
         }
 
         const embedUrl: string | undefined = data?.embedUrl;
         if (embedUrl && !embedUrl.includes('/cdn-cgi/challenge-platform/')) {
           cacheRef.current.set(input, embedUrl);
-          setState({ url: embedUrl, isLoading: false, error: null });
+          setState({ url: embedUrl, streamUrl: null, isLoading: false, error: null });
+          return;
+        }
+
+        if (!needsRemote) {
+          setState({ url: localEmbed, streamUrl: null, isLoading: false, error: null });
           return;
         }
 
         const backendError = data?.error || 'Não foi possível resolver o link para reprodução incorporada';
-        setState({ url: null, isLoading: false, error: backendError });
+        setState({ url: null, streamUrl: null, isLoading: false, error: backendError });
       } catch (e) {
         if (controller.signal.aborted) return;
-        setState({ url: null, isLoading: false, error: String(e) });
+        setState({ url: needsRemote ? null : localEmbed, streamUrl: null, isLoading: false, error: needsRemote ? String(e) : null });
       }
     })();
 
