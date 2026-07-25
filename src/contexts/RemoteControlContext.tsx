@@ -128,6 +128,7 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
   const [enabled, setEnabledState] = useState(() => localStorage.getItem(ENABLED_KEY) !== 'false');
   const [isHostConnected, setIsHostConnected] = useState(false);
   const [extensionStatus, setExtensionStatus] = useState<RemoteExtensionStatus>({ detected: false });
+  const extensionStatusRef = useRef<RemoteExtensionStatus>({ detected: false });
   const extensionSeenAt = useRef(0);
 
   const [cursor, setCursor] = useState({ x: 0, y: 0, visible: false, pressed: false });
@@ -373,6 +374,7 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
     const channel = channelRef.current;
     if (!channel) return;
     const player = playerRef.current;
+    const currentExtensionStatus = extensionStatusRef.current;
     channel.send({
       type: 'broadcast',
       event: 'state',
@@ -381,12 +383,12 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
         hasPlayer: !!player,
         player: player ? player.getState() : null,
         extension: {
-          ...extensionStatus,
-          detected: extensionStatus.detected && Date.now() - extensionSeenAt.current < 12000,
+          ...currentExtensionStatus,
+          detected: currentExtensionStatus.detected && Date.now() - extensionSeenAt.current < 12000,
         },
       },
     });
-  }, [extensionStatus]);
+  }, []);
 
   useEffect(() => {
     const handleExtensionMessage = (event: MessageEvent) => {
@@ -395,19 +397,27 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
       if (data.source !== 'rynex-extension') return;
       extensionSeenAt.current = Date.now();
       if (data.type === 'RYNEX_EXTENSION_STATUS') {
-        setExtensionStatus((prev) => ({
-          ...prev,
-          detected: true,
-          version: typeof data.version === 'string' ? data.version : prev.version,
-        }));
+        setExtensionStatus((prev) => {
+          const next = {
+            ...prev,
+            detected: true,
+            version: typeof data.version === 'string' ? data.version : prev.version,
+          };
+          extensionStatusRef.current = next;
+          return next;
+        });
       }
       if (data.type === 'RYNEX_REMOTE_ACK') {
-        setExtensionStatus((prev) => ({
-          ...prev,
-          detected: true,
-          lastAck: data.ok ? `${data.input || 'comando'}: ${data.method || 'ok'}` : prev.lastAck,
-          lastError: data.ok ? undefined : data.error || 'Comando bloqueado pelo Chrome',
-        }));
+        setExtensionStatus((prev) => {
+          const next = {
+            ...prev,
+            detected: true,
+            lastAck: data.ok ? `${data.input || 'comando'}: ${data.method || 'ok'}` : prev.lastAck,
+            lastError: data.ok ? undefined : data.error || 'Comando bloqueado pelo Chrome',
+          };
+          extensionStatusRef.current = next;
+          return next;
+        });
       }
     };
 
@@ -418,7 +428,11 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
         window.location.origin,
       );
       if (extensionSeenAt.current && Date.now() - extensionSeenAt.current > 12000) {
-        setExtensionStatus((prev) => ({ ...prev, detected: false }));
+        setExtensionStatus((prev) => {
+          const next = { ...prev, detected: false };
+          extensionStatusRef.current = next;
+          return next;
+        });
       }
     }, 3000);
     return () => {
