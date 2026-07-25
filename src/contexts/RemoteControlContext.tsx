@@ -11,6 +11,7 @@ import { useNavigate } from 'react-router-dom';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import RemoteCursor from '@/components/RemoteCursor';
 
 export type RemoteAction =
   | 'hello'
@@ -30,12 +31,22 @@ export type RemoteAction =
   | 'goto'
   | 'back'
   | 'reload'
-  | 'quickImport';
+  | 'quickImport'
+  | 'pointerMove'
+  | 'pointerTap'
+  | 'pointerDoubleTap'
+  | 'pointerRightTap'
+  | 'pointerScroll'
+  | 'pointerCenter'
+  | 'key'
+  | 'cinema';
 
 export interface RemoteCommand {
   action: RemoteAction;
   value?: number | string;
   path?: string;
+  dx?: number;
+  dy?: number;
   payload?: Record<string, unknown>;
 }
 
@@ -101,6 +112,11 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
   const [enabled, setEnabledState] = useState(() => localStorage.getItem(ENABLED_KEY) !== 'false');
   const [isHostConnected, setIsHostConnected] = useState(false);
 
+  const [cursor, setCursor] = useState({ x: 0, y: 0, visible: false, pressed: false });
+  const cursorRef = useRef({ x: 0, y: 0 });
+  const hideTimer = useRef<number | null>(null);
+  const pressTimer = useRef<number | null>(null);
+
   const playerRef = useRef<RemotePlayerApi | null>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
 
@@ -120,6 +136,106 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
     const fresh = generateRemoteCode();
     localStorage.setItem(CODE_KEY, fresh);
     setCode(fresh);
+  }, []);
+
+  // ---- Virtual pointer (touchpad mode, works over iframes too) -------------
+  const showCursor = useCallback((x: number, y: number) => {
+    cursorRef.current = { x, y };
+    setCursor((prev) => ({ ...prev, x, y, visible: true }));
+    if (hideTimer.current) window.clearTimeout(hideTimer.current);
+    hideTimer.current = window.setTimeout(
+      () => setCursor((prev) => ({ ...prev, visible: false })),
+      6000,
+    );
+  }, []);
+
+  const movePointer = useCallback(
+    (dx: number, dy: number) => {
+      const { x, y } = cursorRef.current;
+      const nextX = Math.min(window.innerWidth - 2, Math.max(0, (x || window.innerWidth / 2) + dx));
+      const nextY = Math.min(window.innerHeight - 2, Math.max(0, (y || window.innerHeight / 2) + dy));
+      showCursor(nextX, nextY);
+
+      const target = document.elementFromPoint(nextX, nextY);
+      if (target) {
+        const opts = { bubbles: true, cancelable: true, clientX: nextX, clientY: nextY } as MouseEventInit;
+        target.dispatchEvent(new MouseEvent('mousemove', opts));
+        target.dispatchEvent(new PointerEvent('pointermove', { ...opts, pointerType: 'mouse' }));
+      }
+    },
+    [showCursor],
+  );
+
+  const flashPress = useCallback(() => {
+    setCursor((prev) => ({ ...prev, pressed: true }));
+    if (pressTimer.current) window.clearTimeout(pressTimer.current);
+    pressTimer.current = window.setTimeout(
+      () => setCursor((prev) => ({ ...prev, pressed: false })),
+      180,
+    );
+  }, []);
+
+  const clickPointer = useCallback(
+    (kind: 'tap' | 'double' | 'right') => {
+      const { x, y } = cursorRef.current;
+      const px = x || window.innerWidth / 2;
+      const py = y || window.innerHeight / 2;
+      showCursor(px, py);
+      flashPress();
+
+      const target = document.elementFromPoint(px, py) as HTMLElement | null;
+      if (!target) return;
+
+      const base = { bubbles: true, cancelable: true, clientX: px, clientY: py, view: window };
+
+      if (kind === 'right') {
+        target.dispatchEvent(new MouseEvent('contextmenu', { ...base, button: 2 }));
+        return;
+      }
+
+      target.dispatchEvent(new PointerEvent('pointerdown', { ...base, pointerType: 'mouse', isPrimary: true }));
+      target.dispatchEvent(new MouseEvent('mousedown', base));
+      target.dispatchEvent(new PointerEvent('pointerup', { ...base, pointerType: 'mouse', isPrimary: true }));
+      target.dispatchEvent(new MouseEvent('mouseup', base));
+      target.dispatchEvent(new MouseEvent('click', base));
+      if (kind === 'double') target.dispatchEvent(new MouseEvent('dblclick', base));
+
+      // Native click too (covers React handlers on buttons/links reliably)
+      if (typeof target.click === 'function' && kind === 'tap') target.focus?.();
+    },
+    [flashPress, showCursor],
+  );
+
+  const scrollPointer = useCallback(
+    (dy: number) => {
+      const { x, y } = cursorRef.current;
+      const px = x || window.innerWidth / 2;
+      const py = y || window.innerHeight / 2;
+      const target = document.elementFromPoint(px, py);
+      target?.dispatchEvent(
+        new WheelEvent('wheel', { bubbles: true, cancelable: true, clientX: px, clientY: py, deltaY: dy }),
+      );
+      window.scrollBy({ top: dy, behavior: 'auto' });
+    },
+    [],
+  );
+
+  const sendKey = useCallback((key: string) => {
+    const iframe = document.querySelector('[data-rc-frame] iframe') as HTMLIFrameElement | null;
+    iframe?.focus();
+    const target: EventTarget = iframe ?? document.activeElement ?? document.body;
+    const init: KeyboardEventInit = { key, code: key, bubbles: true, cancelable: true };
+    target.dispatchEvent(new KeyboardEvent('keydown', init));
+    target.dispatchEvent(new KeyboardEvent('keyup', init));
+  }, []);
+
+  const toggleCinema = useCallback(() => {
+    const frame = document.querySelector('[data-rc-frame]');
+    if (!frame) {
+      toast({ title: 'Nenhum player externo nesta tela' });
+      return;
+    }
+    document.body.classList.toggle('rc-cinema');
   }, []);
 
   const sendState = useCallback(() => {
@@ -199,13 +315,37 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
         case 'next':
           player?.next();
           break;
+        case 'pointerMove':
+          movePointer(command.dx ?? 0, command.dy ?? 0);
+          break;
+        case 'pointerTap':
+          clickPointer('tap');
+          break;
+        case 'pointerDoubleTap':
+          clickPointer('double');
+          break;
+        case 'pointerRightTap':
+          clickPointer('right');
+          break;
+        case 'pointerScroll':
+          scrollPointer(command.dy ?? numberValue ?? 0);
+          break;
+        case 'pointerCenter':
+          showCursor(window.innerWidth / 2, window.innerHeight / 2);
+          break;
+        case 'key':
+          sendKey(String(command.value ?? ''));
+          break;
+        case 'cinema':
+          toggleCinema();
+          break;
         default:
           break;
       }
 
       setTimeout(sendState, 120);
     },
-    [navigate, sendState],
+    [clickPointer, movePointer, navigate, scrollPointer, sendKey, sendState, showCursor, toggleCinema],
   );
 
   useEffect(() => {
@@ -237,7 +377,12 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
     [code, enabled, setEnabled, regenerateCode, isHostConnected, registerPlayer],
   );
 
-  return <RemoteControlContext.Provider value={value}>{children}</RemoteControlContext.Provider>;
+  return (
+    <RemoteControlContext.Provider value={value}>
+      {children}
+      <RemoteCursor x={cursor.x} y={cursor.y} visible={cursor.visible} pressed={cursor.pressed} />
+    </RemoteControlContext.Provider>
+  );
 }
 
 export function useRemoteControl() {
