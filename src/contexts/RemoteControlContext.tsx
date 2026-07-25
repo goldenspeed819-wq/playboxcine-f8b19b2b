@@ -574,6 +574,7 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
     [
       clickPointer,
       applySiteAudio,
+      dispatchMedia,
       movePointer,
       navigate,
       pressPlayOverlay,

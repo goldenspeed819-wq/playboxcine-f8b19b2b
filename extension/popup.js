@@ -206,7 +206,12 @@ async function goFullscreen() {
 }
 
 $("#play").addEventListener("click", async () => {
-  say("Procurando o play no player...");
+  say("Controlando o vídeo desta aba...");
+  const direct = await sendInput({ input: "media", action: "toggle" });
+  if (direct?.ok) {
+    say(direct.state?.paused ? "Vídeo pausado." : "Vídeo tocando.");
+    return;
+  }
   const res = await sendInput({ input: "embedPlay" });
   if (res?.ok) say(`Play enviado (${res.method || "ok"}).`);
 });
@@ -215,7 +220,11 @@ $("#mute").addEventListener("click", () => {
   $("#mute").textContent = muted ? "🔊 Som" : "🔇 Mudo";
   applyVolume();
 });
-$("#fs").addEventListener("click", goFullscreen);
+$("#fs").addEventListener("click", async () => {
+  const res = await sendInput({ input: "media", action: "fullscreen" });
+  if (res?.ok) { say("Tela cheia do vídeo alternada."); return; }
+  goFullscreen();
+});
 $("#vol").addEventListener("input", () => {
   volume = Number($("#vol").value);
   muted = false;
@@ -236,5 +245,5 @@ $("#vol").addEventListener("change", applyVolume);
     const host = new URL(tab.url || "about:blank").hostname;
     $("#tab").textContent = host ? `— ${host}` : "";
   } catch (e) {}
-  say("v1.0.5 pronta — controle o player desta aba.");
+  say("v1.0.6 pronta — controle o player desta aba.");
 })();
