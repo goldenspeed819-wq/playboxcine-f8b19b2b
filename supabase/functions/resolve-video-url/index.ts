@@ -138,7 +138,16 @@ function unwrapGoogleRedirect(url: string): string | null {
     if (!u.hostname.includes('google.') || !u.pathname.startsWith('/url')) return null;
     const q = u.searchParams.get('q') || u.searchParams.get('url');
     if (!q) return null;
-    const decoded = decodeURIComponent(q);
+    let decoded = q;
+    for (let i = 0; i < 3 && decoded.includes('%'); i++) {
+      try {
+        const next = decodeURIComponent(decoded);
+        if (next === decoded) break;
+        decoded = next;
+      } catch {
+        break;
+      }
+    }
     return /^https?:\/\//i.test(decoded) ? decoded : null;
   } catch {
     return null;
