@@ -2,7 +2,7 @@
 (function () {
   if (window.__rynexScraper) return;
   window.__rynexScraper = true;
-  const VERSION = "1.0.4";
+  const VERSION = "1.0.6";
 
   const EMBED_RE =
     /https?:\/\/[^"'\s<>\\]*(?:server\.php\?[^"'\s<>\\]*|RCServer[^"'\s<>\\]*|\/player\d*\/[^"'\s<>\\]+)/gi;
@@ -193,6 +193,7 @@
         type: "REMOTE_INPUT",
         requestId: data.requestId,
         input: data.input,
+        action: data.action,
         x: data.x,
         y: data.y,
         dy: data.dy,
