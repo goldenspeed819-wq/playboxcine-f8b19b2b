@@ -131,6 +131,7 @@ export default function QuickImport() {
   const [seriesPreviewSeason, setSeriesPreviewSeason] = useState('1');
   const [seriesPreviewEpisode, setSeriesPreviewEpisode] = useState('1');
   const [seriesPreviewUrl, setSeriesPreviewUrl] = useState('');
+  const [episodeNumbering, setEpisodeNumbering] = useState<'reset' | 'continuous'>('reset');
 
   const [movieTitle, setMovieTitle] = useState('');
   const [movieAbbreviation, setMovieAbbreviation] = useState('');
@@ -143,14 +144,25 @@ export default function QuickImport() {
   const [isUpdating, setIsUpdating] = useState(false);
   const [updateStats, setUpdateStats] = useState<{ movies: number; episodes: number } | null>(null);
 
+  // Converts a season/episode pair into the episode number used inside the URL code.
+  // 'reset'      -> T02EP01 (numbering restarts each season)
+  // 'continuous' -> T02EP53 (numbering continues from the previous seasons)
+  const toUrlEpisode = (season: number, episode: number) => {
+    if (episodeNumbering === 'reset' || !tmdbInfo) return episode;
+    const offset = tmdbInfo.seasons
+      .filter((s) => s.season_number < season)
+      .reduce((sum, s) => sum + s.episode_count, 0);
+    return offset + episode;
+  };
+
   const seriesPreviewVid = useMemo(() => {
     if (!seriesAbbreviation.trim()) return '';
     return buildSeriesEpisodeCode(
       seriesAbbreviation,
       Number(seriesPreviewSeason) || 1,
-      Number(seriesPreviewEpisode) || 1,
+      toUrlEpisode(Number(seriesPreviewSeason) || 1, Number(seriesPreviewEpisode) || 1),
     );
-  }, [seriesAbbreviation, seriesPreviewSeason, seriesPreviewEpisode]);
+  }, [seriesAbbreviation, seriesPreviewSeason, seriesPreviewEpisode, episodeNumbering, tmdbInfo]);
 
   const defaultSeriesPreviewUrl = useMemo(() => {
     if (!seriesPreviewVid) return '';
@@ -177,10 +189,12 @@ export default function QuickImport() {
     const results: SeriesImportResult[] = [];
     for (const season of tmdbInfo.seasons) {
       for (let ep = 1; ep <= season.episode_count; ep++) {
-        const vid = buildSeriesEpisodeCode(seriesAbbreviation, season.season_number, ep);
+        const urlEpisode = toUrlEpisode(season.season_number, ep);
+        const vid = buildSeriesEpisodeCode(seriesAbbreviation, season.season_number, urlEpisode);
         results.push({
           season: season.season_number,
           episode: ep,
+          urlEpisode,
           url: buildPlayerUrl(playerUrlTemplate, playerDomain, serverNum, vid),
           status: 'pending',
         });
@@ -188,7 +202,7 @@ export default function QuickImport() {
     }
 
     setSeriesResults(results);
-  }, [tmdbInfo, seriesAbbreviation, playerUrlTemplate, playerDomain, serverNum]);
+  }, [tmdbInfo, seriesAbbreviation, playerUrlTemplate, playerDomain, serverNum, episodeNumbering]);
 
   useEffect(() => {
     if (!moviePreviewUrl.trim()) return;
