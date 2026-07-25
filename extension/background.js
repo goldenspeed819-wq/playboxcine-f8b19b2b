@@ -7,6 +7,8 @@ const metaByTab = {};  // tabId -> meta
 const EMBED_RE = /(server\.php\?[^"'\s<>]+|RCServer[^"'\s<>]*|\/player\d*\/[^"'\s<>]+)/i;
 const BLOCKED_EMBED_RE = /disqus\.com|\/embed\/comments|comments\/?\?|redirect\.api|embed\.api/i;
 const ASSET_RE = /\.(?:js|mjs|css|png|jpe?g|gif|webp|svg|ico|woff2?|ttf|eot|map|json|xml|txt|vtt|srt)(?:$|[?#])/i;
+const DEBUGGER_VERSION = "1.3";
+const debuggerTabs = new Set();
 
 function bucket(tabId) {
   if (!found[tabId]) found[tabId] = { embeds: [], streams: [] };
@@ -53,7 +55,66 @@ chrome.tabs.onRemoved.addListener((id) => {
   delete opener[id];
   delete closeAt[id];
   delete metaByTab[id];
+  debuggerTabs.delete(id);
 });
+
+chrome.debugger.onDetach.addListener((source) => {
+  if (source.tabId != null) debuggerTabs.delete(source.tabId);
+});
+
+async function ensureDebugger(tabId) {
+  if (debuggerTabs.has(tabId)) return true;
+  try {
+    await chrome.debugger.attach({ tabId }, DEBUGGER_VERSION);
+    debuggerTabs.add(tabId);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+async function sendMouse(tabId, params) {
+  const ok = await ensureDebugger(tabId);
+  if (!ok) return false;
+  try {
+    await chrome.debugger.sendCommand({ tabId }, "Input.dispatchMouseEvent", params);
+    return true;
+  } catch (e) {
+    debuggerTabs.delete(tabId);
+    return false;
+  }
+}
+
+async function remoteInput(tabId, msg) {
+  if (!tabId || tabId < 0) return false;
+  const x = Number(msg.x);
+  const y = Number(msg.y);
+  if ((msg.input === "move" || msg.input === "click" || msg.input === "doubleClick" || msg.input === "rightClick" || msg.input === "scroll") && (!Number.isFinite(x) || !Number.isFinite(y))) {
+    return false;
+  }
+
+  if (msg.input === "move") {
+    return sendMouse(tabId, { type: "mouseMoved", x, y, button: "none" });
+  }
+  if (msg.input === "scroll") {
+    return sendMouse(tabId, {
+      type: "mouseWheel",
+      x,
+      y,
+      deltaX: 0,
+      deltaY: Number(msg.dy) || 0,
+    });
+  }
+
+  const button = msg.input === "rightClick" ? "right" : "left";
+  const clicks = msg.input === "doubleClick" ? 2 : 1;
+  await sendMouse(tabId, { type: "mouseMoved", x, y, button: "none" });
+  for (let i = 1; i <= clicks; i += 1) {
+    await sendMouse(tabId, { type: "mousePressed", x, y, button, buttons: button === "left" ? 1 : 2, clickCount: i });
+    await sendMouse(tabId, { type: "mouseReleased", x, y, button, buttons: 0, clickCount: i });
+  }
+  return true;
+}
 
 // Extrai o embed dentro da aba aberta pelo botão EMBED (iframe / textarea / html)
 async function harvest(tabId) {
@@ -194,6 +255,13 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     delete metaByTab[tabId];
     chrome.storage.local.remove("last");
     sendResponse({ ok: true });
+    return true;
+  }
+  if (msg.type === "REMOTE_INPUT") {
+    (async () => {
+      const ok = await remoteInput(tabId, msg);
+      sendResponse({ ok });
+    })();
     return true;
   }
   return false;
