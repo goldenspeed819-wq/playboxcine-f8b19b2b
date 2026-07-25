@@ -139,7 +139,17 @@
 
     box.querySelector('#rx-url').oninput = function (e) { manual = e.target.value.trim(); };
     box.querySelector('#rx-hide').onclick = function () { box.style.display = 'none'; };
-    box.querySelector('#rx-scan').onclick = function () { clickEmbedButton(); scan(); setTimeout(scan, 800); };
+    box.querySelector('#rx-scan').onclick = function () {
+      var n = clickEmbedButton();
+      scan();
+      setTimeout(scan, 600);
+      setTimeout(function () {
+        scan();
+        if (!embeds.length) {
+          alert('Não achei o embed automaticamente (' + n + ' botão(ões) clicado(s)).\nClique no botão EMBED do player e cole o link no campo do painel.');
+        }
+      }, 1600);
+    };
     box.querySelector('#rx-add').onclick = function () {
       var url = (box.querySelector('#rx-url').value || '').trim() || chosen();
       if (!url) { alert('Nenhum embed encontrado. Clique no botão EMBED do player e cole o link aqui.'); return; }
