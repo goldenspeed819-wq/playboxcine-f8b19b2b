@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Copy, Check, Bookmark, Terminal, ArrowRight } from 'lucide-react';
+import { Copy, Check, Bookmark, Terminal, ArrowRight, PlayCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -11,12 +11,9 @@ const BrowserScraper = () => {
   const [copied, setCopied] = useState<string | null>(null);
 
   const bookmarklet = useMemo(() => {
-    const compact = scraperSource
-      .replace(/\/\*[\s\S]*?\*\//g, '')
-      .replace(/^\s*\/\/.*$/gm, '')
-      .replace(/\n\s*/g, ' ')
-      .trim();
-    return `javascript:${encodeURIComponent(compact)}`;
+    const origin = window.location.origin;
+    const loader = `(function(){var s=document.createElement('script');s.src='${origin}/rynex-scraper.js?v='+(Date.now());s.onload=function(){window.__RYNEX_SCRAPER__&&window.__RYNEX_SCRAPER__.open&&window.__RYNEX_SCRAPER__.open()};s.onerror=function(){alert('O site bloqueou o carregamento automático. Use o código do console em Admin > Scraper.')};document.documentElement.appendChild(s)})()`;
+    return `javascript:${loader}`;
   }, []);
 
   const dragRef = useRef<HTMLAnchorElement>(null);
@@ -48,9 +45,8 @@ const BrowserScraper = () => {
           <Bookmark className="h-4 w-4 text-primary" /> 1. Crie o favorito (bookmarklet)
         </div>
         <p className="text-sm text-muted-foreground">
-          Mostre a barra de favoritos (Ctrl+Shift+B) e <b>arraste o botão abaixo</b> para ela. Esse é o jeito
-          que funciona: ao colar <code>javascript:</code> no campo de URL, o Chrome apaga o prefixo e o favorito
-          não abre.
+          Mostre a barra de favoritos (Ctrl+Shift+B) e <b>arraste o botão abaixo</b> para ela. Agora o favorito é
+          só um carregador pequeno, então ele não fica pesado nem falha sem abrir nada.
         </p>
         <a
           ref={dragRef}
@@ -70,6 +66,19 @@ const BrowserScraper = () => {
             {copied === 'bm' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
           </Button>
         </div>
+      </div>
+
+      <div className="premium-card p-5 space-y-4">
+        <div className="flex items-center gap-2 font-semibold">
+          <PlayCircle className="h-4 w-4 text-primary" /> Teste rápido
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Clique aqui para abrir o painel nesta própria página. Se abrir aqui, o favorito foi criado corretamente;
+          depois use ele na página do conteúdo.
+        </p>
+        <Button onClick={() => import('@/lib/scraper/rynex-scraper.js?raw').then(() => eval(scraperSource))}>
+          Abrir painel de teste
+        </Button>
       </div>
 
       <div className="premium-card p-5 space-y-4">
