@@ -39,6 +39,7 @@ export type RemoteAction =
   | 'pointerScroll'
   | 'pointerCenter'
   | 'key'
+  | 'embedPlay'
   | 'cinema';
 
 export interface RemoteCommand {
@@ -183,7 +184,10 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
       showCursor(px, py);
       flashPress();
 
-      const target = document.elementFromPoint(px, py) as HTMLElement | null;
+      const stack = (document.elementsFromPoint(px, py) as HTMLElement[]).filter(
+        (el) => !el.closest('[data-rc-cursor]'),
+      );
+      const target = stack[0];
       if (!target) return;
 
       const base = { bubbles: true, cancelable: true, clientX: px, clientY: py, view: window };
@@ -202,9 +206,10 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
 
       // Native click on the nearest interactive ancestor — covers overlays/buttons
       // whose handlers ignore synthetic mouse events.
-      const clickable = target.closest(
-        'button, a, [role="button"], input, select, textarea, [tabindex], summary',
-      ) as HTMLElement | null;
+      const selector = 'button, a, [role="button"], input, select, textarea, [tabindex], summary';
+      const clickable =
+        (target.closest(selector) as HTMLElement | null) ??
+        (stack.map((el) => el.closest(selector)).find(Boolean) as HTMLElement | null);
       if (clickable) {
         clickable.focus?.();
         if (kind === 'tap' || kind === 'double') clickable.click();
@@ -212,6 +217,23 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
     },
     [flashPress, showCursor],
   );
+
+  /** Clicks the Rynex play overlay of the current player (works for embeds too). */
+  const pressPlayOverlay = useCallback(() => {
+    const overlay =
+      (document.querySelector('[data-rc-frame] button[aria-label="Reproduzir"]') as HTMLElement | null) ??
+      (document.querySelector('button[aria-label="Reproduzir"]') as HTMLElement | null) ??
+      (document.querySelector('[data-rc-play]') as HTMLElement | null);
+    if (overlay) {
+      overlay.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      const rect = overlay.getBoundingClientRect();
+      showCursor(rect.left + rect.width / 2, rect.top + rect.height / 2);
+      flashPress();
+      overlay.click();
+      return;
+    }
+    playerRef.current?.togglePlay();
+  }, [flashPress, showCursor]);
 
   const scrollPointer = useCallback(
     (dy: number) => {
@@ -343,6 +365,9 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
         case 'key':
           sendKey(String(command.value ?? ''));
           break;
+        case 'embedPlay':
+          pressPlayOverlay();
+          break;
         case 'cinema':
           toggleCinema();
           break;
@@ -352,7 +377,17 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
 
       setTimeout(sendState, 120);
     },
-    [clickPointer, movePointer, navigate, scrollPointer, sendKey, sendState, showCursor, toggleCinema],
+    [
+      clickPointer,
+      movePointer,
+      navigate,
+      pressPlayOverlay,
+      scrollPointer,
+      sendKey,
+      sendState,
+      showCursor,
+      toggleCinema,
+    ],
   );
 
   useEffect(() => {
