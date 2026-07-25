@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Film, Tv, Plus, List, LogOut, Menu, X, Shield, UserCircle, Radio, Settings, ChevronDown, Home, Bell, Sparkles, ChevronRight, Crown, Database, Zap, Link2, Upload } from 'lucide-react';
+import { LayoutDashboard, Film, Tv, Plus, List, LogOut, Menu, X, Shield, UserCircle, Radio, Settings, ChevronDown, Home, Bell, Sparkles, ChevronRight, Crown, Database, Zap, Link2, Upload, Radar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
@@ -92,6 +92,10 @@ const AdminLayout = () => {
       icon: Upload,
       label: 'JSON Externo',
       href: '/admin/external-import'
+    }, {
+      icon: Radar,
+      label: 'Scraper',
+      href: '/admin/scraper'
     }]
   }];
   const mainItems: MenuItem[] = [{
