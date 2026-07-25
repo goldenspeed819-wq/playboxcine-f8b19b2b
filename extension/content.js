@@ -2,6 +2,7 @@
 (function () {
   if (window.__rynexScraper) return;
   window.__rynexScraper = true;
+  const VERSION = "1.0.4";
 
   const EMBED_RE =
     /https?:\/\/[^"'\s<>\\]*(?:server\.php\?[^"'\s<>\\]*|RCServer[^"'\s<>\\]*|\/player\d*\/[^"'\s<>\\]+)/gi;
@@ -169,24 +170,75 @@
     }
   }
 
+  function announce(extra = {}) {
+    window.postMessage(
+      { source: "rynex-extension", type: "RYNEX_EXTENSION_STATUS", status: "ready", version: VERSION, ...extra },
+      "*"
+    );
+  }
+
   // Recebe comandos do controle remoto do Rynex e repassa para o background.
   // O background usa a API do Chrome para enviar input real do mouse para a aba,
   // então funciona até dentro de iframes cross-origin quando a extensão está ativa.
   window.addEventListener("message", (event) => {
     if (event.source !== window) return;
     const data = event.data || {};
+    if (data.source === "rynex-cine" && data.type === "RYNEX_EXTENSION_PING") {
+      announce({ requestId: data.requestId });
+      return;
+    }
     if (data.source !== "rynex-cine" || data.type !== "RYNEX_REMOTE_INPUT") return;
     try {
       chrome.runtime.sendMessage({
         type: "REMOTE_INPUT",
+        requestId: data.requestId,
         input: data.input,
         x: data.x,
         y: data.y,
         dy: data.dy,
         value: data.value,
         muted: data.muted,
+      }).then((response) => {
+        window.postMessage(
+          {
+            source: "rynex-extension",
+            type: "RYNEX_REMOTE_ACK",
+            requestId: data.requestId,
+            input: data.input,
+            ok: response?.ok !== false,
+            method: response?.method || "unknown",
+            error: response?.error || "",
+          },
+          "*"
+        );
+      }).catch((e) => {
+        window.postMessage(
+          {
+            source: "rynex-extension",
+            type: "RYNEX_REMOTE_ACK",
+            requestId: data.requestId,
+            input: data.input,
+            ok: false,
+            method: "bridge",
+            error: e?.message || "Extensão sem resposta",
+          },
+          "*"
+        );
       });
-    } catch (e) {}
+    } catch (e) {
+      window.postMessage(
+        {
+          source: "rynex-extension",
+          type: "RYNEX_REMOTE_ACK",
+          requestId: data.requestId,
+          input: data.input,
+          ok: false,
+          method: "bridge",
+          error: e?.message || "Falha ao chamar a extensão",
+        },
+        "*"
+      );
+    }
   });
 
   chrome.runtime.onMessage.addListener((msg, s, sendResponse) => {
@@ -213,6 +265,8 @@
   });
 
   setTimeout(report, 2500);
+  setTimeout(announce, 300);
+  setInterval(announce, 5000);
   new MutationObserver(() => {
     clearTimeout(window.__rynexT);
     window.__rynexT = setTimeout(report, 3000);

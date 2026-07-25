@@ -79,7 +79,11 @@ async function readState() {
 
 async function scan() {
   $("#found").textContent = "Clicando no EMBED... (pode abrir uma aba, ela fecha sozinha)";
-  chrome.runtime.sendMessage({ type: "CAPTURE", tabId }).catch(() => {});
+  const capture = await chrome.runtime.sendMessage({ type: "CAPTURE", tabId }).catch((e) => ({ ok: false, error: e?.message || "Falha na extensão" }));
+  if (capture && capture.ok === false) {
+    $("#found").textContent = `Erro: ${capture.error || "não consegui iniciar a captura"}`;
+    return;
+  }
   clearInterval(pollTimer);
   let tries = 0;
   pollTimer = setInterval(async () => {
@@ -90,7 +94,7 @@ async function scan() {
       $("#found").textContent = "Embed capturado!";
     } else if (tries > 30) {
       clearInterval(pollTimer);
-      $("#found").textContent = "Nada encontrado — clique no EMBED manualmente e reabra a extensão.";
+      $("#found").textContent = "Nada encontrado — clique no EMBED manualmente e deixe esta janela aberta por 5s.";
     }
   }, 700);
 }
@@ -157,5 +161,5 @@ $("#site").addEventListener("change", () => chrome.storage.local.set({ site: $("
   $("#site").value = site || DEFAULT_SITE;
   render(await getQueue());
   const st = await readState();
-  $("#found").textContent = applyFound(st) ? "Embed já capturado — confira o título." : "Clique em Procurar embed.";
+  $("#found").textContent = applyFound(st) ? "Embed já capturado — confira o título." : "v1.0.4 pronta — clique em Procurar embed.";
 })();

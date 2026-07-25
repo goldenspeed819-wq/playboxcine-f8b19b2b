@@ -63,32 +63,75 @@ chrome.debugger.onDetach.addListener((source) => {
 });
 
 async function ensureDebugger(tabId) {
-  if (debuggerTabs.has(tabId)) return true;
+  if (debuggerTabs.has(tabId)) return { ok: true, method: "debugger" };
   try {
     await chrome.debugger.attach({ tabId }, DEBUGGER_VERSION);
     debuggerTabs.add(tabId);
-    return true;
+    return { ok: true, method: "debugger" };
   } catch (e) {
-    return false;
+    return {
+      ok: false,
+      error: e?.message || "Chrome bloqueou o modo de controle real. Clique em Permitir no aviso da extensão.",
+      method: "debugger",
+    };
   }
 }
 
 async function sendMouse(tabId, params) {
-  const ok = await ensureDebugger(tabId);
-  if (!ok) return false;
+  const attached = await ensureDebugger(tabId);
+  if (!attached.ok) return attached;
   try {
     await chrome.debugger.sendCommand({ tabId }, "Input.dispatchMouseEvent", params);
-    return true;
+    return { ok: true, method: "debugger" };
   } catch (e) {
     debuggerTabs.delete(tabId);
-    return false;
+    return { ok: false, error: e?.message || "Falha ao enviar clique real para a aba.", method: "debugger" };
+  }
+}
+
+async function clickAtPage(tabId, msg) {
+  const x = Number(msg.x);
+  const y = Number(msg.y);
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return { ok: false, error: "Coordenada inválida", method: "script" };
+  try {
+    const [result] = await chrome.scripting.executeScript({
+      target: { tabId },
+      args: [x, y, msg.input || "click"],
+      func: (px, py, input) => {
+        const stack = document.elementsFromPoint(px, py).filter((el) => !el.closest?.("[data-rc-cursor]"));
+        const target = stack[0];
+        if (!target) return false;
+        const button = input === "rightClick" ? 2 : 0;
+        const base = { bubbles: true, cancelable: true, view: window, clientX: px, clientY: py, button };
+        if (input === "rightClick") {
+          target.dispatchEvent(new MouseEvent("contextmenu", base));
+          return true;
+        }
+        ["pointerdown", "mousedown", "pointerup", "mouseup", "click"].forEach((type) => {
+          target.dispatchEvent(
+            type.startsWith("pointer")
+              ? new PointerEvent(type, { ...base, pointerType: "mouse", isPrimary: true })
+              : new MouseEvent(type, base)
+          );
+        });
+        if (input === "doubleClick") target.dispatchEvent(new MouseEvent("dblclick", base));
+        const selector = 'button,a,[role="button"],input,select,textarea,[tabindex],summary,[data-rc-play]';
+        const clickable = target.closest?.(selector) || stack.map((el) => el.closest?.(selector)).find(Boolean);
+        clickable?.focus?.();
+        clickable?.click?.();
+        return true;
+      },
+    });
+    return result?.result ? { ok: true, method: "script" } : { ok: false, error: "Nada clicável nessa posição", method: "script" };
+  } catch (e) {
+    return { ok: false, error: e?.message || "Falha no clique por script", method: "script" };
   }
 }
 
 async function setPageVolume(tabId, msg) {
   const volume = Math.min(1, Math.max(0, Number(msg.value)));
   const muted = Boolean(msg.muted);
-  if (!Number.isFinite(volume)) return false;
+  if (!Number.isFinite(volume)) return { ok: false, error: "Volume inválido", method: "script" };
   try {
     await chrome.scripting.executeScript({
       target: { tabId, allFrames: true },
@@ -116,20 +159,22 @@ async function setPageVolume(tabId, msg) {
         }
       },
     });
-    return true;
+    return { ok: true, method: "script" };
   } catch (e) {
-    return false;
+    return { ok: false, error: e?.message || "Não consegui ajustar volume dentro dos frames", method: "script" };
   }
 }
 
 async function clickLikelyPlay(tabId, msg) {
   const x = Number(msg.x);
   const y = Number(msg.y);
+  const results = [];
   if (Number.isFinite(x) && Number.isFinite(y)) {
-    await remoteInput(tabId, { input: "click", x, y });
+    results.push(await clickAtPage(tabId, { ...msg, input: "click" }));
+    results.push(await remoteInput(tabId, { input: "click", x, y }));
   }
   try {
-    await chrome.scripting.executeScript({
+    const scriptResults = await chrome.scripting.executeScript({
       target: { tabId, allFrames: true },
       func: () => {
         const textOf = (el) =>
@@ -158,22 +203,27 @@ async function clickLikelyPlay(tabId, msg) {
         return true;
       },
     });
-  } catch (e) {}
+    if ((scriptResults || []).some((r) => r.result)) results.push({ ok: true, method: "script-play" });
+  } catch (e) {
+    results.push({ ok: false, error: e?.message || "Não consegui procurar o play nos frames", method: "script-play" });
+  }
   if (Number.isFinite(x) && Number.isFinite(y)) {
     setTimeout(() => remoteInput(tabId, { input: "click", x, y }), 250);
     setTimeout(() => remoteInput(tabId, { input: "click", x, y }), 900);
   }
-  return true;
+  const ok = results.find((r) => r?.ok);
+  if (ok) return { ok: true, method: ok.method || "mixed" };
+  return results[0] || { ok: false, error: "Play não encontrado", method: "mixed" };
 }
 
 async function remoteInput(tabId, msg) {
-  if (!tabId || tabId < 0) return false;
+  if (!tabId || tabId < 0) return { ok: false, error: "Aba inválida", method: "none" };
   if (msg.input === "volume") return setPageVolume(tabId, msg);
   if (msg.input === "embedPlay") return clickLikelyPlay(tabId, msg);
   const x = Number(msg.x);
   const y = Number(msg.y);
   if ((msg.input === "move" || msg.input === "click" || msg.input === "doubleClick" || msg.input === "rightClick" || msg.input === "scroll") && (!Number.isFinite(x) || !Number.isFinite(y))) {
-    return false;
+    return { ok: false, error: "Coordenada inválida", method: "none" };
   }
 
   if (msg.input === "move") {
@@ -191,12 +241,16 @@ async function remoteInput(tabId, msg) {
 
   const button = msg.input === "rightClick" ? "right" : "left";
   const clicks = msg.input === "doubleClick" ? 2 : 1;
+  const scripted = await clickAtPage(tabId, msg);
   await sendMouse(tabId, { type: "mouseMoved", x, y, button: "none" });
+  let hardware = { ok: false, method: "debugger" };
   for (let i = 1; i <= clicks; i += 1) {
-    await sendMouse(tabId, { type: "mousePressed", x, y, button, buttons: button === "left" ? 1 : 2, clickCount: i });
-    await sendMouse(tabId, { type: "mouseReleased", x, y, button, buttons: 0, clickCount: i });
+    hardware = await sendMouse(tabId, { type: "mousePressed", x, y, button, buttons: button === "left" ? 1 : 2, clickCount: i });
+    hardware = await sendMouse(tabId, { type: "mouseReleased", x, y, button, buttons: 0, clickCount: i });
   }
-  return true;
+  if (hardware.ok) return hardware;
+  if (scripted.ok) return scripted;
+  return hardware;
 }
 
 // Extrai o embed dentro da aba aberta pelo botão EMBED (iframe / textarea / html)
@@ -342,8 +396,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
   if (msg.type === "REMOTE_INPUT") {
     (async () => {
-      const ok = await remoteInput(tabId, msg);
-      sendResponse({ ok });
+      const result = await remoteInput(tabId, msg);
+      sendResponse(result);
     })();
     return true;
   }
