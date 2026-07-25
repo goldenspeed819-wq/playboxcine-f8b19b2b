@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      :root { color-scheme: dark; }
+      body { width: 360px; margin: 0; font-family: system-ui, sans-serif; background: #0d0d0f; color: #f2f2f2; }
+      header { padding: 12px 14px; border-bottom: 1px solid #232327; display: flex; align-items: center; gap: 8px; }
+      header b { font-size: 14px; letter-spacing: .5px; }
+      .dot { width: 8px; height: 8px; border-radius: 50%; background: hsl(0 85% 55%); }
+      main { padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+      button { border: 0; border-radius: 8px; padding: 9px 12px; font-size: 13px; font-weight: 600; cursor: pointer; background: hsl(0 85% 55%); color: #fff; }
+      button.ghost { background: #1c1c20; color: #d4d4d8; }
+      .row { display: flex; gap: 8px; }
+      .row button { flex: 1; }
+      input, textarea { width: 100%; box-sizing: border-box; background: #141417; border: 1px solid #2a2a30; color: #eee; border-radius: 8px; padding: 8px; font-size: 12px; }
+      .item { background: #141417; border: 1px solid #232327; border-radius: 8px; padding: 8px; font-size: 12px; }
+      .item .t { font-weight: 600; margin-bottom: 3px; }
+      .item .u { color: #8a8a93; word-break: break-all; font-size: 10px; }
+      .muted { color: #8a8a93; font-size: 11px; }
+      #list { max-height: 220px; overflow: auto; display: flex; flex-direction: column; gap: 6px; }
+      select { width: 100%; background: #141417; color: #eee; border: 1px solid #2a2a30; border-radius: 8px; padding: 7px; font-size: 12px; }
+    </style>
+  </head>
+  <body>
+    <header><span class="dot"></span><b>RYNEX SCRAPER</b><span class="muted" id="count"></span></header>
+    <main>
+      <div class="row">
+        <button id="scan">Procurar embed</button>
+        <button id="add" class="ghost">Adicionar à fila</button>
+      </div>
+      <select id="tipo">
+        <option value="movie">Filme</option>
+        <option value="series">Série</option>
+      </select>
+      <input id="title" placeholder="Título" />
+      <textarea id="url" rows="2" placeholder="Link do embed / stream"></textarea>
+      <div id="found" class="muted"></div>
+      <div id="list"></div>
+      <div class="row">
+        <button id="copy">Copiar JSON</button>
+        <button id="clear" class="ghost">Limpar fila</button>
+      </div>
+      <div class="muted">Cole o JSON em Admin → JSON Externo do Rynex.</div>
+    </main>
+    <script src="popup.js"></script>
+  </body>
+</html>
