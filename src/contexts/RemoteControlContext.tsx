@@ -150,6 +150,20 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
     );
   }, []);
 
+  const dispatchHardwareInput = useCallback(
+    (payload: { input: 'move' | 'click' | 'doubleClick' | 'rightClick' | 'scroll'; x?: number; y?: number; dy?: number }) => {
+      window.postMessage(
+        {
+          source: 'rynex-cine',
+          type: 'RYNEX_REMOTE_INPUT',
+          ...payload,
+        },
+        window.location.origin,
+      );
+    },
+    [],
+  );
+
   const movePointer = useCallback(
     (dx: number, dy: number) => {
       const { x, y } = cursorRef.current;
@@ -163,8 +177,9 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
         target.dispatchEvent(new MouseEvent('mousemove', opts));
         target.dispatchEvent(new PointerEvent('pointermove', { ...opts, pointerType: 'mouse' }));
       }
+      dispatchHardwareInput({ input: 'move', x: nextX, y: nextY });
     },
-    [showCursor],
+    [dispatchHardwareInput, showCursor],
   );
 
   const flashPress = useCallback(() => {
@@ -190,10 +205,14 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
       const target = stack[0];
       if (!target) return;
 
+      const isIframeHit = stack.some((el) => el.tagName === 'IFRAME');
+      const isFrameAreaHit = stack.some((el) => Boolean(el.closest('[data-rc-frame]')));
+
       const base = { bubbles: true, cancelable: true, clientX: px, clientY: py, view: window };
 
       if (kind === 'right') {
         target.dispatchEvent(new MouseEvent('contextmenu', { ...base, button: 2 }));
+        if (isIframeHit || isFrameAreaHit) dispatchHardwareInput({ input: 'rightClick', x: px, y: py });
         return;
       }
 
@@ -214,8 +233,12 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
         clickable.focus?.();
         if (kind === 'tap' || kind === 'double') clickable.click();
       }
+
+      if (isIframeHit || (isFrameAreaHit && !clickable)) {
+        dispatchHardwareInput({ input: kind === 'double' ? 'doubleClick' : 'click', x: px, y: py });
+      }
     },
-    [flashPress, showCursor],
+    [dispatchHardwareInput, flashPress, showCursor],
   );
 
   /** Clicks the Rynex play overlay of the current player (works for embeds too). */
@@ -232,8 +255,23 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
       overlay.click();
       return;
     }
+    const iframe = document.querySelector('[data-rc-frame] iframe') as HTMLIFrameElement | null;
+    if (iframe) {
+      const rect = iframe.getBoundingClientRect();
+      const x = rect.left + rect.width / 2;
+      const y = rect.top + rect.height / 2;
+      showCursor(x, y);
+      flashPress();
+      iframe.focus();
+      dispatchHardwareInput({ input: 'click', x, y });
+      toast({
+        title: 'Clique enviado para o embed',
+        description: 'Para clicar dentro de players externos, use a extensão Rynex atualizada no PC.',
+      });
+      return;
+    }
     playerRef.current?.togglePlay();
-  }, [flashPress, showCursor]);
+  }, [dispatchHardwareInput, flashPress, showCursor]);
 
   const scrollPointer = useCallback(
     (dy: number) => {
@@ -244,9 +282,11 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
       target?.dispatchEvent(
         new WheelEvent('wheel', { bubbles: true, cancelable: true, clientX: px, clientY: py, deltaY: dy }),
       );
+      const isFrameAreaHit = target instanceof HTMLElement && Boolean(target.closest('[data-rc-frame]'));
+      if (isFrameAreaHit || target?.tagName === 'IFRAME') dispatchHardwareInput({ input: 'scroll', x: px, y: py, dy });
       window.scrollBy({ top: dy, behavior: 'auto' });
     },
-    [],
+    [dispatchHardwareInput],
   );
 
   const sendKey = useCallback((key: string) => {

@@ -169,6 +169,24 @@
     }
   }
 
+  // Recebe comandos do controle remoto do Rynex e repassa para o background.
+  // O background usa a API do Chrome para enviar input real do mouse para a aba,
+  // então funciona até dentro de iframes cross-origin quando a extensão está ativa.
+  window.addEventListener("message", (event) => {
+    if (event.source !== window) return;
+    const data = event.data || {};
+    if (data.source !== "rynex-cine" || data.type !== "RYNEX_REMOTE_INPUT") return;
+    try {
+      chrome.runtime.sendMessage({
+        type: "REMOTE_INPUT",
+        input: data.input,
+        x: data.x,
+        y: data.y,
+        dy: data.dy,
+      });
+    } catch (e) {}
+  });
+
   chrome.runtime.onMessage.addListener((msg, s, sendResponse) => {
     if (msg.type === "SCAN") {
       clickEmbed();
