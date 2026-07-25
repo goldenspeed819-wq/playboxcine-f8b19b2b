@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Rynex Scraper",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Captura links de embed e metadados de paginas de filmes/series para importar no Rynex Cine.",
   "permissions": ["storage", "tabs", "scripting", "webRequest", "debugger"],
   "host_permissions": ["<all_urls>"],

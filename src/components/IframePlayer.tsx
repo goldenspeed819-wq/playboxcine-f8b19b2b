@@ -32,6 +32,12 @@ export default function IframePlayer({ src, originalUrl, poster, title }: Props)
     return () => window.clearTimeout(t);
   }, [src, started]);
 
+  useEffect(() => {
+    const startFromRemote = () => setStarted(true);
+    window.addEventListener('rynex:embed-play', startFromRemote);
+    return () => window.removeEventListener('rynex:embed-play', startFromRemote);
+  }, []);
+
   const openUrl = originalUrl || src;
 
   return (
@@ -47,6 +53,7 @@ export default function IframePlayer({ src, originalUrl, poster, title }: Props)
         />
       ) : (
         <button
+          data-rc-play
           type="button"
           onClick={() => setStarted(true)}
           aria-label="Reproduzir"
