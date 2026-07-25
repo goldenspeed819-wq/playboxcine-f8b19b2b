@@ -11,6 +11,7 @@
 
   function isEmbed(u) {
     if (!u || typeof u !== 'string') return false;
+    if (/disqus\.com|\/embed\/comments|comments\/?\?/i.test(u)) return false;
     return /server\.php\?/i.test(u) || /RCServer/i.test(u) || /\/player\d*\//i.test(u);
   }
   function abs(u) {
@@ -50,7 +51,7 @@
   }
 
   function fire(el) {
-    var ev = ['pointerdown', 'mousedown', 'mouseup', 'click'];
+    var ev = ['pointerover', 'mouseover', 'pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click'];
     for (var i = 0; i < ev.length; i++) {
       try {
         el.dispatchEvent(new MouseEvent(ev[i], { bubbles: true, cancelable: true, view: el.ownerDocument.defaultView }));
@@ -68,9 +69,11 @@
       for (var i = 0; i < nodes.length; i++) {
         var el = nodes[i];
         var txt = ((el.textContent || '') + ' ' + (el.className && el.className.baseVal !== undefined ? el.className.baseVal : el.className || '') + ' ' +
-          (el.id || '') + ' ' + (el.getAttribute && (el.getAttribute('alt') || el.getAttribute('title') || el.getAttribute('onclick')) || '')).toLowerCase();
-        if (txt.indexOf('embed') === -1) continue;
-        if (el.children && el.children.length > 3) continue;
+          (el.id || '') + ' ' + (el.getAttribute && ['aria-label', 'alt', 'title', 'data-title', 'data-tooltip', 'onclick'].map(function (a) { return el.getAttribute(a) || ''; }).join(' ') || '')).toLowerCase().trim();
+        var rect = el.getBoundingClientRect && el.getBoundingClientRect();
+        if (!(txt === 'embed' || /^embed\b/.test(txt) || txt.indexOf(' embed') !== -1 || txt.indexOf('embed ') !== -1)) continue;
+        if (rect && (rect.width <= 0 || rect.height <= 0 || rect.width > 500 || rect.height > 220)) continue;
+        if (el.children && el.children.length > 5) continue;
         fire(el);
         clicked++;
       }
