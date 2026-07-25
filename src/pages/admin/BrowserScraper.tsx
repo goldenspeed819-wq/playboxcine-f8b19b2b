@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Copy, Check, Bookmark, Terminal, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,12 @@ const BrowserScraper = () => {
       .trim();
     return `javascript:${encodeURIComponent(compact)}`;
   }, []);
+
+  const dragRef = useRef<HTMLAnchorElement>(null);
+  useEffect(() => {
+    // definido via DOM: o React bloqueia/avisa em href="javascript:"
+    if (dragRef.current) dragRef.current.setAttribute('href', bookmarklet);
+  }, [bookmarklet]);
 
   const copy = async (text: string, key: string) => {
     await navigator.clipboard.writeText(text);
@@ -41,11 +47,23 @@ const BrowserScraper = () => {
         <div className="flex items-center gap-2 font-semibold">
           <Bookmark className="h-4 w-4 text-primary" /> 1. Crie o favorito (bookmarklet)
         </div>
-        <ol className="text-sm text-muted-foreground list-decimal ml-5 space-y-1">
-          <li>Copie o código abaixo.</li>
-          <li>No navegador, crie um novo favorito (Ctrl+D → Editar) com o nome <b>Rynex Scraper</b>.</li>
-          <li>No campo <b>URL</b> do favorito, cole o código copiado e salve.</li>
-        </ol>
+        <p className="text-sm text-muted-foreground">
+          Mostre a barra de favoritos (Ctrl+Shift+B) e <b>arraste o botão abaixo</b> para ela. Esse é o jeito
+          que funciona: ao colar <code>javascript:</code> no campo de URL, o Chrome apaga o prefixo e o favorito
+          não abre.
+        </p>
+        <a
+          ref={dragRef}
+          draggable
+          onClick={(e) => e.preventDefault()}
+          className="inline-flex items-center gap-2 rounded-lg border border-primary bg-primary/10 px-4 py-2 text-sm font-semibold cursor-grab select-none"
+        >
+          <Bookmark className="h-4 w-4 text-primary" /> Rynex Scraper (arraste-me)
+        </a>
+        <p className="text-xs text-muted-foreground">
+          Se preferir colar manualmente: copie o código abaixo, crie o favorito, cole na URL e digite
+          <b> javascript:</b> na frente (sem espaço) antes de salvar.
+        </p>
         <div className="flex gap-2">
           <Textarea readOnly value={bookmarklet} className="font-mono text-[10px] h-24" />
           <Button onClick={() => copy(bookmarklet, 'bm')} className="shrink-0">
