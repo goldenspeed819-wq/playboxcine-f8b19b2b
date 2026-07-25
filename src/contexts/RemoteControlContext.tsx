@@ -40,6 +40,9 @@ export type RemoteAction =
   | 'pointerCenter'
   | 'key'
   | 'embedPlay'
+  | 'siteVolume'
+  | 'siteVolumeDelta'
+  | 'siteToggleMute'
   | 'cinema';
 
 export interface RemoteCommand {
@@ -94,7 +97,11 @@ const RemoteControlContext = createContext<RemoteControlContextValue | null>(nul
 
 const CODE_KEY = 'rynex-remote-code';
 const ENABLED_KEY = 'rynex-remote-enabled';
+const SITE_VOLUME_KEY = 'rynex-site-volume';
+const SITE_MUTED_KEY = 'rynex-site-muted';
 const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
+const clamp = (value: number, min = 0, max = 1) => Math.min(max, Math.max(min, value));
 
 export const generateRemoteCode = () =>
   Array.from({ length: 6 }, () => ALPHABET[Math.floor(Math.random() * ALPHABET.length)]).join('');
@@ -117,6 +124,8 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
   const cursorRef = useRef({ x: 0, y: 0 });
   const hideTimer = useRef<number | null>(null);
   const pressTimer = useRef<number | null>(null);
+  const siteVolumeRef = useRef(Number(localStorage.getItem(SITE_VOLUME_KEY) ?? '1'));
+  const siteMutedRef = useRef(localStorage.getItem(SITE_MUTED_KEY) === 'true');
 
   const playerRef = useRef<RemotePlayerApi | null>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
@@ -151,7 +160,14 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
   }, []);
 
   const dispatchHardwareInput = useCallback(
-    (payload: { input: 'move' | 'click' | 'doubleClick' | 'rightClick' | 'scroll'; x?: number; y?: number; dy?: number }) => {
+    (payload: {
+      input: 'move' | 'click' | 'doubleClick' | 'rightClick' | 'scroll' | 'embedPlay' | 'volume';
+      x?: number;
+      y?: number;
+      dy?: number;
+      value?: number;
+      muted?: boolean;
+    }) => {
       window.postMessage(
         {
           source: 'rynex-cine',
@@ -162,6 +178,26 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
       );
     },
     [],
+  );
+
+  const applySiteAudio = useCallback(
+    (volume: number, muted = siteMutedRef.current) => {
+      const nextVolume = clamp(Number.isFinite(volume) ? volume : 1);
+      const nextMuted = Boolean(muted);
+      siteVolumeRef.current = nextVolume;
+      siteMutedRef.current = nextMuted;
+      localStorage.setItem(SITE_VOLUME_KEY, String(nextVolume));
+      localStorage.setItem(SITE_MUTED_KEY, String(nextMuted));
+
+      document.querySelectorAll('video, audio').forEach((media) => {
+        const el = media as HTMLMediaElement;
+        el.volume = nextVolume;
+        el.muted = nextMuted;
+      });
+
+      dispatchHardwareInput({ input: 'volume', value: nextVolume, muted: nextMuted });
+    },
+    [dispatchHardwareInput],
   );
 
   const movePointer = useCallback(
@@ -234,7 +270,7 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
         if (kind === 'tap' || kind === 'double') clickable.click();
       }
 
-      if (isIframeHit || (isFrameAreaHit && !clickable)) {
+      if (isIframeHit || isFrameAreaHit) {
         dispatchHardwareInput({ input: kind === 'double' ? 'doubleClick' : 'click', x: px, y: py });
       }
     },
@@ -244,15 +280,27 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
   /** Clicks the Rynex play overlay of the current player (works for embeds too). */
   const pressPlayOverlay = useCallback(() => {
     const overlay =
+      (document.querySelector('[data-rc-frame] [data-rc-play]') as HTMLElement | null) ??
       (document.querySelector('[data-rc-frame] button[aria-label="Reproduzir"]') as HTMLElement | null) ??
       (document.querySelector('button[aria-label="Reproduzir"]') as HTMLElement | null) ??
       (document.querySelector('[data-rc-play]') as HTMLElement | null);
     if (overlay) {
       overlay.scrollIntoView({ block: 'center', behavior: 'smooth' });
       const rect = overlay.getBoundingClientRect();
-      showCursor(rect.left + rect.width / 2, rect.top + rect.height / 2);
+      const x = rect.left + rect.width / 2;
+      const y = rect.top + rect.height / 2;
+      showCursor(x, y);
       flashPress();
+      const base = { bubbles: true, cancelable: true, clientX: x, clientY: y, view: window };
+      overlay.dispatchEvent(new PointerEvent('pointerdown', { ...base, pointerType: 'mouse', isPrimary: true }));
+      overlay.dispatchEvent(new MouseEvent('mousedown', base));
+      overlay.dispatchEvent(new PointerEvent('pointerup', { ...base, pointerType: 'mouse', isPrimary: true }));
+      overlay.dispatchEvent(new MouseEvent('mouseup', base));
+      overlay.dispatchEvent(new MouseEvent('click', base));
       overlay.click();
+      window.dispatchEvent(new CustomEvent('rynex:embed-play'));
+      dispatchHardwareInput({ input: 'embedPlay', x, y });
+      window.setTimeout(() => dispatchHardwareInput({ input: 'embedPlay', x, y }), 900);
       return;
     }
     const iframe = document.querySelector('[data-rc-frame] iframe') as HTMLIFrameElement | null;
@@ -264,6 +312,7 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
       flashPress();
       iframe.focus();
       dispatchHardwareInput({ input: 'click', x, y });
+      dispatchHardwareInput({ input: 'embedPlay', x, y });
       toast({
         title: 'Clique enviado para o embed',
         description: 'Para clicar dentro de players externos, use a extensão Rynex atualizada no PC.',
@@ -362,12 +411,15 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
           break;
         case 'volume':
           player?.setVolume(numberValue || 0);
+          applySiteAudio(numberValue || 0, false);
           break;
         case 'volumeDelta':
           player?.volumeDelta(numberValue || 0);
+          applySiteAudio(siteVolumeRef.current + (numberValue || 0), false);
           break;
         case 'toggleMute':
           player?.toggleMute();
+          applySiteAudio(siteVolumeRef.current, !siteMutedRef.current);
           break;
         case 'toggleFullscreen':
           player?.toggleFullscreen();
@@ -408,6 +460,15 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
         case 'embedPlay':
           pressPlayOverlay();
           break;
+        case 'siteVolume':
+          applySiteAudio(numberValue || 0, false);
+          break;
+        case 'siteVolumeDelta':
+          applySiteAudio(siteVolumeRef.current + (numberValue || 0), false);
+          break;
+        case 'siteToggleMute':
+          applySiteAudio(siteVolumeRef.current, !siteMutedRef.current);
+          break;
         case 'cinema':
           toggleCinema();
           break;
@@ -419,6 +480,7 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
     },
     [
       clickPointer,
+      applySiteAudio,
       movePointer,
       navigate,
       pressPlayOverlay,
@@ -453,6 +515,13 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
       supabase.removeChannel(channel);
     };
   }, [code, enabled, handleCommand, sendState]);
+
+  useEffect(() => {
+    applySiteAudio(siteVolumeRef.current, siteMutedRef.current);
+    const observer = new MutationObserver(() => applySiteAudio(siteVolumeRef.current, siteMutedRef.current));
+    observer.observe(document.body, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, [applySiteAudio]);
 
   const value = useMemo(
     () => ({ code, enabled, setEnabled, regenerateCode, isHostConnected, registerPlayer }),
