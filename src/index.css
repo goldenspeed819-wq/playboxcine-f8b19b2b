@@ -306,3 +306,18 @@
 .stagger-3 { animation-delay: 0.15s; }
 .stagger-4 { animation-delay: 0.2s; }
 .stagger-5 { animation-delay: 0.25s; }
+
+/* Remote control: "cinema" mode for external embeds (no user gesture needed) */
+body.rc-cinema {
+  overflow: hidden;
+}
+body.rc-cinema [data-rc-frame] {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  width: 100vw;
+  height: 100vh;
+  aspect-ratio: auto;
+  border-radius: 0;
+  background: #000;
+}
