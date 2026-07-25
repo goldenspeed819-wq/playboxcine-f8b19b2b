@@ -553,3 +553,147 @@ function QuickImportRemote({ send }: { send: (command: RemoteCommand) => void })
     </div>
   );
 }
+// ---------------------------------------------------------------------------
+
+/** Touchpad mode: turns the phone into a virtual mouse for the PC screen. */
+function TouchpadPad({ send }: { send: (command: RemoteCommand) => void }) {
+  const last = useRef<{ x: number; y: number } | null>(null);
+  const moved = useRef(false);
+  const startedAt = useRef(0);
+  const lastTap = useRef(0);
+  const [speed, setSpeed] = useState(1.6);
+  const [scrollMode, setScrollMode] = useState(false);
+
+  const onStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    const t = e.touches[0];
+    last.current = { x: t.clientX, y: t.clientY };
+    moved.current = false;
+    startedAt.current = Date.now();
+  };
+
+  const onMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    const t = e.touches[0];
+    if (!last.current) return;
+    const dx = t.clientX - last.current.x;
+    const dy = t.clientY - last.current.y;
+    last.current = { x: t.clientX, y: t.clientY };
+    if (Math.abs(dx) + Math.abs(dy) < 1) return;
+    moved.current = true;
+
+    if (scrollMode || e.touches.length > 1) {
+      send({ action: 'pointerScroll', dy: -dy * 3 });
+    } else {
+      send({ action: 'pointerMove', dx: dx * speed, dy: dy * speed });
+    }
+  };
+
+  const onEnd = () => {
+    const duration = Date.now() - startedAt.current;
+    last.current = null;
+    if (moved.current || duration > 400) return;
+
+    const now = Date.now();
+    if (now - lastTap.current < 280) {
+      lastTap.current = 0;
+      send({ action: 'pointerDoubleTap' });
+    } else {
+      lastTap.current = now;
+      send({ action: 'pointerTap' });
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div
+        onTouchStart={onStart}
+        onTouchMove={onMove}
+        onTouchEnd={onEnd}
+        className={cn(
+          'relative h-72 rounded-2xl border border-border/60 touch-none select-none overflow-hidden',
+          scrollMode ? 'bg-primary/10' : 'bg-secondary/40',
+        )}
+      >
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-muted-foreground pointer-events-none">
+          <MousePointer2 className="w-8 h-8 text-primary/70" />
+          <p className="text-xs font-medium">
+            {scrollMode ? 'Modo rolagem — arraste para rolar' : 'Arraste para mover o cursor'}
+          </p>
+          <p className="text-[10px]">1 toque = clique · 2 toques = duplo clique</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-3">
+        <Button variant="secondary" className="gap-2" onClick={() => send({ action: 'pointerTap' })}>
+          <MousePointer2 className="w-4 h-4" />
+          Clique
+        </Button>
+        <Button
+          variant={scrollMode ? 'default' : 'secondary'}
+          className="gap-2"
+          onClick={() => setScrollMode((v) => !v)}
+        >
+          <ArrowDown className="w-4 h-4" />
+          Rolagem
+        </Button>
+        <Button variant="secondary" className="gap-2" onClick={() => send({ action: 'pointerCenter' })}>
+          <Crosshair className="w-4 h-4" />
+          Centralizar
+        </Button>
+      </div>
+
+      {/* Directional nudges (precision) */}
+      <div className="premium-card p-4 space-y-3">
+        <p className="text-xs text-muted-foreground">Ajuste fino do cursor</p>
+        <div className="grid grid-cols-3 gap-2 max-w-[220px] mx-auto">
+          <span />
+          <Button variant="outline" size="icon" onClick={() => send({ action: 'pointerMove', dy: -20 })}>
+            <ArrowUp className="w-4 h-4" />
+          </Button>
+          <span />
+          <Button variant="outline" size="icon" onClick={() => send({ action: 'pointerMove', dx: -20 })}>
+            <ArrowLeft className="w-4 h-4" />
+          </Button>
+          <Button variant="outline" size="icon" onClick={() => send({ action: 'pointerTap' })}>
+            <CornerDownLeft className="w-4 h-4" />
+          </Button>
+          <Button variant="outline" size="icon" onClick={() => send({ action: 'pointerMove', dx: 20 })}>
+            <ArrowRight className="w-4 h-4" />
+          </Button>
+          <span />
+          <Button variant="outline" size="icon" onClick={() => send({ action: 'pointerMove', dy: 20 })}>
+            <ArrowDown className="w-4 h-4" />
+          </Button>
+          <span />
+        </div>
+      </div>
+
+      {/* Sensitivity */}
+      <div className="premium-card p-4 space-y-3">
+        <div className="flex items-center justify-between text-sm">
+          <span>Sensibilidade</span>
+          <span className="text-xs text-muted-foreground">{speed.toFixed(1)}x</span>
+        </div>
+        <Slider value={[speed]} min={0.6} max={3.5} step={0.1} onValueChange={(v) => setSpeed(v[0])} />
+      </div>
+
+      {/* Iframe helpers */}
+      <div className="grid grid-cols-2 gap-3">
+        <Button variant="secondary" className="gap-2" onClick={() => send({ action: 'cinema' })}>
+          <MonitorPlay className="w-4 h-4" />
+          Tela cheia (embed)
+        </Button>
+        <Button variant="secondary" className="gap-2" onClick={() => send({ action: 'reload' })}>
+          <RotateCcw className="w-4 h-4" />
+          Recarregar
+        </Button>
+      </div>
+
+      <p className="text-[11px] text-muted-foreground leading-relaxed px-1">
+        No player externo (embed), o cursor aparece na tela do PC e clica em qualquer botão do site do
+        Rynex. Dentro do vídeo de outro provedor, use "Tela cheia (embed)" para expandir e as teclas do
+        próprio provedor — por segurança, o navegador não deixa nenhum site enviar cliques para dentro
+        de um iframe de outro domínio.
+      </p>
+    </div>
+  );
+}
