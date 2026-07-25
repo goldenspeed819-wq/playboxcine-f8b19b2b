@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import { EpisodeNotifications } from '@/components/EpisodeNotifications';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { RemoteControlDialog } from '@/components/RemoteControlDialog';
 import logo from '@/assets/logo.png';
 
 export function Header() {
@@ -136,6 +137,7 @@ export function Header() {
             <div className="flex items-center">
               <div className="hidden sm:flex"><EpisodeNotifications /></div>
               <div className="hidden sm:flex"><ThemeToggle /></div>
+              <div className="hidden sm:flex"><RemoteControlDialog /></div>
               <Button variant="ghost" size="icon" onClick={() => navigate('/favorites')}
                 className="hidden sm:flex text-muted-foreground hover:text-primary h-8 w-8 rounded-lg" title="Favoritos">
                 <Heart className="w-4 h-4" />
