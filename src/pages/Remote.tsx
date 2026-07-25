@@ -230,16 +230,30 @@ export default function Remote() {
             </p>
           </div>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => {
-            setPairedCode(null);
-            setHostState(null);
-          }}
-        >
-          Trocar
-        </Button>
+        <div className="flex items-center gap-1 shrink-0">
+          <Button
+            variant="ghost"
+            size="sm"
+            className={cn('text-xs', vibrateOn ? 'text-primary' : 'text-muted-foreground')}
+            onClick={() => {
+              const next = !vibrateOn;
+              setVibrateOn(next);
+              localStorage.setItem('rynex-remote-vibrate', String(next));
+            }}
+          >
+            {vibrateOn ? 'Vibrar: on' : 'Vibrar: off'}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setPairedCode(null);
+              setHostState(null);
+            }}
+          >
+            Trocar
+          </Button>
+        </div>
       </div>
 
       <Tabs defaultValue="control" className="px-4 pt-4">
