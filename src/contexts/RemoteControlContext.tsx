@@ -181,7 +181,7 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
   );
 
   const applySiteAudio = useCallback(
-    (volume: number, muted = siteMutedRef.current) => {
+    (volume: number, muted = siteMutedRef.current, notifyExtension = true) => {
       const nextVolume = clamp(Number.isFinite(volume) ? volume : 1);
       const nextMuted = Boolean(muted);
       siteVolumeRef.current = nextVolume;
@@ -195,7 +195,7 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
         el.muted = nextMuted;
       });
 
-      dispatchHardwareInput({ input: 'volume', value: nextVolume, muted: nextMuted });
+      if (notifyExtension) dispatchHardwareInput({ input: 'volume', value: nextVolume, muted: nextMuted });
     },
     [dispatchHardwareInput],
   );
@@ -518,7 +518,7 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
 
   useEffect(() => {
     applySiteAudio(siteVolumeRef.current, siteMutedRef.current);
-    const observer = new MutationObserver(() => applySiteAudio(siteVolumeRef.current, siteMutedRef.current));
+    const observer = new MutationObserver(() => applySiteAudio(siteVolumeRef.current, siteMutedRef.current, false));
     observer.observe(document.body, { childList: true, subtree: true });
     return () => observer.disconnect();
   }, [applySiteAudio]);
