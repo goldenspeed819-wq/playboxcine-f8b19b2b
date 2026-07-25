@@ -1,112 +1,113 @@
-/* Rynex Scraper — cole no console do site de origem (ou use como bookmarklet).
-   Captura automaticamente streams .m3u8 / .mp4 carregados pela página,
-   junta título / capa / sinopse e acumula os itens entre páginas. */
+/* Rynex Scraper — cole no console da página do conteúdo (ou use como bookmarklet).
+   Foco: capturar o link de EMBED (player3/server.php?server=RCServerXX&vid=...). */
 (function () {
   if (window.__RYNEX_SCRAPER__) { window.__RYNEX_SCRAPER__.open(); return; }
 
   var STORE = 'rynex_scraper_items';
-  var found = [];
+  var embeds = [];
 
-  function load() {
-    try { return JSON.parse(localStorage.getItem(STORE) || '[]'); } catch (e) { return []; }
-  }
-  function save(items) {
-    try { localStorage.setItem(STORE, JSON.stringify(items)); } catch (e) {}
-  }
-  function isStream(u) {
-    if (!u || typeof u !== 'string') return false;
-    if (u.indexOf('blob:') === 0) return false;
-    if (u.indexOf('/seg-') !== -1) return false;
-    if (isEmbed(u)) return true;
-    return /\.m3u8(\?|$)/i.test(u) || /\.mp4(\?|$)/i.test(u) || /\.mpd(\?|$)/i.test(u);
-  }
+  function load() { try { return JSON.parse(localStorage.getItem(STORE) || '[]'); } catch (e) { return []; } }
+  function save(i) { try { localStorage.setItem(STORE, JSON.stringify(i)); } catch (e) {} }
+
   function isEmbed(u) {
+    if (!u || typeof u !== 'string') return false;
     return /server\.php\?/i.test(u) || /RCServer/i.test(u) || /\/player\d*\//i.test(u);
   }
-  function typeOf(u) {
-    if (isEmbed(u)) return 'EMBED';
-    if (/\.m3u8/i.test(u)) return 'HLS';
-    if (/\.mpd/i.test(u)) return 'DASH';
-    return 'MP4';
+  function abs(u) {
+    if (!u) return null;
+    if (u.indexOf('//') === 0) return location.protocol + u;
+    try { return new URL(u, location.href).href; } catch (e) { return null; }
   }
   function add(u) {
-    try { u = new URL(u, location.href).href; } catch (e) { return; }
-    if (!isStream(u)) return;
-    if (found.some(function (v) { return v.url === u; })) return;
-    found.push({ url: u, type: typeOf(u) });
+    u = abs(u);
+    if (!u || !isEmbed(u)) return;
+    if (embeds.indexOf(u) !== -1) return;
+    embeds.push(u);
     render();
   }
 
-  // --- hooks de rede ---
-  var _fetch = window.fetch;
-  window.fetch = function (input, init) {
-    try { add(typeof input === 'string' ? input : (input && input.url)); } catch (e) {}
-    return _fetch.apply(this, arguments);
-  };
-  var _open = XMLHttpRequest.prototype.open;
-  XMLHttpRequest.prototype.open = function (m, u) { try { add(u); } catch (e) {} return _open.apply(this, arguments); };
-
-  try {
-    new PerformanceObserver(function (list) {
-      list.getEntries().forEach(function (e) { add(e.name); });
-    }).observe({ entryTypes: ['resource'] });
-    performance.getEntriesByType('resource').forEach(function (e) { add(e.name); });
-  } catch (e) {}
-
-  setInterval(function () {
-    document.querySelectorAll('video, source').forEach(function (el) { add(el.src || el.getAttribute('src')); });
-    document.querySelectorAll('iframe').forEach(function (el) { add(el.src || el.getAttribute('src')); });
-    document.querySelectorAll('textarea, input').forEach(function (el) {
-      var v = el.value || '';
-      var mm = v.match(/(?:https?:)?\/\/[^"'\s]+server\.php\?[^"'\s]*/i);
-      if (mm) add(mm[0].indexOf('//') === 0 ? location.protocol + mm[0] : mm[0]);
-    });
-    var html = document.documentElement.innerHTML;
-    var re = /https?:\/\/[^"'\s\\]+\.(?:m3u8|mp4|mpd)[^"'\s\\]*/gi, m;
-    while ((m = re.exec(html))) add(m[0]);
-    var re2 = /(?:https?:)?\/\/[^"'\s\\<>]+server\.php\?[^"'\s\\<>]*/gi, m2;
-    while ((m2 = re2.exec(html))) add(m2[0].indexOf('//') === 0 ? location.protocol + m2[0] : m2[0]);
-  }, 1500);
-
-  function meta(sel, attr) {
-    var el = document.querySelector(sel);
-    return el ? (el.getAttribute(attr || 'content') || '').trim() : '';
+  function scanText(text) {
+    if (!text) return;
+    var re = /(?:https?:)?\/\/[^"'\s\\<>()]+?\/player\d*\/[^"'\s\\<>()]*/gi, m;
+    while ((m = re.exec(text))) add(m[0]);
+    var re2 = /(?:https?:)?\/\/[^"'\s\\<>()]+server\.php\?[^"'\s\\<>()]*/gi, m2;
+    while ((m2 = re2.exec(text))) add(m2[0]);
+    var re3 = /(?:src|SRC)\s*=\s*["']([^"']*(?:server\.php|player\d)[^"']*)["']/g, m3;
+    while ((m3 = re3.exec(text))) add(m3[1]);
   }
+
+  function clickEmbedButton() {
+    var nodes = document.querySelectorAll('a,button,div,span,img,[onclick],[class*=embed],[id*=embed]');
+    for (var i = 0; i < nodes.length; i++) {
+      var el = nodes[i];
+      var txt = ((el.textContent || '') + ' ' + (el.className || '') + ' ' + (el.id || '') + ' ' + (el.getAttribute('alt') || '')).toLowerCase();
+      if (txt.indexOf('embed') !== -1 && el.offsetParent !== null) {
+        try { el.click(); } catch (e) {}
+      }
+    }
+  }
+
+  function scan() {
+    document.querySelectorAll('iframe').forEach(function (f) {
+      add(f.src || f.getAttribute('src'));
+      try { scanText(f.contentDocument.documentElement.innerHTML); } catch (e) {}
+    });
+    document.querySelectorAll('textarea, input').forEach(function (el) { scanText(el.value || ''); });
+    document.querySelectorAll('a').forEach(function (a) { add(a.getAttribute('href')); });
+    scanText(document.documentElement.innerHTML);
+    // HTML original do servidor (pega links inseridos por script depois)
+    if (!scan._raw) {
+      scan._raw = true;
+      try {
+        fetch(location.href, { credentials: 'include' })
+          .then(function (r) { return r.text(); })
+          .then(function (t) { scanText(t); })
+          .catch(function () {});
+      } catch (e) {}
+    }
+  }
+
+  setInterval(scan, 2000);
+
+  function meta(sel) { var el = document.querySelector(sel); return el ? (el.getAttribute('content') || '').trim() : ''; }
   function pageTitle() {
     return meta('meta[property="og:title"]') ||
       (document.querySelector('h1') && document.querySelector('h1').textContent.trim()) ||
       document.title.trim();
   }
-  function best() {
-    var m = found.filter(function (v) { return v.type === 'HLS' && v.url.indexOf('master.m3u8') !== -1; })[0];
-    return m || found.filter(function (v) { return v.type === 'HLS'; })[0] || found[0] || null;
-  }
 
-  // --- UI ---
   var box = document.createElement('div');
-  box.setAttribute('style', 'position:fixed;z-index:2147483647;right:16px;bottom:16px;width:330px;background:#111;color:#fff;font:12px/1.4 system-ui,sans-serif;border:1px solid #e11d2f;border-radius:12px;padding:12px;box-shadow:0 10px 40px rgba(0,0,0,.6)');
+  box.setAttribute('style', 'position:fixed;z-index:2147483647;right:16px;bottom:16px;width:340px;background:#111;color:#fff;font:12px/1.4 system-ui,sans-serif;border:1px solid #e11d2f;border-radius:12px;padding:12px;box-shadow:0 10px 40px rgba(0,0,0,.6)');
   document.documentElement.appendChild(box);
+
+  var manual = '';
+
+  function chosen() { return manual || embeds[0] || null; }
 
   function render() {
     var items = load();
-    var b = best();
+    var cur = chosen();
     box.innerHTML =
       '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">' +
         '<b style="color:#e11d2f;letter-spacing:.5px">RYNEX SCRAPER</b>' +
         '<span style="opacity:.6;cursor:pointer" id="rx-hide">—</span>' +
       '</div>' +
-      '<div style="opacity:.85;margin-bottom:6px">' + (found.length ? found.length + ' stream(s) detectado(s)' : 'Dê play no vídeo para detectar…') + '</div>' +
-      '<div style="font-size:10px;word-break:break-all;opacity:.6;max-height:52px;overflow:auto;margin-bottom:8px">' + (b ? b.url : '') + '</div>' +
+      '<div style="opacity:.85;margin-bottom:6px">' + (embeds.length ? embeds.length + ' embed(s) encontrado(s)' : 'Nenhum embed ainda — clique em "Procurar embed"') + '</div>' +
+      '<input id="rx-url" placeholder="Cole aqui o link do Embed (opcional)" value="' + (manual ? manual.replace(/"/g, '&quot;') : (embeds[0] || '')) + '" style="width:100%;box-sizing:border-box;background:#000;color:#0f0;border:1px solid #333;border-radius:6px;padding:6px;font:10px monospace;margin-bottom:8px" />' +
       '<div style="margin-bottom:8px;opacity:.9">Fila: <b>' + items.length + '</b> item(ns)</div>' +
       '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
+        '<button id="rx-scan" style="flex:1 1 100%;background:#222;color:#fff;border:1px solid #444;border-radius:8px;padding:7px;cursor:pointer">Procurar embed</button>' +
         '<button id="rx-add" style="flex:1;background:#e11d2f;color:#fff;border:0;border-radius:8px;padding:7px;cursor:pointer;font-weight:600">Adicionar</button>' +
         '<button id="rx-copy" style="flex:1;background:#222;color:#fff;border:1px solid #333;border-radius:8px;padding:7px;cursor:pointer">Copiar JSON</button>' +
         '<button id="rx-clear" style="background:#222;color:#888;border:1px solid #333;border-radius:8px;padding:7px;cursor:pointer">Limpar</button>' +
       '</div>';
 
+    box.querySelector('#rx-url').oninput = function (e) { manual = e.target.value.trim(); };
     box.querySelector('#rx-hide').onclick = function () { box.style.display = 'none'; };
+    box.querySelector('#rx-scan').onclick = function () { clickEmbedButton(); scan(); setTimeout(scan, 800); };
     box.querySelector('#rx-add').onclick = function () {
-      if (!found.length) { alert('Nenhum stream detectado ainda. Dê play no vídeo.'); return; }
+      var url = (box.querySelector('#rx-url').value || '').trim() || chosen();
+      if (!url) { alert('Nenhum embed encontrado. Clique no botão EMBED do player e cole o link aqui.'); return; }
       var items = load();
       var title = prompt('Título do conteúdo:', pageTitle());
       if (title === null) return;
@@ -116,9 +117,10 @@
         title: title,
         thumb: meta('meta[property="og:image"]'),
         description: meta('meta[property="og:description"]') || meta('meta[name="description"]'),
-        videos: found.slice()
+        videos: [{ url: url, type: 'EMBED' }]
       });
       save(items);
+      manual = '';
       render();
       alert('Adicionado! Total na fila: ' + items.length);
     };
@@ -128,11 +130,10 @@
       navigator.clipboard.writeText(json).then(function () { alert('JSON copiado! Cole em Admin > JSON Externo.'); },
         function () { prompt('Copie o JSON:', json); });
     };
-    box.querySelector('#rx-clear').onclick = function () {
-      if (confirm('Limpar a fila?')) { save([]); render(); }
-    };
+    box.querySelector('#rx-clear').onclick = function () { if (confirm('Limpar a fila?')) { save([]); render(); } };
   }
 
   window.__RYNEX_SCRAPER__ = { open: function () { box.style.display = 'block'; render(); } };
+  scan();
   render();
 })();
