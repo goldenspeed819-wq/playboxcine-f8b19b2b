@@ -383,6 +383,12 @@ const SeriesDetail = () => {
                 <IframePlayer
                   src={resolvedEpisodeIframeUrl || normalizedEpisodeUrl}
                   originalUrl={normalizedEpisodeUrl}
+                  poster={selectedEpisode?.thumbnail || series.thumbnail}
+                  title={
+                    selectedEpisode
+                      ? `${series.title} - T${selectedEpisode.season}E${selectedEpisode.episode}`
+                      : series.title
+                  }
                 />
               ) : (
                 <VideoPlayer

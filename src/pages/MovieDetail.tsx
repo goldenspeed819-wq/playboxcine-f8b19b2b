@@ -223,7 +223,12 @@ const MovieDetail = () => {
               {/* Video Player */}
               {currentVideoUrl && getSourceType(currentVideoUrl) === 'iframe' ? (
                 iframeSrc ? (
-                  <IframePlayer src={iframeSrc} originalUrl={currentVideoUrl} />
+                  <IframePlayer
+                    src={iframeSrc}
+                    originalUrl={currentVideoUrl}
+                    poster={movie.thumbnail}
+                    title={hasPart2 ? `${movie.title} - Parte ${currentPart}` : movie.title}
+                  />
                 ) : (
                   <div className="aspect-video rounded-xl border bg-card p-6 flex items-center justify-center text-center">
                     <div className="space-y-3">

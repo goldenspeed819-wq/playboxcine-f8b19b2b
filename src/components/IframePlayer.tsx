@@ -1,19 +1,27 @@
 import { useEffect, useState } from 'react';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 type Props = {
   src: string;
   originalUrl?: string;
+  poster?: string | null;
+  title?: string;
 };
 
-export default function IframePlayer({ src, originalUrl }: Props) {
+export default function IframePlayer({ src, originalUrl, poster, title }: Props) {
   const [loaded, setLoaded] = useState(false);
   const [showFallback, setShowFallback] = useState(false);
+  const [started, setStarted] = useState(false);
 
   useEffect(() => {
     setLoaded(false);
     setShowFallback(false);
+    setStarted(false);
+  }, [src]);
+
+  useEffect(() => {
+    if (!started) return;
 
     const t = window.setTimeout(() => {
       // Many hosts block embedding (X-Frame-Options/CSP). We can't force it,
@@ -22,23 +30,48 @@ export default function IframePlayer({ src, originalUrl }: Props) {
     }, 6000);
 
     return () => window.clearTimeout(t);
-  }, [src]);
+  }, [src, started]);
 
   const openUrl = originalUrl || src;
 
   return (
     <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden">
-      <iframe
-        src={src}
-        className="absolute inset-0 w-full h-full"
-        frameBorder="0"
-        allow="autoplay; fullscreen; picture-in-picture"
-        allowFullScreen
-        loading="lazy"
-        onLoad={() => setLoaded(true)}
-      />
+      {started ? (
+        <iframe
+          src={src.includes('autoplay') ? src : `${src}${src.includes('?') ? '&' : '?'}autoplay=1`}
+          className="absolute inset-0 w-full h-full"
+          frameBorder="0"
+          allow="autoplay; fullscreen; picture-in-picture"
+          allowFullScreen
+          onLoad={() => setLoaded(true)}
+        />
+      ) : (
+        <button
+          type="button"
+          onClick={() => setStarted(true)}
+          aria-label="Reproduzir"
+          className="group absolute inset-0 w-full h-full"
+        >
+          {poster && (
+            <img
+              src={poster}
+              alt={title ? `Capa de ${title}` : 'Capa do vídeo'}
+              className="absolute inset-0 w-full h-full object-cover opacity-60"
+            />
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/30 to-transparent" />
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
+            <span className="flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-primary text-primary-foreground shadow-lg transition-transform group-hover:scale-110">
+              <Play className="w-8 h-8 sm:w-10 sm:h-10 ml-1 fill-current" />
+            </span>
+            {title && (
+              <span className="font-display text-lg sm:text-xl text-foreground drop-shadow">{title}</span>
+            )}
+          </div>
+        </button>
+      )}
 
-      {showFallback && !loaded && (
+      {started && showFallback && !loaded && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/70 p-4">
           <div className="max-w-md w-full text-center space-y-3">
             <p className="text-sm text-white/80">
