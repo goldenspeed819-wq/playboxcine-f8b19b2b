@@ -94,12 +94,26 @@ async function setPageVolume(tabId, msg) {
       target: { tabId, allFrames: true },
       args: [volume, muted],
       func: (v, m) => {
-        document.querySelectorAll("video, audio").forEach((media) => {
-          media.volume = v;
-          media.muted = m;
-        });
+        const apply = () => {
+          document.querySelectorAll("video, audio").forEach((media) => {
+            media.volume = v;
+            media.muted = m;
+          });
+        };
+        apply();
         window.__rynexSiteVolume = v;
         window.__rynexSiteMuted = m;
+        if (!window.__rynexVolumeObserver) {
+          window.__rynexVolumeObserver = new MutationObserver(() => {
+            const volume = typeof window.__rynexSiteVolume === "number" ? window.__rynexSiteVolume : v;
+            const muted = Boolean(window.__rynexSiteMuted);
+            document.querySelectorAll("video, audio").forEach((media) => {
+              media.volume = volume;
+              media.muted = muted;
+            });
+          });
+          window.__rynexVolumeObserver.observe(document.documentElement, { childList: true, subtree: true });
+        }
       },
     });
     return true;
