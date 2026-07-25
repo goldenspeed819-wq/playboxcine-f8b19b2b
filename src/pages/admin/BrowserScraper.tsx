@@ -32,7 +32,8 @@ const BrowserScraper = () => {
         <h1 className="text-3xl font-display tracking-wide">Scraper do Navegador</h1>
         <p className="text-muted-foreground text-sm mt-1">
           O scraper roda dentro do seu navegador, na aba do site de origem — assim ele passa pelo Cloudflare
-          normalmente (você já está autenticado na página) e captura os streams reais que o player carrega.
+          normalmente. Ele captura o <b>link de embed</b> do player (RCServer / server.php), que é o mesmo que
+          você pegava no botão EMBED.
         </p>
       </div>
 
@@ -72,7 +73,8 @@ const BrowserScraper = () => {
         <div className="font-semibold">3. Como usar em massa</div>
         <ol className="text-sm text-muted-foreground list-decimal ml-5 space-y-1">
           <li>Abra a página do conteúdo e clique no favorito <b>Rynex Scraper</b> (um painel vermelho aparece no canto).</li>
-          <li>Dê <b>play</b> no vídeo — o painel mostra os streams detectados (.m3u8 / .mp4).</li>
+          <li>Clique em <b>Procurar embed</b> — ele varre iframes, o HTML e tenta clicar no botão EMBED do player.</li>
+          <li>Se não achar, clique no <b>EMBED</b> do player, copie o link e cole no campo do painel.</li>
           <li>Clique em <b>Adicionar</b> — confirme o título. O item entra na fila.</li>
           <li>Vá para o próximo filme/série e repita. A fila fica salva, mesmo trocando de página.</li>
           <li>No fim, clique em <b>Copiar JSON</b> e cole em <b>JSON Externo</b> para importar tudo de uma vez.</li>
