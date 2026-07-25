@@ -131,6 +131,25 @@ function proxyUrl(stream: string, referer: string): string {
   return `${base}/functions/v1/stream-proxy?url=${encodeURIComponent(stream)}&referer=${encodeURIComponent(referer)}`;
 }
 
+/** RedeCanais mirrors bounce through google.com/url?...&q=<encoded real url> */
+function unwrapGoogleRedirect(url: string): string | null {
+  try {
+    const u = new URL(url);
+    if (!u.hostname.includes('google.') || !u.pathname.startsWith('/url')) return null;
+    const q = u.searchParams.get('q') || u.searchParams.get('url');
+    if (!q) return null;
+    const decoded = decodeURIComponent(q);
+    return /^https?:\/\//i.test(decoded) ? decoded : null;
+  } catch {
+    return null;
+  }
+}
+
+function unusedProxy(stream: string, referer: string): string {
+  const base = Deno.env.get('SUPABASE_URL') || '';
+  return `${base}/functions/v1/stream-proxy?url=${encodeURIComponent(stream)}&referer=${encodeURIComponent(referer)}`;
+}
+
 function iframeSrcs(html: string, baseUrl: string): string[] {
   const out: string[] = [];
   for (const m of html.matchAll(/<iframe[^>]+src=["']([^"']+)["']/gi)) {
@@ -145,12 +164,15 @@ function iframeSrcs(html: string, baseUrl: string): string[] {
 
 /** Fetches a page (and up to one nested iframe level) looking for a direct .m3u8/.mp4 stream. */
 async function findDirectStream(pageUrl: string, depth = 0): Promise<{ stream: string; referer: string } | null> {
-  if (depth > 1) return null;
+  if (depth > 3) return null;
 
   try {
     const u = new URL(pageUrl);
     const resp = await fetchPage(pageUrl, { 'Referer': `${u.protocol}//${u.host}/` });
     const finalUrl = resp.url || pageUrl;
+
+    const unwrapped = unwrapGoogleRedirect(finalUrl);
+    if (unwrapped) return await findDirectStream(unwrapped, depth + 1);
 
     if (/\.(m3u8|mp4)(\?|$)/i.test(finalUrl)) {
       return { stream: finalUrl, referer: `${u.protocol}//${u.host}/` };
@@ -160,6 +182,23 @@ async function findDirectStream(pageUrl: string, depth = 0): Promise<{ stream: s
     if (!contentType.includes('text/html')) return null;
 
     const html = await resp.text();
+
+    // meta refresh / JS location redirects
+    const redirectMatch =
+      html.match(/http-equiv=["']refresh["'][^>]*content=["'][^"']*url=([^"']+)["']/i) ||
+      html.match(/(?:window\.)?location(?:\.href)?\s*=\s*["']([^"']+)["']/i);
+    if (redirectMatch?.[1]) {
+      try {
+        const next = new URL(redirectMatch[1].trim(), finalUrl).toString();
+        if (next !== finalUrl) {
+          const viaRedirect = await findDirectStream(next, depth + 1);
+          if (viaRedirect) return viaRedirect;
+        }
+      } catch {
+        // ignore
+      }
+    }
+
     const streams = extractDirectStreams(html, finalUrl);
     if (streams.length > 0) {
       return { stream: streams[0], referer: new URL(finalUrl).origin + '/' };
