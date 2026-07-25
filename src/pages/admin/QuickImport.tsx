@@ -571,6 +571,41 @@ export default function QuickImport() {
                     </div>
                   </div>
 
+                  <div className="space-y-2 rounded-xl bg-muted/40 p-3">
+                    <Label>Numeração dos episódios nas URLs</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Como o site de origem numera os episódios a cada nova temporada?
+                    </p>
+                    <div className="grid sm:grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setEpisodeNumbering('reset')}
+                        className={cn(
+                          'text-left rounded-lg border p-3 text-xs transition-colors',
+                          episodeNumbering === 'reset'
+                            ? 'border-primary bg-primary/10 text-primary'
+                            : 'border-border hover:bg-muted/60',
+                        )}
+                      >
+                        <span className="block font-semibold">Zera a cada temporada</span>
+                        <span className="block text-muted-foreground">T01EP52 → T02EP01</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEpisodeNumbering('continuous')}
+                        className={cn(
+                          'text-left rounded-lg border p-3 text-xs transition-colors',
+                          episodeNumbering === 'continuous'
+                            ? 'border-primary bg-primary/10 text-primary'
+                            : 'border-border hover:bg-muted/60',
+                        )}
+                      >
+                        <span className="block font-semibold">Continua a contagem</span>
+                        <span className="block text-muted-foreground">T01EP52 → T02EP53</span>
+                      </button>
+                    </div>
+                  </div>
+
                   <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
                     <div className="space-y-2">
                       <Label>Episódio do preview</Label>
@@ -611,7 +646,12 @@ export default function QuickImport() {
                           {result.status === 'success' ? <CheckCircle className="w-4 h-4 text-green-500" /> :
                            result.status === 'error' ? <XCircle className="w-4 h-4 text-destructive" /> :
                            <div className="w-4 h-4 rounded-full bg-muted" />}
-                          <span className="font-mono text-xs text-muted-foreground">T{String(result.season).padStart(2, '0')}E{String(result.episode).padStart(2, '0')}</span>
+                          <span className="font-mono text-xs text-muted-foreground">
+                            T{String(result.season).padStart(2, '0')}E{String(result.episode).padStart(2, '0')}
+                            {result.urlEpisode !== result.episode && (
+                              <span className="text-primary"> →EP{String(result.urlEpisode).padStart(2, '0')}</span>
+                            )}
+                          </span>
                           <span className="flex-1 truncate text-xs text-muted-foreground">{result.url}</span>
                           <span
                             className={cn(
