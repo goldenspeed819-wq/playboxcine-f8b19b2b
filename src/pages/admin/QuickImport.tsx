@@ -539,6 +539,41 @@ export default function QuickImport() {
               <p>• Você pode alterar a URL do preview antes de importar</p>
             </div>
 
+            <div className="space-y-2 rounded-xl border border-primary/30 bg-muted/40 p-3">
+              <Label>Numeração dos episódios nas URLs</Label>
+              <p className="text-xs text-muted-foreground">
+                Como o site de origem numera os episódios a cada nova temporada?
+              </p>
+              <div className="grid sm:grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEpisodeNumbering('reset')}
+                  className={cn(
+                    'text-left rounded-lg border p-3 text-xs transition-colors',
+                    episodeNumbering === 'reset'
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-border hover:bg-muted/60',
+                  )}
+                >
+                  <span className="block font-semibold">Zera a cada temporada</span>
+                  <span className="block text-muted-foreground">T01EP52 → T02EP01</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEpisodeNumbering('continuous')}
+                  className={cn(
+                    'text-left rounded-lg border p-3 text-xs transition-colors',
+                    episodeNumbering === 'continuous'
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-border hover:bg-muted/60',
+                  )}
+                >
+                  <span className="block font-semibold">Continua a contagem</span>
+                  <span className="block text-muted-foreground">T01EP52 → T02EP53</span>
+                </button>
+              </div>
+            </div>
+
             <Button
               onClick={handleSearchTMDB}
               disabled={!seriesTitle.trim() || !seriesAbbreviation.trim() || isSearching}
@@ -568,41 +603,6 @@ export default function QuickImport() {
                           </span>
                         ))}
                       </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2 rounded-xl bg-muted/40 p-3">
-                    <Label>Numeração dos episódios nas URLs</Label>
-                    <p className="text-xs text-muted-foreground">
-                      Como o site de origem numera os episódios a cada nova temporada?
-                    </p>
-                    <div className="grid sm:grid-cols-2 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setEpisodeNumbering('reset')}
-                        className={cn(
-                          'text-left rounded-lg border p-3 text-xs transition-colors',
-                          episodeNumbering === 'reset'
-                            ? 'border-primary bg-primary/10 text-primary'
-                            : 'border-border hover:bg-muted/60',
-                        )}
-                      >
-                        <span className="block font-semibold">Zera a cada temporada</span>
-                        <span className="block text-muted-foreground">T01EP52 → T02EP01</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setEpisodeNumbering('continuous')}
-                        className={cn(
-                          'text-left rounded-lg border p-3 text-xs transition-colors',
-                          episodeNumbering === 'continuous'
-                            ? 'border-primary bg-primary/10 text-primary'
-                            : 'border-border hover:bg-muted/60',
-                        )}
-                      >
-                        <span className="block font-semibold">Continua a contagem</span>
-                        <span className="block text-muted-foreground">T01EP52 → T02EP53</span>
-                      </button>
                     </div>
                   </div>
 
