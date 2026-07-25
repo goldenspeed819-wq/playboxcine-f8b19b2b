@@ -106,6 +106,7 @@
       } catch (e) {
         continue;
       }
+      collectEmbedApi(html, out.embeds);
       (html.match(EMBED_RE) || []).forEach((u) => {
         if (isEmbedUrl(u)) out.embeds.push(u);
       });
@@ -133,6 +134,7 @@
           try {
             const r2 = await fetch(abs, { credentials: "include" });
             const h2 = await r2.text();
+            collectEmbedApi(h2, out.embeds);
             (h2.match(EMBED_RE) || []).forEach((u) => {
               if (isEmbedUrl(u)) out.embeds.push(u);
             });
