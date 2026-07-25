@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Tv, Film, Loader2, CheckCircle, XCircle, RefreshCw, Search, Link2, PlaySquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -117,6 +118,9 @@ function PreviewPlayer({
 
 export default function QuickImport() {
   const { toast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState<'series' | 'movie' | 'domains'>('series');
+  const [pendingRemoteSearch, setPendingRemoteSearch] = useState(false);
 
   const [playerDomain, setPlayerDomain] = useState('redecanais.cafe');
   const [serverNum, setServerNum] = useState('21');
@@ -270,6 +274,41 @@ export default function QuickImport() {
       setIsSearching(false);
     }
   };
+
+  // Prefill coming from the phone remote control (Importar tab)
+  useEffect(() => {
+    const raw = searchParams.get('rc');
+    if (!raw) return;
+    try {
+      const payload = JSON.parse(decodeURIComponent(raw));
+      if (payload.domain) setPlayerDomain(String(payload.domain));
+      if (payload.server) setServerNum(String(payload.server));
+      if (payload.numbering === 'continuous' || payload.numbering === 'reset') {
+        setEpisodeNumbering(payload.numbering);
+      }
+      if (payload.type === 'movie') {
+        setActiveTab('movie');
+        setMovieTitle(String(payload.title || ''));
+        setMovieAbbreviation(String(payload.abbreviation || ''));
+      } else {
+        setActiveTab('series');
+        setSeriesTitle(String(payload.title || ''));
+        setSeriesAbbreviation(String(payload.abbreviation || ''));
+        if (payload.title && payload.abbreviation) setPendingRemoteSearch(true);
+      }
+      toast({ title: 'Dados recebidos do controle remoto', description: String(payload.title || '') });
+    } catch {
+      toast({ title: 'Não foi possível ler os dados do controle', variant: 'destructive' });
+    }
+    searchParams.delete('rc');
+    setSearchParams(searchParams, { replace: true });
+  }, [searchParams, setSearchParams, toast]);
+
+  useEffect(() => {
+    if (!pendingRemoteSearch || !seriesTitle.trim() || !seriesAbbreviation.trim()) return;
+    setPendingRemoteSearch(false);
+    handleSearchTMDB();
+  }, [pendingRemoteSearch, seriesTitle, seriesAbbreviation]);
 
   const handleImportSeries = async () => {
     if (!tmdbInfo || seriesResults.length === 0 || !seriesAbbreviation.trim()) return;
@@ -502,7 +541,7 @@ export default function QuickImport() {
         </div>
       </div>
 
-      <Tabs defaultValue="series" className="space-y-4">
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'series' | 'movie' | 'domains')} className="space-y-4">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="series" className="gap-2"><Tv className="w-4 h-4" /> Série</TabsTrigger>
           <TabsTrigger value="movie" className="gap-2"><Film className="w-4 h-4" /> Filme</TabsTrigger>

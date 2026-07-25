@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { BackgroundProvider, BackgroundImage } from "@/contexts/BackgroundContext";
 import { VIPProvider } from "@/contexts/VIPContext";
+import { RemoteControlProvider } from "@/contexts/RemoteControlContext";
 import { SecurityGuard } from "@/components/SecurityGuard";
 
 // Public Pages
@@ -25,6 +26,7 @@ import TermsOfUse from "./pages/TermsOfUse";
 import Settings from "./pages/Settings";
 import WatchHistory from "./pages/WatchHistory";
 import Favorites from "./pages/Favorites";
+import Remote from "./pages/Remote";
 
 // Admin Pages
 import AdminLayout from "./pages/admin/AdminLayout";
@@ -65,6 +67,7 @@ const App = () => (
         <AuthProvider>
           <VIPProvider>
             <BackgroundProvider>
+              <RemoteControlProvider>
               <BackgroundImage />
               <SecurityGuard />
               <Toaster />
@@ -87,6 +90,7 @@ const App = () => (
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/history" element={<WatchHistory />} />
                 <Route path="/favorites" element={<Favorites />} />
+                <Route path="/remote" element={<Remote />} />
                 
                 {/* Admin Routes */}
                 <Route path="/admin" element={<AdminLayout />}>
@@ -114,6 +118,7 @@ const App = () => (
                 {/* 404 */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
+              </RemoteControlProvider>
             </BackgroundProvider>
           </VIPProvider>
         </AuthProvider>

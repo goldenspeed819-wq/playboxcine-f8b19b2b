@@ -31,6 +31,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { useSubtitleStyles } from '@/hooks/useSubtitleStyles';
+import { useOptionalRemoteControl } from '@/contexts/RemoteControlContext';
 
 
 interface SubtitleTrack {
@@ -57,6 +58,7 @@ export function VideoPlayer({ src, poster, title, subtitles = [], nextLabel, onN
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const { getSubtitleCSS } = useSubtitleStyles();
+  const remote = useOptionalRemoteControl();
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [buffered, setBuffered] = useState(0);
@@ -74,6 +76,7 @@ export function VideoPlayer({ src, poster, title, subtitles = [], nextLabel, onN
   const [videoError, setVideoError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeSubtitle, setActiveSubtitle] = useState<string | null>(null);
+  const [isCinema, setIsCinema] = useState(false);
   
   const controlsTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
@@ -449,6 +452,88 @@ export function VideoPlayer({ src, poster, title, subtitles = [], nextLabel, onN
     setPlaybackSpeed(speed);
   };
 
+  // ---- Remote control (phone) integration -------------------------------
+  const remoteFullscreen = useCallback(async () => {
+    const container = containerRef.current;
+    if (!container) return;
+    if (document.fullscreenElement) {
+      document.exitFullscreen?.();
+      setIsCinema(false);
+      return;
+    }
+    try {
+      await container.requestFullscreen?.();
+      setIsCinema(false);
+    } catch {
+      // Browsers require a user gesture for native fullscreen — fall back to
+      // an in-page cinema mode that fills the whole window.
+      setIsCinema((prev) => !prev);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!remote) return;
+    return remote.registerPlayer({
+      togglePlay: () => {
+        const video = videoRef.current;
+        if (!video) return;
+        if (video.paused) video.play().catch(() => {});
+        else video.pause();
+      },
+      play: () => videoRef.current?.play().catch(() => {}),
+      pause: () => videoRef.current?.pause(),
+      seek: (seconds) => skip(seconds),
+      seekTo: (seconds) => {
+        const video = videoRef.current;
+        if (video) video.currentTime = Math.max(0, seconds);
+      },
+      setVolume: (value) => {
+        const video = videoRef.current;
+        if (!video) return;
+        const next = Math.min(1, Math.max(0, value));
+        video.volume = next;
+        video.muted = next === 0;
+        setVolume(next);
+        setIsMuted(next === 0);
+      },
+      volumeDelta: (delta) => {
+        const video = videoRef.current;
+        if (!video) return;
+        const next = Math.min(1, Math.max(0, video.volume + delta));
+        video.volume = next;
+        video.muted = next === 0;
+        setVolume(next);
+        setIsMuted(next === 0);
+      },
+      toggleMute: () => {
+        const video = videoRef.current;
+        if (!video) return;
+        video.muted = !video.muted;
+        setIsMuted(video.muted);
+      },
+      toggleFullscreen: () => { void remoteFullscreen(); },
+      togglePiP: () => { void togglePiP(); },
+      setSpeed: (speed) => changePlaybackSpeed(speed),
+      skipIntro: () => skipIntro(),
+      next: () => onNextClick?.(),
+      getState: () => {
+        const video = videoRef.current;
+        return {
+          title,
+          isPlaying: video ? !video.paused : false,
+          currentTime: video?.currentTime ?? 0,
+          duration: video && isFinite(video.duration) ? video.duration : 0,
+          volume: video?.volume ?? 1,
+          isMuted: video?.muted ?? false,
+          isFullscreen: !!document.fullscreenElement || isCinema,
+          speed: video?.playbackRate ?? 1,
+          hasNext: !!onNextClick,
+          hasIntro: introEndTime != null,
+        };
+      },
+    });
+  }, [remote, remoteFullscreen, title, onNextClick, introEndTime, isCinema]);
+
   const formatTime = (time: number) => {
     if (!isFinite(time) || isNaN(time)) return '0:00';
     const hours = Math.floor(time / 3600);
@@ -483,7 +568,10 @@ export function VideoPlayer({ src, poster, title, subtitles = [], nextLabel, onN
   return (
     <div
       ref={containerRef}
-      className="video-player-container group relative rounded-xl overflow-hidden bg-black"
+      className={cn(
+        'video-player-container group relative overflow-hidden bg-black',
+        isCinema ? 'fixed inset-0 z-[100] rounded-none' : 'rounded-xl',
+      )}
       onMouseMove={handleMouseMove}
       onMouseLeave={() => isPlaying && setShowControls(false)}
     >
