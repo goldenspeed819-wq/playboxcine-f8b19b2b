@@ -1,5 +1,7 @@
 // Rynex Scraper - background service worker
 const found = {}; // tabId -> { embeds:Set-like array, streams:[] }
+const opener = {}; // abas abertas pelo botão EMBED -> aba original
+const autoClose = {}; // abas que devemos fechar após capturar
 
 function bucket(tabId) {
   if (!found[tabId]) found[tabId] = { embeds: [], streams: [] };
@@ -17,19 +19,44 @@ function push(list, url) {
   if (!list.includes(url)) list.push(url);
 }
 
+const owner = (tabId) => opener[tabId] || tabId;
+
 // Sniff network for embeds / streams
 chrome.webRequest.onBeforeRequest.addListener(
   (d) => {
     if (d.tabId < 0) return;
-    const b = bucket(d.tabId);
+    const b = bucket(owner(d.tabId));
     if (EMBED_RE.test(d.url)) push(b.embeds, d.url);
     else if (/\.m3u8(\?|$)|\.mp4(\?|$)/i.test(d.url) && !/\.ts(\?|$)/i.test(d.url)) push(b.streams, d.url);
   },
   { urls: ["<all_urls>"] }
 );
 
-chrome.tabs.onRemoved.addListener((id) => delete found[id]);
-chrome.tabs.onUpdated.addListener((id, info) => {
+// O botão EMBED abre uma nova aba onde a URL final é gerada em tempo real
+chrome.tabs.onCreated.addListener((tab) => {
+  if (tab.openerTabId != null) {
+    opener[tab.id] = owner(tab.openerTabId);
+    autoClose[tab.id] = Date.now();
+  }
+});
+
+chrome.tabs.onRemoved.addListener((id) => {
+  delete found[id];
+  delete opener[id];
+  delete autoClose[id];
+});
+
+chrome.tabs.onUpdated.addListener((id, info, tab) => {
+  const url = info.url || tab?.url || "";
+  if (opener[id]) {
+    if (url && EMBED_RE.test(url)) push(bucket(opener[id]).embeds, url);
+    // fecha a aba auxiliar depois de capturar
+    if (autoClose[id] && url && /server\.php\?|RCServer/i.test(url)) {
+      delete autoClose[id];
+      setTimeout(() => chrome.tabs.remove(id).catch(() => {}), 400);
+    }
+    return;
+  }
   if (info.status === "loading" && info.url) delete found[id];
 });
 
