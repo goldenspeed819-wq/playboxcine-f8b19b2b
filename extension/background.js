@@ -258,11 +258,20 @@ async function controlMedia(tabId, msg) {
             case "mute": m.muted = !m.muted; break;
             case "rate": m.playbackRate = value || 1; break;
             case "fullscreen": {
+              // Alterna entre tela cheia (estilo F11) e o vídeo rodando na
+              // moldura normal do site — sem nunca parar a reprodução.
               const target = m.closest("[class*=video], [class*=player]") || m;
+              const wasPlaying = !m.paused;
               try {
-                if (document.fullscreenElement) document.exitFullscreen();
-                else (target.requestFullscreen || m.requestFullscreen)?.call(target);
+                if (document.fullscreenElement) {
+                  const done = document.exitFullscreen?.();
+                  if (done && done.then) done.then(() => { if (wasPlaying) play(m); });
+                } else {
+                  const done = (target.requestFullscreen || m.requestFullscreen)?.call(target);
+                  if (done && done.then) done.then(() => { if (wasPlaying) play(m); });
+                }
               } catch (e) {}
+              setTimeout(() => { if (wasPlaying && m.paused) play(m); }, 400);
               break;
             }
             default: break;
@@ -279,7 +288,11 @@ async function controlMedia(tabId, msg) {
             else if (action === "volume") { p.volume(Math.min(1, Math.max(0, value ?? p.volume()))); p.muted(false); }
             else if (action === "mute") p.muted(!p.muted());
             else if (action === "rate") p.playbackRate(value || 1);
-            else if (action === "fullscreen") p.isFullscreen() ? p.exitFullscreen() : p.requestFullscreen();
+            else if (action === "fullscreen") {
+              const wasPlaying = !p.paused();
+              p.isFullscreen() ? p.exitFullscreen() : p.requestFullscreen();
+              setTimeout(() => { if (wasPlaying && p.paused()) p.play(); }, 400);
+            }
           } catch (e) {}
         });
         return state || { paused: null };

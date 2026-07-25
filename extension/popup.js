@@ -189,9 +189,13 @@ async function goFullscreen() {
           .filter((i) => i.r.width > 200 && i.r.height > 120)
           .sort((a, b) => b.r.width * b.r.height - a.r.width * a.r.height)[0];
         const target = pick?.el || document.documentElement;
+        const vids = [...document.querySelectorAll("video")];
+        const playing = vids.filter((v) => !v.paused);
+        const resume = () => setTimeout(() => playing.forEach((v) => { if (v.paused) v.play?.().catch(() => {}); }), 400);
         try {
-          if (document.fullscreenElement) { document.exitFullscreen(); return "exit"; }
+          if (document.fullscreenElement) { document.exitFullscreen(); resume(); return "exit"; }
           target.requestFullscreen?.();
+          resume();
           return "enter";
         } catch (e) {
           return "blocked";
@@ -199,7 +203,7 @@ async function goFullscreen() {
       },
     });
     const done = (res || []).map((r) => r.result).find((v) => v === "enter" || v === "exit");
-    say(done ? "Tela cheia alternada." : "O Chrome bloqueou a tela cheia — clique uma vez na página.");
+    say(done === "exit" ? "Voltou pra moldura do site (vídeo continua)." : done ? "Tela cheia (F11)." : "O Chrome bloqueou a tela cheia — clique uma vez na página.");
   } catch (e) {
     say(`Erro: ${e?.message || "não consegui a tela cheia"}`);
   }
@@ -222,7 +226,7 @@ $("#mute").addEventListener("click", () => {
 });
 $("#fs").addEventListener("click", async () => {
   const res = await sendInput({ input: "media", action: "fullscreen" });
-  if (res?.ok) { say("Tela cheia do vídeo alternada."); return; }
+  if (res?.ok) { say("Alternado: tela cheia ⇄ vídeo na moldura do site."); return; }
   goFullscreen();
 });
 $("#vol").addEventListener("input", () => {
@@ -245,5 +249,5 @@ $("#vol").addEventListener("change", applyVolume);
     const host = new URL(tab.url || "about:blank").hostname;
     $("#tab").textContent = host ? `— ${host}` : "";
   } catch (e) {}
-  say("v1.0.6 pronta — controle o player desta aba.");
+  say("v1.0.7 pronta — tela cheia alterna com o vídeo na moldura.");
 })();
