@@ -183,6 +183,8 @@
         x: data.x,
         y: data.y,
         dy: data.dy,
+        value: data.value,
+        muted: data.muted,
       });
     } catch (e) {}
   });

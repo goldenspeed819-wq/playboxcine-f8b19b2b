@@ -48,6 +48,8 @@ import {
 } from '@/contexts/RemoteControlContext';
 
 const LAST_CODE_KEY = 'rynex-remote-last-code';
+const SITE_VOLUME_KEY = 'rynex-site-volume';
+const SITE_MUTED_KEY = 'rynex-site-muted';
 
 interface HostState {
   page: string;
@@ -625,8 +627,28 @@ function TouchpadPad({ send }: { send: (command: RemoteCommand) => void }) {
   const [speed, setSpeed] = useState(1.6);
   const [scrollMode, setScrollMode] = useState(false);
   const [feedback, setFeedback] = useState('pronto');
+  const [siteVolume, setSiteVolume] = useState(() => Number(localStorage.getItem(SITE_VOLUME_KEY) ?? '1'));
+  const [siteMuted, setSiteMuted] = useState(() => localStorage.getItem(SITE_MUTED_KEY) === 'true');
 
   const multiTouch = useRef(false);
+
+  const sendSiteVolume = (next: number) => {
+    const volume = Math.min(1, Math.max(0, next));
+    setSiteVolume(volume);
+    setSiteMuted(false);
+    localStorage.setItem(SITE_VOLUME_KEY, String(volume));
+    localStorage.setItem(SITE_MUTED_KEY, 'false');
+    send({ action: 'siteVolume', value: volume });
+  };
+
+  const toggleSiteMute = () => {
+    const next = !siteMuted;
+    setSiteMuted(next);
+    localStorage.setItem(SITE_MUTED_KEY, String(next));
+    send({ action: 'siteToggleMute' });
+  };
+
+  const SiteVolumeIcon = siteMuted || siteVolume === 0 ? VolumeX : siteVolume < 0.5 ? Volume1 : Volume2;
 
   const onStart = (e: React.PointerEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -778,9 +800,34 @@ function TouchpadPad({ send }: { send: (command: RemoteCommand) => void }) {
         </Button>
       </div>
 
+      <div className="premium-card p-4 space-y-3">
+        <div className="flex items-center justify-between text-sm">
+          <span>Volume do site inteiro</span>
+          <span className="text-xs text-muted-foreground">{siteMuted ? 'Mudo' : `${Math.round(siteVolume * 100)}%`}</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <Button variant="outline" size="icon" onClick={toggleSiteMute}>
+            <SiteVolumeIcon className="w-4 h-4" />
+          </Button>
+          <Slider
+            value={[siteMuted ? 0 : Math.round(siteVolume * 100)]}
+            max={100}
+            step={1}
+            onValueChange={(value) => sendSiteVolume(value[0] / 100)}
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <Button variant="secondary" onClick={() => sendSiteVolume(siteVolume - 0.1)}>
+            Volume −
+          </Button>
+          <Button variant="secondary" onClick={() => sendSiteVolume(siteVolume + 0.1)}>
+            Volume +
+          </Button>
+        </div>
+      </div>
+
       <p className="text-[11px] text-muted-foreground leading-relaxed px-1">
-        Para clicar dentro do player externo, instale/atualize a extensão Rynex no PC. Sem ela, o navegador
-        só permite clicar na camada do Rynex ao redor do iframe.
+        Para clicar e ajustar volume dentro do player externo, instale/atualize a extensão Rynex no PC.
       </p>
     </div>
   );

@@ -85,8 +85,77 @@ async function sendMouse(tabId, params) {
   }
 }
 
+async function setPageVolume(tabId, msg) {
+  const volume = Math.min(1, Math.max(0, Number(msg.value)));
+  const muted = Boolean(msg.muted);
+  if (!Number.isFinite(volume)) return false;
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId, allFrames: true },
+      args: [volume, muted],
+      func: (v, m) => {
+        document.querySelectorAll("video, audio").forEach((media) => {
+          media.volume = v;
+          media.muted = m;
+        });
+        window.__rynexSiteVolume = v;
+        window.__rynexSiteMuted = m;
+      },
+    });
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+async function clickLikelyPlay(tabId, msg) {
+  const x = Number(msg.x);
+  const y = Number(msg.y);
+  if (Number.isFinite(x) && Number.isFinite(y)) {
+    await remoteInput(tabId, { input: "click", x, y });
+  }
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId, allFrames: true },
+      func: () => {
+        const textOf = (el) =>
+          ((el.textContent || "") + " " + (el.id || "") + " " + (el.className || "") + " " +
+            ["aria-label", "title", "alt", "data-title"].map((a) => el.getAttribute?.(a) || "").join(" ")).toLowerCase();
+        const candidates = [...document.querySelectorAll('button,a,[role="button"],div,span,svg')]
+          .filter((el) => {
+            const r = el.getBoundingClientRect();
+            if (r.width <= 0 || r.height <= 0 || r.width > 260 || r.height > 260) return false;
+            const txt = textOf(el);
+            return /\b(play|reproduzir|assistir|iniciar|start)\b|▶|►/i.test(txt);
+          })
+          .sort((a, b) => {
+            const ar = a.getBoundingClientRect();
+            const br = b.getBoundingClientRect();
+            const ac = Math.abs(ar.left + ar.width / 2 - innerWidth / 2) + Math.abs(ar.top + ar.height / 2 - innerHeight / 2);
+            const bc = Math.abs(br.left + br.width / 2 - innerWidth / 2) + Math.abs(br.top + br.height / 2 - innerHeight / 2);
+            return ac - bc;
+          });
+        const target = candidates[0];
+        if (!target) return false;
+        ["pointerdown", "mousedown", "pointerup", "mouseup", "click"].forEach((type) => {
+          target.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: window }));
+        });
+        target.click?.();
+        return true;
+      },
+    });
+  } catch (e) {}
+  if (Number.isFinite(x) && Number.isFinite(y)) {
+    setTimeout(() => remoteInput(tabId, { input: "click", x, y }), 250);
+    setTimeout(() => remoteInput(tabId, { input: "click", x, y }), 900);
+  }
+  return true;
+}
+
 async function remoteInput(tabId, msg) {
   if (!tabId || tabId < 0) return false;
+  if (msg.input === "volume") return setPageVolume(tabId, msg);
+  if (msg.input === "embedPlay") return clickLikelyPlay(tabId, msg);
   const x = Number(msg.x);
   const y = Number(msg.y);
   if ((msg.input === "move" || msg.input === "click" || msg.input === "doubleClick" || msg.input === "rightClick" || msg.input === "scroll") && (!Number.isFinite(x) || !Number.isFinite(y))) {
