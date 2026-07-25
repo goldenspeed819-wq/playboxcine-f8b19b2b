@@ -9,7 +9,7 @@ import scraperSource from '@/lib/scraper/rynex-scraper.js?raw';
 const BrowserScraper = () => {
   const { toast } = useToast();
   const [copied, setCopied] = useState<string | null>(null);
-  const extensionFile = 'rynex-helper-v104.zip';
+  const extensionFile = 'rynex-helper-v105.zip';
 
   const bookmarklet = useMemo(() => {
     const origin = window.location.origin;
@@ -70,20 +70,21 @@ const BrowserScraper = () => {
           <Chrome className="h-4 w-4 text-primary" /> Extensão do Chrome (recomendado)
         </div>
         <p className="text-sm text-muted-foreground">
-          A extensão agora é o <b>Rynex Helper v1.0.4</b>: captura o botão <b>EMBED</b> e também mostra, no
-          controle remoto, se o PC realmente recebeu a ponte da extensão para mouse/volume em player externo.
+          Agora ela é o <b>Rynex Controle v1.0.5</b>: ao abrir, o painel já é o controle do player —{' '}
+          <b>play</b>, <b>volume do site</b>, <b>mudo</b> e <b>tela cheia</b> funcionando dentro de players
+          externos. A captura de embed virou um item opcional no fim do painel.
         </p>
         <Button onClick={downloadExtension}>
-          <Download className="h-4 w-4 mr-2" /> Baixar extensão v1.0.4 (.zip)
+          <Download className="h-4 w-4 mr-2" /> Baixar extensão v1.0.5 (.zip)
         </Button>
         <ol className="text-sm text-muted-foreground list-decimal ml-5 space-y-1">
-          <li>Apague downloads antigos chamados <b>rynex-extension</b>.</li>
+          <li>Apague downloads antigos (<b>rynex-extension</b> / <b>rynex-helper-v104</b>).</li>
           <li>Baixe e descompacte <b>{extensionFile}</b>.</li>
           <li>Abra <b>chrome://extensions</b> no Chrome (ou Edge/Brave/Opera).</li>
           <li>Ative o <b>Modo do desenvolvedor</b> (canto superior direito).</li>
           <li>Clique em <b>Carregar sem compactação</b> e selecione a pasta descompactada.</li>
-          <li>Abra a página do filme/série, clique no ícone da extensão → <b>Procurar embed</b> → <b>Adicionar à fila</b>.</li>
-          <li>No fim, <b>Copiar JSON</b> e colar em <b>JSON Externo</b>.</li>
+          <li>Na aba do player, clique no ícone da extensão e use <b>Dar play</b>, volume e tela cheia.</li>
+          <li>Se quiser importar conteúdo, abra <b>Capturar embed (opcional)</b> no fim do painel.</li>
         </ol>
       </div>
 
