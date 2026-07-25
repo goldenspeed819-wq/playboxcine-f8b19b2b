@@ -36,25 +36,60 @@
     while ((m3 = re3.exec(text))) add(m3[1]);
   }
 
+  // Lista todos os documentos acessíveis (página + iframes de mesma origem, recursivo)
+  function docs(root, out, depth) {
+    out = out || []; depth = depth || 0;
+    if (!root || out.indexOf(root) !== -1 || depth > 4) return out;
+    out.push(root);
+    var frames = root.querySelectorAll('iframe,frame');
+    for (var i = 0; i < frames.length; i++) {
+      var d = null;
+      try { d = frames[i].contentDocument; } catch (e) { d = null; }
+      if (d) docs(d, out, depth + 1);
+    }
+    return out;
+  }
+
+  function fire(el) {
+    var ev = ['pointerdown', 'mousedown', 'mouseup', 'click'];
+    for (var i = 0; i < ev.length; i++) {
+      try {
+        el.dispatchEvent(new MouseEvent(ev[i], { bubbles: true, cancelable: true, view: el.ownerDocument.defaultView }));
+      } catch (e) {}
+    }
+    try { el.click(); } catch (e) {}
+  }
+
   function clickEmbedButton() {
-    var nodes = document.querySelectorAll('a,button,div,span,img,[onclick],[class*=embed],[id*=embed]');
-    for (var i = 0; i < nodes.length; i++) {
-      var el = nodes[i];
-      var txt = ((el.textContent || '') + ' ' + (el.className || '') + ' ' + (el.id || '') + ' ' + (el.getAttribute('alt') || '')).toLowerCase();
-      if (txt.indexOf('embed') !== -1 && el.offsetParent !== null) {
-        try { el.click(); } catch (e) {}
+    var list = docs(document);
+    var clicked = 0;
+    for (var d = 0; d < list.length; d++) {
+      var nodes;
+      try { nodes = list[d].querySelectorAll('a,button,div,span,img,li,td,[onclick],[class*=embed],[id*=embed],[class*=Embed],[id*=Embed]'); } catch (e) { continue; }
+      for (var i = 0; i < nodes.length; i++) {
+        var el = nodes[i];
+        var txt = ((el.textContent || '') + ' ' + (el.className && el.className.baseVal !== undefined ? el.className.baseVal : el.className || '') + ' ' +
+          (el.id || '') + ' ' + (el.getAttribute && (el.getAttribute('alt') || el.getAttribute('title') || el.getAttribute('onclick')) || '')).toLowerCase();
+        if (txt.indexOf('embed') === -1) continue;
+        if (el.children && el.children.length > 3) continue; // evita clicar em containers grandes
+        fire(el);
+        clicked++;
       }
     }
+    return clicked;
   }
 
   function scan() {
-    document.querySelectorAll('iframe').forEach(function (f) {
-      add(f.src || f.getAttribute('src'));
-      try { scanText(f.contentDocument.documentElement.innerHTML); } catch (e) {}
-    });
-    document.querySelectorAll('textarea, input').forEach(function (el) { scanText(el.value || ''); });
-    document.querySelectorAll('a').forEach(function (a) { add(a.getAttribute('href')); });
-    scanText(document.documentElement.innerHTML);
+    var list = docs(document);
+    for (var d = 0; d < list.length; d++) {
+      var doc = list[d];
+      try {
+        doc.querySelectorAll('iframe,frame').forEach(function (f) { add(f.src || f.getAttribute('src')); });
+        doc.querySelectorAll('textarea, input').forEach(function (el) { scanText(el.value || ''); });
+        doc.querySelectorAll('a').forEach(function (a) { add(a.getAttribute('href')); });
+        scanText(doc.documentElement.innerHTML);
+      } catch (e) {}
+    }
     // HTML original do servidor (pega links inseridos por script depois)
     if (!scan._raw) {
       scan._raw = true;
@@ -104,7 +139,17 @@
 
     box.querySelector('#rx-url').oninput = function (e) { manual = e.target.value.trim(); };
     box.querySelector('#rx-hide').onclick = function () { box.style.display = 'none'; };
-    box.querySelector('#rx-scan').onclick = function () { clickEmbedButton(); scan(); setTimeout(scan, 800); };
+    box.querySelector('#rx-scan').onclick = function () {
+      var n = clickEmbedButton();
+      scan();
+      setTimeout(scan, 600);
+      setTimeout(function () {
+        scan();
+        if (!embeds.length) {
+          alert('Não achei o embed automaticamente (' + n + ' botão(ões) clicado(s)).\nClique no botão EMBED do player e cole o link no campo do painel.');
+        }
+      }, 1600);
+    };
     box.querySelector('#rx-add').onclick = function () {
       var url = (box.querySelector('#rx-url').value || '').trim() || chosen();
       if (!url) { alert('Nenhum embed encontrado. Clique no botão EMBED do player e cole o link aqui.'); return; }
