@@ -9,6 +9,7 @@ import scraperSource from '@/lib/scraper/rynex-scraper.js?raw';
 const BrowserScraper = () => {
   const { toast } = useToast();
   const [copied, setCopied] = useState<string | null>(null);
+  const extensionFile = 'rynex-helper-v104.zip';
 
   const bookmarklet = useMemo(() => {
     const origin = window.location.origin;
@@ -30,15 +31,23 @@ const BrowserScraper = () => {
   };
 
   const downloadExtension = () => {
-    fetch('/rynex-extension.zip')
+    fetch(`/${extensionFile}?v=${Date.now()}`, { cache: 'no-store' })
       .then((res) => {
         if (!res.ok) throw new Error(`Falha no download: ${res.status}`);
         return res.blob();
       })
+      .then(async (blob) => {
+        const header = new Uint8Array(await blob.slice(0, 4).arrayBuffer());
+        const isZip = header[0] === 0x50 && header[1] === 0x4b;
+        if (!isZip || blob.size < 10000) {
+          throw new Error('Download incompleto. Recarregue a página e baixe novamente.');
+        }
+        return blob;
+      })
       .then((blob) => {
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
-        a.download = 'rynex-extension.zip';
+        a.download = extensionFile;
         a.click();
         URL.revokeObjectURL(a.href);
       })
@@ -65,10 +74,11 @@ const BrowserScraper = () => {
           controle remoto, se o PC realmente recebeu a ponte da extensão para mouse/volume em player externo.
         </p>
         <Button onClick={downloadExtension}>
-          <Download className="h-4 w-4 mr-2" /> Baixar extensão (.zip)
+          <Download className="h-4 w-4 mr-2" /> Baixar extensão v1.0.4 (.zip)
         </Button>
         <ol className="text-sm text-muted-foreground list-decimal ml-5 space-y-1">
-          <li>Descompacte o arquivo baixado.</li>
+          <li>Apague downloads antigos chamados <b>rynex-extension</b>.</li>
+          <li>Baixe e descompacte <b>{extensionFile}</b>.</li>
           <li>Abra <b>chrome://extensions</b> no Chrome (ou Edge/Brave/Opera).</li>
           <li>Ative o <b>Modo do desenvolvedor</b> (canto superior direito).</li>
           <li>Clique em <b>Carregar sem compactação</b> e selecione a pasta descompactada.</li>
