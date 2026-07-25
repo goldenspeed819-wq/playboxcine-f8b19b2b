@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Rynex Helper",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Ajuda o Rynex Cine a capturar embeds e enviar comandos reais de mouse/volume para players externos.",
   "permissions": ["storage", "tabs", "scripting", "webRequest", "debugger"],
   "host_permissions": ["<all_urls>"],

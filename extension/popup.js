@@ -154,6 +154,76 @@ $("#send").addEventListener("click", async () => {
 });
 $("#site").addEventListener("change", () => chrome.storage.local.set({ site: $("#site").value.trim() }));
 
+// ---- Controle (play / volume / tela cheia) ----
+let volume = 100;
+let muted = false;
+
+function say(msg) {
+  $("#status").textContent = msg;
+}
+
+async function sendInput(payload) {
+  try {
+    const res = await chrome.runtime.sendMessage({ type: "REMOTE_INPUT", tabId, ...payload });
+    if (res && res.ok === false) say(`Erro: ${res.error || "comando recusado pelo Chrome"}`);
+    return res;
+  } catch (e) {
+    say(`Erro: ${e?.message || "extensão sem resposta"}`);
+    return { ok: false };
+  }
+}
+
+async function applyVolume() {
+  $("#volTxt").textContent = muted ? "mudo" : `${volume}%`;
+  const res = await sendInput({ input: "volume", value: volume / 100, muted });
+  if (res?.ok) say(muted ? "Áudio no mudo." : `Volume em ${volume}%.`);
+}
+
+async function goFullscreen() {
+  try {
+    const res = await chrome.scripting.executeScript({
+      target: { tabId, allFrames: true },
+      func: () => {
+        const pick = [...document.querySelectorAll("video, iframe")]
+          .map((el) => ({ el, r: el.getBoundingClientRect() }))
+          .filter((i) => i.r.width > 200 && i.r.height > 120)
+          .sort((a, b) => b.r.width * b.r.height - a.r.width * a.r.height)[0];
+        const target = pick?.el || document.documentElement;
+        try {
+          if (document.fullscreenElement) { document.exitFullscreen(); return "exit"; }
+          target.requestFullscreen?.();
+          return "enter";
+        } catch (e) {
+          return "blocked";
+        }
+      },
+    });
+    const done = (res || []).map((r) => r.result).find((v) => v === "enter" || v === "exit");
+    say(done ? "Tela cheia alternada." : "O Chrome bloqueou a tela cheia — clique uma vez na página.");
+  } catch (e) {
+    say(`Erro: ${e?.message || "não consegui a tela cheia"}`);
+  }
+}
+
+$("#play").addEventListener("click", async () => {
+  say("Procurando o play no player...");
+  const res = await sendInput({ input: "embedPlay" });
+  if (res?.ok) say(`Play enviado (${res.method || "ok"}).`);
+});
+$("#mute").addEventListener("click", () => {
+  muted = !muted;
+  $("#mute").textContent = muted ? "🔊 Som" : "🔇 Mudo";
+  applyVolume();
+});
+$("#fs").addEventListener("click", goFullscreen);
+$("#vol").addEventListener("input", () => {
+  volume = Number($("#vol").value);
+  muted = false;
+  $("#mute").textContent = "🔇 Mudo";
+  $("#volTxt").textContent = `${volume}%`;
+});
+$("#vol").addEventListener("change", applyVolume);
+
 (async () => {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   tabId = tab.id;
@@ -161,5 +231,10 @@ $("#site").addEventListener("change", () => chrome.storage.local.set({ site: $("
   $("#site").value = site || DEFAULT_SITE;
   render(await getQueue());
   const st = await readState();
-  $("#found").textContent = applyFound(st) ? "Embed já capturado — confira o título." : "v1.0.4 pronta — clique em Procurar embed.";
+  $("#found").textContent = applyFound(st) ? "Embed já capturado — confira o título." : "Clique em Procurar embed.";
+  try {
+    const host = new URL(tab.url || "about:blank").hostname;
+    $("#tab").textContent = host ? `— ${host}` : "";
+  } catch (e) {}
+  say("v1.0.5 pronta — controle o player desta aba.");
 })();
