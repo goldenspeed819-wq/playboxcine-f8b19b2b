@@ -24,6 +24,14 @@ import {
   Gauge,
   Upload,
   RotateCcw,
+  MousePointer2,
+  Crosshair,
+  MonitorPlay,
+  ArrowUp,
+  ArrowDown,
+  ArrowLeft,
+  CornerDownLeft,
+  ArrowRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -188,14 +196,19 @@ export default function Remote() {
       </div>
 
       <Tabs defaultValue="control" className="px-4 pt-4">
-        <TabsList className="grid grid-cols-3 w-full">
+        <TabsList className="grid grid-cols-4 w-full">
           <TabsTrigger value="control">Controle</TabsTrigger>
+          <TabsTrigger value="mouse">Mouse</TabsTrigger>
           <TabsTrigger value="content">Conteúdo</TabsTrigger>
           <TabsTrigger value="import">Importar</TabsTrigger>
         </TabsList>
 
         <TabsContent value="control" className="pt-5">
           <ControlPad player={player} send={send} />
+        </TabsContent>
+
+        <TabsContent value="mouse" className="pt-5">
+          <TouchpadPad send={send} />
         </TabsContent>
 
         <TabsContent value="content" className="pt-5">
