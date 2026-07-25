@@ -9,6 +9,16 @@ type State = {
   error: string | null;
 };
 
+// Guards against resolving half-typed URLs (e.g. "https://h//site.com/...")
+function isResolvableUrl(value: string): boolean {
+  try {
+    const { hostname } = new URL(value);
+    return hostname.includes('.') && !/\s/.test(hostname);
+  } catch {
+    return false;
+  }
+}
+
 export function useResolvedEmbedUrl(rawUrl: string | null | undefined): State {
   const cacheRef = useRef<Map<string, string>>(new Map());
   const streamCacheRef = useRef<Map<string, string>>(new Map());
@@ -26,7 +36,7 @@ export function useResolvedEmbedUrl(rawUrl: string | null | undefined): State {
     abortRef.current = null;
 
     const input = rawUrl ? normalizeHttpUrl(rawUrl) : '';
-    if (!input) {
+    if (!input || !isResolvableUrl(input)) {
       setState({ url: null, streamUrl: null, isLoading: false, error: null });
       return;
     }
@@ -54,7 +64,7 @@ export function useResolvedEmbedUrl(rawUrl: string | null | undefined): State {
     // While resolving, keep the local embed available as fallback when it already works.
     setState({ url: needsRemote ? null : localEmbed, streamUrl: null, isLoading: true, error: null });
 
-    (async () => {
+    const timer = setTimeout(() => void (async () => {
       try {
         const { data, error } = await supabase.functions.invoke('resolve-video-url', {
           body: { url: input },
@@ -92,9 +102,10 @@ export function useResolvedEmbedUrl(rawUrl: string | null | undefined): State {
         if (controller.signal.aborted) return;
         setState({ url: needsRemote ? null : localEmbed, streamUrl: null, isLoading: false, error: needsRemote ? String(e) : null });
       }
-    })();
+    })(), 600);
 
     return () => {
+      clearTimeout(timer);
       controller.abort();
     };
   }, [rawUrl]);
