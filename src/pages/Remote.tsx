@@ -779,10 +779,8 @@ function TouchpadPad({ send }: { send: (command: RemoteCommand) => void }) {
       </div>
 
       <p className="text-[11px] text-muted-foreground leading-relaxed px-1">
-        No player externo (embed), o cursor aparece na tela do PC e clica em qualquer botão do site do
-        Rynex. Dentro do vídeo de outro provedor, use "Tela cheia (embed)" para expandir e as teclas do
-        próprio provedor — por segurança, o navegador não deixa nenhum site enviar cliques para dentro
-        de um iframe de outro domínio.
+        Para clicar dentro do player externo, instale/atualize a extensão Rynex no PC. Sem ela, o navegador
+        só permite clicar na camada do Rynex ao redor do iframe.
       </p>
     </div>
   );
