@@ -3,8 +3,30 @@ export type KnownProvider = 'mixdrop' | 'doodstream' | 'streamtape' | 'redecanai
 export function normalizeHttpUrl(input: string): string {
   const trimmed = input.trim();
   if (!trimmed) return '';
+  if (trimmed.startsWith('//')) return `https:${trimmed}`;
   if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return trimmed;
   return `https://${trimmed}`;
+}
+
+export function isResolvableHttpUrl(value: string): boolean {
+  try {
+    const { protocol, hostname } = new URL(normalizeHttpUrl(value));
+    const host = hostname.toLowerCase();
+    const labels = host.split('.');
+    const tld = labels[labels.length - 1] || '';
+
+    return (
+      (protocol === 'http:' || protocol === 'https:') &&
+      !/\s/.test(value) &&
+      labels.length >= 2 &&
+      labels.every(Boolean) &&
+      !host.endsWith('.') &&
+      tld.length >= 2 &&
+      /^[a-z][a-z0-9-]*$/i.test(tld)
+    );
+  } catch {
+    return false;
+  }
 }
 
 function toIdEmbedUrl(origin: string, provider: KnownProvider, id: string) {

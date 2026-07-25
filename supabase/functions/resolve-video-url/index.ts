@@ -10,8 +10,40 @@ type KnownProvider = 'mixdrop' | 'doodstream' | 'streamtape' | 'unknown';
 function normalizeHttpUrl(input: string): string {
   const trimmed = (input || '').trim();
   if (!trimmed) return '';
+  if (trimmed.startsWith('//')) return `https:${trimmed}`;
   if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return trimmed;
   return `https://${trimmed}`;
+}
+
+function isValidPublicHttpUrl(input: string): boolean {
+  try {
+    const url = new URL(input);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return false;
+    if (/\s/.test(input)) return false;
+
+    const host = url.hostname.toLowerCase();
+    if (!host || host.endsWith('.') || !host.includes('.')) return false;
+    if (host === 'localhost' || host.endsWith('.localhost')) return false;
+
+    const labels = host.split('.');
+    const tld = labels[labels.length - 1] || '';
+    if (labels.some((label) => !label)) return false;
+    if (tld.length < 2 || !/^[a-z][a-z0-9-]*$/i.test(tld)) return false;
+    if (/^(127|10|0)\./.test(host)) return false;
+    if (/^192\.168\./.test(host)) return false;
+    if (/^172\.(1[6-9]|2\d|3[0-1])\./.test(host)) return false;
+
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function invalidUrlResponse() {
+  return new Response(
+    JSON.stringify({ success: false, error: 'URL inválida ou domínio incompleto' }),
+    { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+  );
 }
 
 function detectProvider(url: string): KnownProvider {
@@ -247,11 +279,8 @@ serve(async (req) => {
     const { url } = await req.json().catch(() => ({ url: '' }));
     const input = normalizeHttpUrl(url);
 
-    if (!input || (!input.startsWith('http://') && !input.startsWith('https://'))) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'URL inválida' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    if (!input || !isValidPublicHttpUrl(input)) {
+      return invalidUrlResponse();
     }
 
     // 0) Try to find a direct stream so the native Rynex player can be used
@@ -285,7 +314,12 @@ serve(async (req) => {
     }
 
     // 2) Fetch page and follow redirects server-side
-    let resp = await fetchPage(input);
+    let resp: Response;
+    try {
+      resp = await fetchPage(input);
+    } catch {
+      return invalidUrlResponse();
+    }
     let resolvedUrl = resp.url || input;
 
     const normalizedFinal = toEmbedUrl(resolvedUrl);
