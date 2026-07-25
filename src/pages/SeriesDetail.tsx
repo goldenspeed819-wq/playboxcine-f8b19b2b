@@ -54,7 +54,7 @@ const SeriesDetail = () => {
   const [showEpisodePanel, setShowEpisodePanel] = useState(false);
 
   const normalizedEpisodeUrl = normalizeRedeCanaisUrl(selectedEpisode?.video_url);
-  const { url: resolvedEpisodeIframeUrl } = useResolvedEmbedUrl(normalizedEpisodeUrl);
+  const { url: resolvedEpisodeIframeUrl, streamUrl: resolvedEpisodeStreamUrl } = useResolvedEmbedUrl(normalizedEpisodeUrl);
 
   useEffect(() => {
     if (id) {
@@ -379,7 +379,7 @@ const SeriesDetail = () => {
             {/* Main Content */}
             <div className="lg:col-span-2 space-y-8">
               {/* Video Player */}
-              {normalizedEpisodeUrl && getSourceType(normalizedEpisodeUrl) === 'iframe' ? (
+              {normalizedEpisodeUrl && getSourceType(normalizedEpisodeUrl) === 'iframe' && !resolvedEpisodeStreamUrl ? (
                 <IframePlayer
                   src={resolvedEpisodeIframeUrl || normalizedEpisodeUrl}
                   originalUrl={normalizedEpisodeUrl}
@@ -392,7 +392,7 @@ const SeriesDetail = () => {
                 />
               ) : (
                 <VideoPlayer
-                  src={normalizedEpisodeUrl || null}
+                  src={resolvedEpisodeStreamUrl || normalizedEpisodeUrl || null}
                   poster={selectedEpisode?.thumbnail || series.thumbnail}
                   title={
                     selectedEpisode
