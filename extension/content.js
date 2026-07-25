@@ -7,9 +7,11 @@
     /https?:\/\/[^"'\s<>\\]*(?:server\.php\?[^"'\s<>\\]*|RCServer[^"'\s<>\\]*|\/player\d*\/[^"'\s<>\\]+)/gi;
   const STREAM_RE = /https?:\/\/[^"'\s<>\\]+\.(?:m3u8|mp4)(?:\?[^"'\s<>\\]*)?/gi;
   const BLOCKED_EMBED_RE = /disqus\.com|\/embed\/comments|comments\/?\?/i;
+  // Assets (js/css/imagens/fontes) nunca são embed
+  const ASSET_RE = /\.(?:js|mjs|css|png|jpe?g|gif|webp|svg|ico|woff2?|ttf|eot|map|json|xml|txt|vtt|srt|ts)(?:$|[?#])/i;
 
   const uniq = (a) => [...new Set(a.filter(Boolean))];
-  const isBlockedEmbed = (url) => !url || BLOCKED_EMBED_RE.test(url);
+  const isBlockedEmbed = (url) => !url || BLOCKED_EMBED_RE.test(url) || ASSET_RE.test(url);
   const isEmbedUrl = (url) => {
     if (!url || isBlockedEmbed(url)) return false;
     return /server\.php\?/i.test(url) || /RCServer/i.test(url) || /\/player\d*\//i.test(url);

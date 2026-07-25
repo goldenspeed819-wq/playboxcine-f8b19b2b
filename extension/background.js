@@ -8,10 +8,12 @@ function bucket(tabId) {
 
 const EMBED_RE = /(server\.php\?[^"'\s<>]+|RCServer[^"'\s<>]*|\/player\d*\/[^"'\s<>]+)/i;
 const BLOCKED_EMBED_RE = /disqus\.com|\/embed\/comments|comments\/?\?/i;
+const ASSET_RE = /\.(?:js|mjs|css|png|jpe?g|gif|webp|svg|ico|woff2?|ttf|eot|map|json|xml|txt|vtt|srt)(?:$|[?#])/i;
 
 function push(list, url) {
   if (!url) return;
   if (BLOCKED_EMBED_RE.test(url)) return;
+  if (ASSET_RE.test(url)) return;
   if (!list.includes(url)) list.push(url);
 }
 
