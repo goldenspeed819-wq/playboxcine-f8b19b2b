@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Copy, Check, Bookmark, Terminal, ArrowRight, PlayCircle } from 'lucide-react';
+import { Copy, Check, Bookmark, Terminal, ArrowRight, PlayCircle, Download, Chrome } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -29,6 +29,22 @@ const BrowserScraper = () => {
     toast({ title: 'Copiado!' });
   };
 
+  const downloadExtension = () => {
+    fetch('/rynex-extension.zip')
+      .then((res) => {
+        if (!res.ok) throw new Error(`Falha no download: ${res.status}`);
+        return res.blob();
+      })
+      .then((blob) => {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'rynex-extension.zip';
+        a.click();
+        URL.revokeObjectURL(a.href);
+      })
+      .catch((err) => toast({ title: err.message, variant: 'destructive' }));
+  };
+
   return (
     <div className="space-y-6 max-w-4xl">
       <div>
@@ -38,6 +54,28 @@ const BrowserScraper = () => {
           normalmente. Ele captura o <b>link de embed</b> do player (RCServer / server.php), que é o mesmo que
           você pegava no botão EMBED.
         </p>
+      </div>
+
+      <div className="premium-card p-5 space-y-4 border-primary/40">
+        <div className="flex items-center gap-2 font-semibold">
+          <Chrome className="h-4 w-4 text-primary" /> Extensão do Chrome (recomendado)
+        </div>
+        <p className="text-sm text-muted-foreground">
+          A extensão roda em <b>todos os frames</b> da página — inclusive dentro do iframe do player — então ela
+          consegue clicar no botão <b>EMBED</b> e capturar o link <code>server.php?server=RCServerXX&amp;vid=...</code>,
+          o que o favorito não conseguia por bloqueio de origem. Também escuta a rede para pegar streams.
+        </p>
+        <Button onClick={downloadExtension}>
+          <Download className="h-4 w-4 mr-2" /> Baixar extensão (.zip)
+        </Button>
+        <ol className="text-sm text-muted-foreground list-decimal ml-5 space-y-1">
+          <li>Descompacte o arquivo baixado.</li>
+          <li>Abra <b>chrome://extensions</b> no Chrome (ou Edge/Brave/Opera).</li>
+          <li>Ative o <b>Modo do desenvolvedor</b> (canto superior direito).</li>
+          <li>Clique em <b>Carregar sem compactação</b> e selecione a pasta descompactada.</li>
+          <li>Abra a página do filme/série, clique no ícone da extensão → <b>Procurar embed</b> → <b>Adicionar à fila</b>.</li>
+          <li>No fim, <b>Copiar JSON</b> e colar em <b>JSON Externo</b>.</li>
+        </ol>
       </div>
 
       <div className="premium-card p-5 space-y-4">

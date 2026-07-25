@@ -24,6 +24,7 @@ interface ExternalSeries {
 interface ScraperResult {
   url: string;
   title: string;
+  type?: string;
   thumb?: string;
   description?: string;
   videos: { url: string; type: string }[];
@@ -120,7 +121,7 @@ const ExternalJsonImport = () => {
         for (const r of data.results) {
           const url = pickBestUrlFromVideos(r.videos);
           parsedItems.push({
-            type: 'movie', titulo: r.title, videoUrl: url,
+            type: r.type === 'series' ? 'series' : 'movie', titulo: r.title, videoUrl: url,
             thumbnail: r.thumb || null, description: r.description || null,
             status: 'pending',
           });
