@@ -57,7 +57,7 @@ function pickBestUrlFromVideos(videos: { url: string; type: string }[]): string 
   if (!videos || videos.length === 0) return null;
   // Prefer HLS master, then any HLS, skip TS segments, blob:, and page URLs
   const validVideos = videos.filter(v =>
-    v.url.startsWith('https://') &&
+    /^https?:\/\//i.test(v.url) &&
     !v.url.includes('/seg-') &&
     !v.url.startsWith('blob:') &&
     v.type !== 'TS'
@@ -66,7 +66,10 @@ function pickBestUrlFromVideos(videos: { url: string; type: string }[]): string 
   if (master) return master.url;
   const hls = validVideos.find(v => v.type === 'HLS');
   if (hls) return hls.url;
-  return null;
+  const embed = validVideos.find(v => v.type === 'EMBED' || /server\.php\?/i.test(v.url));
+  if (embed) return embed.url;
+  const mp4 = validVideos.find(v => v.type === 'MP4');
+  return mp4 ? mp4.url : null;
 }
 
 function extractYear(titulo: string): number | null {
