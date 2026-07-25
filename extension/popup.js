@@ -88,7 +88,6 @@ function render(q) {
 
 async function scan() {
   $("#found").textContent = "Procurando...";
-  await clickEmbedInAllFrames();
   try {
     await chrome.tabs.sendMessage(tabId, { type: "SCAN" });
   } catch (e) {}
@@ -146,5 +145,9 @@ $("#copy").addEventListener("click", async () => {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   tabId = tab.id;
   render(await getQueue());
-  scan();
+  // scan manual: evita requisições automáticas que disparam o Cloudflare
+  const found = await chrome.runtime.sendMessage({ type: "GET", tabId }).catch(() => ({}));
+  const best = pickBest(found || {});
+  if (best) $("#url").value = best;
+  $("#found").textContent = best ? "Embed já capturado — confira o título." : "Clique em Procurar embed.";
 })();
