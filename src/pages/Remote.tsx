@@ -116,8 +116,37 @@ export default function Remote() {
     const channel = channelRef.current;
     if (!channel) return;
     channel.send({ type: 'broadcast', event: 'cmd', payload: command });
-    if (navigator.vibrate) navigator.vibrate(12);
+    if (navigator.vibrate && !command.action.startsWith('pointer')) navigator.vibrate(12);
   }, []);
+
+  // Pointer moves/scrolls are batched: Realtime broadcast is rate limited, so
+  // sending one message per touchmove would be dropped and the cursor freezes.
+  const pending = useRef({ moveX: 0, moveY: 0, scroll: 0 });
+  const flushTimer = useRef<number | null>(null);
+
+  const sendPointer = useCallback(
+    (command: RemoteCommand) => {
+      if (command.action === 'pointerMove') {
+        pending.current.moveX += command.dx ?? 0;
+        pending.current.moveY += command.dy ?? 0;
+      } else if (command.action === 'pointerScroll') {
+        pending.current.scroll += command.dy ?? 0;
+      } else {
+        send(command);
+        return;
+      }
+
+      if (flushTimer.current) return;
+      flushTimer.current = window.setTimeout(() => {
+        flushTimer.current = null;
+        const { moveX, moveY, scroll } = pending.current;
+        pending.current = { moveX: 0, moveY: 0, scroll: 0 };
+        if (moveX || moveY) send({ action: 'pointerMove', dx: moveX, dy: moveY });
+        if (scroll) send({ action: 'pointerScroll', dy: scroll });
+      }, 70);
+    },
+    [send],
+  );
 
   const handlePair = () => {
     const code = codeInput.trim().toUpperCase();
@@ -208,7 +237,7 @@ export default function Remote() {
         </TabsContent>
 
         <TabsContent value="mouse" className="pt-5">
-          <TouchpadPad send={send} />
+          <TouchpadPad send={sendPointer} />
         </TabsContent>
 
         <TabsContent value="content" className="pt-5">
@@ -563,56 +592,81 @@ function TouchpadPad({ send }: { send: (command: RemoteCommand) => void }) {
   const lastTap = useRef(0);
   const [speed, setSpeed] = useState(1.6);
   const [scrollMode, setScrollMode] = useState(false);
+  const [feedback, setFeedback] = useState('pronto');
 
-  const onStart = (e: React.TouchEvent<HTMLDivElement>) => {
-    const t = e.touches[0];
-    last.current = { x: t.clientX, y: t.clientY };
+  const multiTouch = useRef(false);
+
+  const onStart = (e: React.PointerEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    (e.currentTarget as HTMLDivElement).setPointerCapture?.(e.pointerId);
+    multiTouch.current = false;
+    last.current = { x: e.clientX, y: e.clientY };
     moved.current = false;
     startedAt.current = Date.now();
+    setFeedback('tocando...');
   };
 
-  const onMove = (e: React.TouchEvent<HTMLDivElement>) => {
-    const t = e.touches[0];
+  const onMove = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!last.current) return;
-    const dx = t.clientX - last.current.x;
-    const dy = t.clientY - last.current.y;
-    last.current = { x: t.clientX, y: t.clientY };
+    e.preventDefault();
+    const dx = e.clientX - last.current.x;
+    const dy = e.clientY - last.current.y;
+    last.current = { x: e.clientX, y: e.clientY };
     if (Math.abs(dx) + Math.abs(dy) < 1) return;
     moved.current = true;
 
-    if (scrollMode || e.touches.length > 1) {
+    if (scrollMode || multiTouch.current) {
       send({ action: 'pointerScroll', dy: -dy * 3 });
+      setFeedback('rolando...');
     } else {
       send({ action: 'pointerMove', dx: dx * speed, dy: dy * speed });
+      setFeedback(`movendo ${dx > 0 ? '→' : dx < 0 ? '←' : ''}${dy > 0 ? '↓' : dy < 0 ? '↑' : ''}`);
     }
   };
 
-  const onEnd = () => {
+  const onEnd = (e: React.PointerEvent<HTMLDivElement>) => {
+    (e.currentTarget as HTMLDivElement).releasePointerCapture?.(e.pointerId);
     const duration = Date.now() - startedAt.current;
     last.current = null;
-    if (moved.current || duration > 400) return;
+    if (moved.current || duration > 400) {
+      setFeedback('pronto');
+      return;
+    }
 
     const now = Date.now();
     if (now - lastTap.current < 280) {
       lastTap.current = 0;
       send({ action: 'pointerDoubleTap' });
+      setFeedback('duplo clique enviado');
     } else {
       lastTap.current = now;
       send({ action: 'pointerTap' });
+      setFeedback('clique enviado');
     }
   };
 
   return (
     <div className="space-y-4">
       <div
-        onTouchStart={onStart}
-        onTouchMove={onMove}
-        onTouchEnd={onEnd}
+        onPointerDown={onStart}
+        onPointerMove={onMove}
+        onPointerUp={onEnd}
+        onPointerCancel={() => {
+          last.current = null;
+          setFeedback('pronto');
+        }}
+        onTouchStart={(e) => {
+          multiTouch.current = e.touches.length > 1;
+        }}
+        onContextMenu={(e) => e.preventDefault()}
         className={cn(
           'relative h-72 rounded-2xl border border-border/60 touch-none select-none overflow-hidden',
           scrollMode ? 'bg-primary/10' : 'bg-secondary/40',
         )}
       >
+        <span className="absolute top-2 left-1/2 -translate-x-1/2 text-[10px] px-2 py-0.5 rounded-full bg-background/70 text-primary">
+          {feedback}
+        </span>
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-muted-foreground pointer-events-none">
           <MousePointer2 className="w-8 h-8 text-primary/70" />
           <p className="text-xs font-medium">
