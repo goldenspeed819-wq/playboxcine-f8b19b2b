@@ -77,14 +77,28 @@ export default function IframePlayer({ src, originalUrl, poster, title }: Props)
             <p className="text-sm text-white/80">
               Este provedor bloqueou reprodução incorporada neste site.
             </p>
-            <Button
-              variant="secondary"
-              className="gap-2"
-              onClick={() => window.open(openUrl, '_blank', 'noopener,noreferrer')}
-            >
-              <ExternalLink className="w-4 h-4" />
-              Abrir no provedor
-            </Button>
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <Button
+                variant="secondary"
+                className="gap-2"
+                onClick={() => window.open(openUrl, '_blank', 'noopener,noreferrer')}
+              >
+                <ExternalLink className="w-4 h-4" />
+                Abrir no provedor
+              </Button>
+              <Button
+                variant="outline"
+                className="gap-2"
+                onClick={() => {
+                  setStarted(false);
+                  setShowFallback(false);
+                  setLoaded(false);
+                }}
+              >
+                <Play className="w-4 h-4" />
+                Tentar novamente
+              </Button>
+            </div>
             <p className="text-xs text-white/50">
               Dica: use um link <strong>embed</strong> (ex.: /e/...) quando disponível.
             </p>
