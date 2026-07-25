@@ -116,8 +116,37 @@ export default function Remote() {
     const channel = channelRef.current;
     if (!channel) return;
     channel.send({ type: 'broadcast', event: 'cmd', payload: command });
-    if (navigator.vibrate) navigator.vibrate(12);
+    if (navigator.vibrate && !command.action.startsWith('pointer')) navigator.vibrate(12);
   }, []);
+
+  // Pointer moves/scrolls are batched: Realtime broadcast is rate limited, so
+  // sending one message per touchmove would be dropped and the cursor freezes.
+  const pending = useRef({ moveX: 0, moveY: 0, scroll: 0 });
+  const flushTimer = useRef<number | null>(null);
+
+  const sendPointer = useCallback(
+    (command: RemoteCommand) => {
+      if (command.action === 'pointerMove') {
+        pending.current.moveX += command.dx ?? 0;
+        pending.current.moveY += command.dy ?? 0;
+      } else if (command.action === 'pointerScroll') {
+        pending.current.scroll += command.dy ?? 0;
+      } else {
+        send(command);
+        return;
+      }
+
+      if (flushTimer.current) return;
+      flushTimer.current = window.setTimeout(() => {
+        flushTimer.current = null;
+        const { moveX, moveY, scroll } = pending.current;
+        pending.current = { moveX: 0, moveY: 0, scroll: 0 };
+        if (moveX || moveY) send({ action: 'pointerMove', dx: moveX, dy: moveY });
+        if (scroll) send({ action: 'pointerScroll', dy: scroll });
+      }, 70);
+    },
+    [send],
+  );
 
   const handlePair = () => {
     const code = codeInput.trim().toUpperCase();
@@ -208,7 +237,7 @@ export default function Remote() {
         </TabsContent>
 
         <TabsContent value="mouse" className="pt-5">
-          <TouchpadPad send={send} />
+          <TouchpadPad send={sendPointer} />
         </TabsContent>
 
         <TabsContent value="content" className="pt-5">
