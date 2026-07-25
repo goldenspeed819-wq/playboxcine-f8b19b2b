@@ -27,6 +27,7 @@ const buildPlayerUrl = (template: string, domain: string, serverNum: string, vid
 interface SeriesImportResult {
   season: number;
   episode: number;
+  urlEpisode: number;
   url: string;
   status: 'pending' | 'success' | 'error';
 }
@@ -130,6 +131,7 @@ export default function QuickImport() {
   const [seriesPreviewSeason, setSeriesPreviewSeason] = useState('1');
   const [seriesPreviewEpisode, setSeriesPreviewEpisode] = useState('1');
   const [seriesPreviewUrl, setSeriesPreviewUrl] = useState('');
+  const [episodeNumbering, setEpisodeNumbering] = useState<'reset' | 'continuous'>('reset');
 
   const [movieTitle, setMovieTitle] = useState('');
   const [movieAbbreviation, setMovieAbbreviation] = useState('');
@@ -142,14 +144,25 @@ export default function QuickImport() {
   const [isUpdating, setIsUpdating] = useState(false);
   const [updateStats, setUpdateStats] = useState<{ movies: number; episodes: number } | null>(null);
 
+  // Converts a season/episode pair into the episode number used inside the URL code.
+  // 'reset'      -> T02EP01 (numbering restarts each season)
+  // 'continuous' -> T02EP53 (numbering continues from the previous seasons)
+  const toUrlEpisode = (season: number, episode: number) => {
+    if (episodeNumbering === 'reset' || !tmdbInfo) return episode;
+    const offset = tmdbInfo.seasons
+      .filter((s) => s.season_number < season)
+      .reduce((sum, s) => sum + s.episode_count, 0);
+    return offset + episode;
+  };
+
   const seriesPreviewVid = useMemo(() => {
     if (!seriesAbbreviation.trim()) return '';
     return buildSeriesEpisodeCode(
       seriesAbbreviation,
       Number(seriesPreviewSeason) || 1,
-      Number(seriesPreviewEpisode) || 1,
+      toUrlEpisode(Number(seriesPreviewSeason) || 1, Number(seriesPreviewEpisode) || 1),
     );
-  }, [seriesAbbreviation, seriesPreviewSeason, seriesPreviewEpisode]);
+  }, [seriesAbbreviation, seriesPreviewSeason, seriesPreviewEpisode, episodeNumbering, tmdbInfo]);
 
   const defaultSeriesPreviewUrl = useMemo(() => {
     if (!seriesPreviewVid) return '';
@@ -176,10 +189,12 @@ export default function QuickImport() {
     const results: SeriesImportResult[] = [];
     for (const season of tmdbInfo.seasons) {
       for (let ep = 1; ep <= season.episode_count; ep++) {
-        const vid = buildSeriesEpisodeCode(seriesAbbreviation, season.season_number, ep);
+        const urlEpisode = toUrlEpisode(season.season_number, ep);
+        const vid = buildSeriesEpisodeCode(seriesAbbreviation, season.season_number, urlEpisode);
         results.push({
           season: season.season_number,
           episode: ep,
+          urlEpisode,
           url: buildPlayerUrl(playerUrlTemplate, playerDomain, serverNum, vid),
           status: 'pending',
         });
@@ -187,7 +202,7 @@ export default function QuickImport() {
     }
 
     setSeriesResults(results);
-  }, [tmdbInfo, seriesAbbreviation, playerUrlTemplate, playerDomain, serverNum]);
+  }, [tmdbInfo, seriesAbbreviation, playerUrlTemplate, playerDomain, serverNum, episodeNumbering]);
 
   useEffect(() => {
     if (!moviePreviewUrl.trim()) return;
@@ -556,6 +571,41 @@ export default function QuickImport() {
                     </div>
                   </div>
 
+                  <div className="space-y-2 rounded-xl bg-muted/40 p-3">
+                    <Label>Numeração dos episódios nas URLs</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Como o site de origem numera os episódios a cada nova temporada?
+                    </p>
+                    <div className="grid sm:grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setEpisodeNumbering('reset')}
+                        className={cn(
+                          'text-left rounded-lg border p-3 text-xs transition-colors',
+                          episodeNumbering === 'reset'
+                            ? 'border-primary bg-primary/10 text-primary'
+                            : 'border-border hover:bg-muted/60',
+                        )}
+                      >
+                        <span className="block font-semibold">Zera a cada temporada</span>
+                        <span className="block text-muted-foreground">T01EP52 → T02EP01</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEpisodeNumbering('continuous')}
+                        className={cn(
+                          'text-left rounded-lg border p-3 text-xs transition-colors',
+                          episodeNumbering === 'continuous'
+                            ? 'border-primary bg-primary/10 text-primary'
+                            : 'border-border hover:bg-muted/60',
+                        )}
+                      >
+                        <span className="block font-semibold">Continua a contagem</span>
+                        <span className="block text-muted-foreground">T01EP52 → T02EP53</span>
+                      </button>
+                    </div>
+                  </div>
+
                   <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
                     <div className="space-y-2">
                       <Label>Episódio do preview</Label>
@@ -596,7 +646,12 @@ export default function QuickImport() {
                           {result.status === 'success' ? <CheckCircle className="w-4 h-4 text-green-500" /> :
                            result.status === 'error' ? <XCircle className="w-4 h-4 text-destructive" /> :
                            <div className="w-4 h-4 rounded-full bg-muted" />}
-                          <span className="font-mono text-xs text-muted-foreground">T{String(result.season).padStart(2, '0')}E{String(result.episode).padStart(2, '0')}</span>
+                          <span className="font-mono text-xs text-muted-foreground">
+                            T{String(result.season).padStart(2, '0')}E{String(result.episode).padStart(2, '0')}
+                            {result.urlEpisode !== result.episode && (
+                              <span className="text-primary"> →EP{String(result.urlEpisode).padStart(2, '0')}</span>
+                            )}
+                          </span>
                           <span className="flex-1 truncate text-xs text-muted-foreground">{result.url}</span>
                           <span
                             className={cn(
