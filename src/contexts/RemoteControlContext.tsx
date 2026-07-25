@@ -150,6 +150,20 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
     );
   }, []);
 
+  const dispatchHardwareInput = useCallback(
+    (payload: { input: 'move' | 'click' | 'doubleClick' | 'rightClick' | 'scroll'; x?: number; y?: number; dy?: number }) => {
+      window.postMessage(
+        {
+          source: 'rynex-cine',
+          type: 'RYNEX_REMOTE_INPUT',
+          ...payload,
+        },
+        window.location.origin,
+      );
+    },
+    [],
+  );
+
   const movePointer = useCallback(
     (dx: number, dy: number) => {
       const { x, y } = cursorRef.current;
@@ -176,20 +190,6 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
       180,
     );
   }, []);
-
-  const dispatchHardwareInput = useCallback(
-    (payload: { input: 'move' | 'click' | 'doubleClick' | 'rightClick' | 'scroll'; x?: number; y?: number; dy?: number }) => {
-      window.postMessage(
-        {
-          source: 'rynex-cine',
-          type: 'RYNEX_REMOTE_INPUT',
-          ...payload,
-        },
-        window.location.origin,
-      );
-    },
-    [],
-  );
 
   const clickPointer = useCallback(
     (kind: 'tap' | 'double' | 'right') => {
