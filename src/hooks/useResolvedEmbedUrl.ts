@@ -34,6 +34,12 @@ export function useResolvedEmbedUrl(rawUrl: string | null | undefined): State {
     const needsRemote = shouldResolveRemotely(input);
     const localEmbed = toEmbedUrl(input) ?? input;
 
+    if (!needsRemote) {
+      cacheRef.current.set(input, localEmbed);
+      setState({ url: localEmbed, streamUrl: null, isLoading: false, error: null });
+      return;
+    }
+
     // Cached results
     const cachedStream = streamCacheRef.current.get(input);
     if (cachedStream) {
@@ -50,9 +56,7 @@ export function useResolvedEmbedUrl(rawUrl: string | null | undefined): State {
     const controller = new AbortController();
     abortRef.current = controller;
 
-    // Always try remotely: we want a direct stream so the native player can be used.
-    // While resolving, keep the local embed available as fallback when it already works.
-    setState({ url: needsRemote ? null : localEmbed, streamUrl: null, isLoading: true, error: null });
+    setState({ url: null, streamUrl: null, isLoading: true, error: null });
 
     const timer = setTimeout(() => void (async () => {
       try {
@@ -63,7 +67,7 @@ export function useResolvedEmbedUrl(rawUrl: string | null | undefined): State {
         if (controller.signal.aborted) return;
 
         if (error) {
-          setState({ url: needsRemote ? null : localEmbed, streamUrl: null, isLoading: false, error: needsRemote ? error.message : null });
+          setState({ url: null, streamUrl: null, isLoading: false, error: error.message });
           return;
         }
 
@@ -81,16 +85,11 @@ export function useResolvedEmbedUrl(rawUrl: string | null | undefined): State {
           return;
         }
 
-        if (!needsRemote) {
-          setState({ url: localEmbed, streamUrl: null, isLoading: false, error: null });
-          return;
-        }
-
         const backendError = data?.error || 'Não foi possível resolver o link para reprodução incorporada';
         setState({ url: null, streamUrl: null, isLoading: false, error: backendError });
       } catch (e) {
         if (controller.signal.aborted) return;
-        setState({ url: needsRemote ? null : localEmbed, streamUrl: null, isLoading: false, error: needsRemote ? String(e) : null });
+        setState({ url: null, streamUrl: null, isLoading: false, error: String(e) });
       }
     })(), 600);
 
