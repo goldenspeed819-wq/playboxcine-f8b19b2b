@@ -92,7 +92,7 @@ async function scan() {
   try {
     await chrome.tabs.sendMessage(tabId, { type: "SCAN" });
   } catch (e) {}
-  await new Promise((r) => setTimeout(r, 4000));
+  await new Promise((r) => setTimeout(r, 6000));
   const found = await chrome.runtime.sendMessage({ type: "GET", tabId });
   const m = await chrome.tabs.sendMessage(tabId, { type: "META" }).catch(() => ({}));
   meta = m || {};
