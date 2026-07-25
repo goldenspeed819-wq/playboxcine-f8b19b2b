@@ -166,6 +166,8 @@ async function setPageVolume(tabId, msg) {
 }
 
 async function clickLikelyPlay(tabId, msg) {
+  const direct = await controlMedia(tabId, { action: "play" });
+  if (direct.ok) return { ok: true, method: "media" };
   const x = Number(msg.x);
   const y = Number(msg.y);
   const results = [];
@@ -216,9 +218,88 @@ async function clickLikelyPlay(tabId, msg) {
   return results[0] || { ok: false, error: "Play não encontrado", method: "mixed" };
 }
 
+
+// Controle direto da mídia dentro de TODOS os frames (inclusive o player do
+// RedeCanais/Video.js). É a técnica que funciona sem depender de clique:
+// o content script/scripting roda dentro do iframe e mexe no <video> direto.
+async function controlMedia(tabId, msg) {
+  const action = String(msg.action || "toggle");
+  const value = Number(msg.value);
+  try {
+    const results = await chrome.scripting.executeScript({
+      target: { tabId, allFrames: true },
+      args: [action, Number.isFinite(value) ? value : null],
+      func: (action, value) => {
+        const medias = [...document.querySelectorAll("video, audio")].filter((m) => {
+          const r = m.getBoundingClientRect?.() || { width: 1, height: 1 };
+          return m.tagName === "AUDIO" || m.readyState > 0 || m.currentSrc || r.width > 0;
+        });
+        const vjs = (() => {
+          try {
+            const players = window.videojs && window.videojs.getPlayers && window.videojs.getPlayers();
+            return players ? Object.values(players).filter(Boolean) : [];
+          } catch (e) { return []; }
+        })();
+        if (!medias.length && !vjs.length) return null;
+
+        const play = (m) => {
+          const p = m.play?.();
+          if (p && p.catch) p.catch(() => { m.muted = true; m.play?.().catch(() => {}); });
+        };
+        let state = null;
+        medias.forEach((m) => {
+          switch (action) {
+            case "play": play(m); break;
+            case "pause": m.pause?.(); break;
+            case "toggle": m.paused ? play(m) : m.pause?.(); break;
+            case "seek": m.currentTime = Math.max(0, (m.currentTime || 0) + (value || 0)); break;
+            case "seekTo": m.currentTime = Math.max(0, value || 0); break;
+            case "volume": m.volume = Math.min(1, Math.max(0, value ?? m.volume)); m.muted = false; break;
+            case "mute": m.muted = !m.muted; break;
+            case "rate": m.playbackRate = value || 1; break;
+            case "fullscreen": {
+              const target = m.closest("[class*=video], [class*=player]") || m;
+              try {
+                if (document.fullscreenElement) document.exitFullscreen();
+                else (target.requestFullscreen || m.requestFullscreen)?.call(target);
+              } catch (e) {}
+              break;
+            }
+            default: break;
+          }
+          state = { paused: !!m.paused, currentTime: m.currentTime || 0, duration: m.duration || 0, volume: m.volume, muted: !!m.muted };
+        });
+        vjs.forEach((p) => {
+          try {
+            if (action === "play") p.play();
+            else if (action === "pause") p.pause();
+            else if (action === "toggle") p.paused() ? p.play() : p.pause();
+            else if (action === "seek") p.currentTime((p.currentTime() || 0) + (value || 0));
+            else if (action === "seekTo") p.currentTime(value || 0);
+            else if (action === "volume") { p.volume(Math.min(1, Math.max(0, value ?? p.volume()))); p.muted(false); }
+            else if (action === "mute") p.muted(!p.muted());
+            else if (action === "rate") p.playbackRate(value || 1);
+            else if (action === "fullscreen") p.isFullscreen() ? p.exitFullscreen() : p.requestFullscreen();
+          } catch (e) {}
+        });
+        return state || { paused: null };
+      },
+    });
+    const state = (results || []).map((r) => r.result).find(Boolean);
+    if (!state) return { ok: false, error: "Nenhum vídeo encontrado nesta aba", method: "media" };
+    return { ok: true, method: "media", state };
+  } catch (e) {
+    return { ok: false, error: e?.message || "Falha ao controlar o vídeo", method: "media" };
+  }
+}
+
 async function remoteInput(tabId, msg) {
   if (!tabId || tabId < 0) return { ok: false, error: "Aba inválida", method: "none" };
-  if (msg.input === "volume") return setPageVolume(tabId, msg);
+  if (msg.input === "media") return controlMedia(tabId, msg);
+  if (msg.input === "volume") {
+    await controlMedia(tabId, { action: "volume", value: msg.value });
+    return setPageVolume(tabId, msg);
+  }
   if (msg.input === "embedPlay") return clickLikelyPlay(tabId, msg);
   const x = Number(msg.x);
   const y = Number(msg.y);

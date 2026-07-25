@@ -172,7 +172,8 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
 
   const dispatchHardwareInput = useCallback(
     (payload: {
-      input: 'move' | 'click' | 'doubleClick' | 'rightClick' | 'scroll' | 'embedPlay' | 'volume';
+      input: 'move' | 'click' | 'doubleClick' | 'rightClick' | 'scroll' | 'embedPlay' | 'volume' | 'media';
+      action?: string;
       x?: number;
       y?: number;
       dy?: number;
@@ -191,6 +192,17 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
       );
     },
     [],
+  );
+
+  /**
+   * Controla o vídeo dentro do embed (RedeCanais/Video.js) pela extensão:
+   * o script roda dentro do iframe e mexe direto no elemento <video>.
+   */
+  const dispatchMedia = useCallback(
+    (action: string, value?: number) => {
+      dispatchHardwareInput({ input: 'media', action, value });
+    },
+    [dispatchHardwareInput],
   );
 
   const applySiteAudio = useCallback(
@@ -312,6 +324,8 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
       overlay.dispatchEvent(new MouseEvent('click', base));
       overlay.click();
       window.dispatchEvent(new CustomEvent('rynex:embed-play'));
+      dispatchMedia('play');
+      window.setTimeout(() => dispatchMedia('play'), 1500);
       dispatchHardwareInput({ input: 'embedPlay', x, y });
       window.setTimeout(() => dispatchHardwareInput({ input: 'embedPlay', x, y }), 900);
       window.setTimeout(() => dispatchHardwareInput({ input: 'embedPlay', x, y }), 2200);
@@ -325,6 +339,7 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
       showCursor(x, y);
       flashPress();
       iframe.focus();
+      dispatchMedia('play');
       dispatchHardwareInput({ input: 'click', x, y });
       dispatchHardwareInput({ input: 'embedPlay', x, y });
       toast({
@@ -334,7 +349,7 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
       return;
     }
     playerRef.current?.togglePlay();
-  }, [dispatchHardwareInput, flashPress, showCursor]);
+  }, [dispatchHardwareInput, dispatchMedia, flashPress, showCursor]);
 
   const scrollPointer = useCallback(
     (dy: number) => {
@@ -465,19 +480,24 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
           break;
         }
         case 'togglePlay':
-          player?.togglePlay();
+          if (player) player.togglePlay();
+          else dispatchMedia('toggle');
           break;
         case 'play':
-          player?.play();
+          if (player) player.play();
+          else dispatchMedia('play');
           break;
         case 'pause':
-          player?.pause();
+          if (player) player.pause();
+          else dispatchMedia('pause');
           break;
         case 'seek':
-          player?.seek(numberValue || 0);
+          if (player) player.seek(numberValue || 0);
+          else dispatchMedia('seek', numberValue || 0);
           break;
         case 'seekTo':
-          player?.seekTo(numberValue || 0);
+          if (player) player.seekTo(numberValue || 0);
+          else dispatchMedia('seekTo', numberValue || 0);
           break;
         case 'volume':
           player?.setVolume(numberValue || 0);
@@ -489,16 +509,19 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
           break;
         case 'toggleMute':
           player?.toggleMute();
+          if (!player) dispatchMedia('mute');
           applySiteAudio(siteVolumeRef.current, !siteMutedRef.current);
           break;
         case 'toggleFullscreen':
-          player?.toggleFullscreen();
+          if (player) player.toggleFullscreen();
+          else dispatchMedia('fullscreen');
           break;
         case 'togglePiP':
           player?.togglePiP();
           break;
         case 'speed':
-          player?.setSpeed(numberValue || 1);
+          if (player) player.setSpeed(numberValue || 1);
+          else dispatchMedia('rate', numberValue || 1);
           break;
         case 'skipIntro':
           player?.skipIntro();
@@ -551,6 +574,7 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
     [
       clickPointer,
       applySiteAudio,
+      dispatchMedia,
       movePointer,
       navigate,
       pressPlayOverlay,
