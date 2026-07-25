@@ -365,6 +365,9 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
         case 'key':
           sendKey(String(command.value ?? ''));
           break;
+        case 'embedPlay':
+          pressPlayOverlay();
+          break;
         case 'cinema':
           toggleCinema();
           break;
@@ -374,7 +377,17 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
 
       setTimeout(sendState, 120);
     },
-    [clickPointer, movePointer, navigate, scrollPointer, sendKey, sendState, showCursor, toggleCinema],
+    [
+      clickPointer,
+      movePointer,
+      navigate,
+      pressPlayOverlay,
+      scrollPointer,
+      sendKey,
+      sendState,
+      showCursor,
+      toggleCinema,
+    ],
   );
 
   useEffect(() => {

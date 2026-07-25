@@ -14,6 +14,7 @@ export default function RemoteCursor({ x, y, visible, pressed }: Props) {
   return (
     <div
       aria-hidden
+      data-rc-cursor
       className="pointer-events-none fixed z-[9999] transition-transform duration-75"
       style={{ left: 0, top: 0, transform: `translate3d(${x}px, ${y}px, 0)` }}
     >

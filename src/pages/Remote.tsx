@@ -764,6 +764,10 @@ function TouchpadPad({ send }: { send: (command: RemoteCommand) => void }) {
 
       {/* Iframe helpers */}
       <div className="grid grid-cols-2 gap-3">
+        <Button className="gap-2 col-span-2" onClick={() => send({ action: 'embedPlay' })}>
+          <MonitorPlay className="w-4 h-4" />
+          Dar play no vídeo
+        </Button>
         <Button variant="secondary" className="gap-2" onClick={() => send({ action: 'cinema' })}>
           <MonitorPlay className="w-4 h-4" />
           Tela cheia (embed)
