@@ -38,7 +38,7 @@ export default function IframePlayer({ src, originalUrl, poster, title }: Props)
     <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden">
       {started ? (
         <iframe
-          src={src.includes('autoplay') ? src : `${src}${src.includes('?') ? '&' : '?'}autoplay=1`}
+          src={src}
           className="absolute inset-0 w-full h-full"
           frameBorder="0"
           allow="autoplay; fullscreen; picture-in-picture"
