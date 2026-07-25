@@ -35,7 +35,7 @@ export default function IframePlayer({ src, originalUrl, poster, title }: Props)
   const openUrl = originalUrl || src;
 
   return (
-    <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden">
+    <div data-rc-frame className="relative w-full aspect-video bg-black rounded-xl overflow-hidden">
       {started ? (
         <iframe
           src={src}
