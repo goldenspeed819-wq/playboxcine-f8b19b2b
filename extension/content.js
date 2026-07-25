@@ -182,6 +182,17 @@
   }
 
   function clickEmbed() {
+    // 1) o botão EMBED do player é um link redirect.api / embed.api
+    const link = [...document.querySelectorAll("a[href]")].find((a) =>
+      /redirect\.api\?|embed\.api\?embed=/i.test(a.getAttribute("href") || "")
+    );
+    if (link) {
+      fire(link);
+      try {
+        link.click();
+      } catch (e) {}
+      return true;
+    }
     const els = [
       ...document.querySelectorAll(
         'a,button,div,span,li,td,img,[role="button"],[onclick],[class*="embed" i],[id*="embed" i],[aria-label*="embed" i],[title*="embed" i]'
