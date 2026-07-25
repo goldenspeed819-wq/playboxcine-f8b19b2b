@@ -87,8 +87,43 @@
     const out = { embeds: [...base.embeds], streams: [...base.streams] };
     if (depth <= 0) return out;
 
+    const apiLinks = [...document.querySelectorAll("a[href]")]
+      .map((a) => a.getAttribute("href") || "")
+      .filter((h) => /redirect\.api\?|embed\.api\?embed=/i.test(h))
+      .map((h) => {
+        try {
+          return new URL(h, location.href).href;
+        } catch (e) {
+          return "";
+        }
+      });
+
+    // segue o link do botão EMBED (a URL final é gerada em tempo real no servidor)
+    for (const link of uniq(apiLinks).slice(0, 3)) {
+      try {
+        const res = await fetch(link, { credentials: "include", redirect: "follow" });
+        if (isEmbedUrl(res.url)) out.embeds.push(res.url);
+        const h = await res.text();
+        collectEmbedApi(h, out.embeds);
+        (h.match(EMBED_RE) || []).forEach((u) => {
+          if (isEmbedUrl(u)) out.embeds.push(u);
+        });
+        EMBED_RE.lastIndex = 0;
+        let mm;
+        REL_EMBED_RE.lastIndex = 0;
+        while ((mm = REL_EMBED_RE.exec(h))) {
+          try {
+            const a2 = new URL(mm[1], res.url || link).href;
+            if (isEmbedUrl(a2)) out.embeds.push(a2);
+          } catch (e) {}
+        }
+        REL_EMBED_RE.lastIndex = 0;
+      } catch (e) {}
+    }
+
     const pages = uniq([
       ...[...document.querySelectorAll("iframe[src]")].map((f) => f.src),
+      ...apiLinks,
       ...out.embeds,
     ]).filter((u) => {
       try {
@@ -182,6 +217,17 @@
   }
 
   function clickEmbed() {
+    // 1) o botão EMBED do player é um link redirect.api / embed.api
+    const link = [...document.querySelectorAll("a[href]")].find((a) =>
+      /redirect\.api\?|embed\.api\?embed=/i.test(a.getAttribute("href") || "")
+    );
+    if (link) {
+      fire(link);
+      try {
+        link.click();
+      } catch (e) {}
+      return true;
+    }
     const els = [
       ...document.querySelectorAll(
         'a,button,div,span,li,td,img,[role="button"],[onclick],[class*="embed" i],[id*="embed" i],[aria-label*="embed" i],[title*="embed" i]'
