@@ -84,12 +84,20 @@ export interface RemotePlayerApi {
   getState: () => RemotePlayerState;
 }
 
+export interface RemoteExtensionStatus {
+  detected: boolean;
+  version?: string;
+  lastAck?: string;
+  lastError?: string;
+}
+
 interface RemoteControlContextValue {
   code: string;
   enabled: boolean;
   setEnabled: (value: boolean) => void;
   regenerateCode: () => void;
   isHostConnected: boolean;
+  extensionStatus: RemoteExtensionStatus;
   registerPlayer: (api: RemotePlayerApi) => () => void;
 }
 
@@ -119,6 +127,8 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
   });
   const [enabled, setEnabledState] = useState(() => localStorage.getItem(ENABLED_KEY) !== 'false');
   const [isHostConnected, setIsHostConnected] = useState(false);
+  const [extensionStatus, setExtensionStatus] = useState<RemoteExtensionStatus>({ detected: false });
+  const extensionSeenAt = useRef(0);
 
   const [cursor, setCursor] = useState({ x: 0, y: 0, visible: false, pressed: false });
   const cursorRef = useRef({ x: 0, y: 0 });
@@ -168,10 +178,12 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
       value?: number;
       muted?: boolean;
     }) => {
+      const requestId = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
       window.postMessage(
         {
           source: 'rynex-cine',
           type: 'RYNEX_REMOTE_INPUT',
+          requestId,
           ...payload,
         },
         window.location.origin,
@@ -301,6 +313,7 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
       window.dispatchEvent(new CustomEvent('rynex:embed-play'));
       dispatchHardwareInput({ input: 'embedPlay', x, y });
       window.setTimeout(() => dispatchHardwareInput({ input: 'embedPlay', x, y }), 900);
+      window.setTimeout(() => dispatchHardwareInput({ input: 'embedPlay', x, y }), 2200);
       return;
     }
     const iframe = document.querySelector('[data-rc-frame] iframe') as HTMLIFrameElement | null;
@@ -367,8 +380,51 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
         page: window.location.pathname,
         hasPlayer: !!player,
         player: player ? player.getState() : null,
+        extension: {
+          ...extensionStatus,
+          detected: extensionStatus.detected && Date.now() - extensionSeenAt.current < 12000,
+        },
       },
     });
+  }, [extensionStatus]);
+
+  useEffect(() => {
+    const handleExtensionMessage = (event: MessageEvent) => {
+      if (event.source !== window) return;
+      const data = event.data || {};
+      if (data.source !== 'rynex-extension') return;
+      extensionSeenAt.current = Date.now();
+      if (data.type === 'RYNEX_EXTENSION_STATUS') {
+        setExtensionStatus((prev) => ({
+          ...prev,
+          detected: true,
+          version: typeof data.version === 'string' ? data.version : prev.version,
+        }));
+      }
+      if (data.type === 'RYNEX_REMOTE_ACK') {
+        setExtensionStatus((prev) => ({
+          ...prev,
+          detected: true,
+          lastAck: data.ok ? `${data.input || 'comando'}: ${data.method || 'ok'}` : prev.lastAck,
+          lastError: data.ok ? undefined : data.error || 'Comando bloqueado pelo Chrome',
+        }));
+      }
+    };
+
+    window.addEventListener('message', handleExtensionMessage);
+    const ping = window.setInterval(() => {
+      window.postMessage(
+        { source: 'rynex-cine', type: 'RYNEX_EXTENSION_PING', requestId: `${Date.now()}` },
+        window.location.origin,
+      );
+      if (extensionSeenAt.current && Date.now() - extensionSeenAt.current > 12000) {
+        setExtensionStatus((prev) => ({ ...prev, detected: false }));
+      }
+    }, 3000);
+    return () => {
+      window.removeEventListener('message', handleExtensionMessage);
+      window.clearInterval(ping);
+    };
   }, []);
 
   const handleCommand = useCallback(
@@ -524,8 +580,8 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
   }, [applySiteAudio]);
 
   const value = useMemo(
-    () => ({ code, enabled, setEnabled, regenerateCode, isHostConnected, registerPlayer }),
-    [code, enabled, setEnabled, regenerateCode, isHostConnected, registerPlayer],
+    () => ({ code, enabled, setEnabled, regenerateCode, isHostConnected, extensionStatus, registerPlayer }),
+    [code, enabled, setEnabled, regenerateCode, isHostConnected, extensionStatus, registerPlayer],
   );
 
   return (

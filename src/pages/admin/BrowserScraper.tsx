@@ -61,9 +61,8 @@ const BrowserScraper = () => {
           <Chrome className="h-4 w-4 text-primary" /> Extensão do Chrome (recomendado)
         </div>
         <p className="text-sm text-muted-foreground">
-          A extensão roda em <b>todos os frames</b> da página — inclusive dentro do iframe do player — então ela
-          clica no botão <b>EMBED</b> do player e captura só links <code>server.php?server=RCServerXX&amp;vid=...</code>,
-          ignorando Disqus/comentários.
+          A extensão agora é o <b>Rynex Helper v1.0.4</b>: captura o botão <b>EMBED</b> e também mostra, no
+          controle remoto, se o PC realmente recebeu a ponte da extensão para mouse/volume em player externo.
         </p>
         <Button onClick={downloadExtension}>
           <Download className="h-4 w-4 mr-2" /> Baixar extensão (.zip)
