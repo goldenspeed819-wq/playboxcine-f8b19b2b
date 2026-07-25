@@ -62,8 +62,8 @@ const BrowserScraper = () => {
         </div>
         <p className="text-sm text-muted-foreground">
           A extensão roda em <b>todos os frames</b> da página — inclusive dentro do iframe do player — então ela
-          consegue clicar no botão <b>EMBED</b> e capturar o link <code>server.php?server=RCServerXX&amp;vid=...</code>,
-          o que o favorito não conseguia por bloqueio de origem. Também escuta a rede para pegar streams.
+          clica no botão <b>EMBED</b> do player e captura só links <code>server.php?server=RCServerXX&amp;vid=...</code>,
+          ignorando Disqus/comentários.
         </p>
         <Button onClick={downloadExtension}>
           <Download className="h-4 w-4 mr-2" /> Baixar extensão (.zip)

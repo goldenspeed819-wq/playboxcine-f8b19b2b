@@ -6,10 +6,12 @@ function bucket(tabId) {
   return found[tabId];
 }
 
-const EMBED_RE = /(server\.php\?[^"'\s<>]+|RCServer[^"'\s<>]*|\/embed\/[^"'\s<>]+|\/player\/[^"'\s<>]+)/i;
+const EMBED_RE = /(server\.php\?[^"'\s<>]+|RCServer[^"'\s<>]*|\/player\d*\/[^"'\s<>]+)/i;
+const BLOCKED_EMBED_RE = /disqus\.com|\/embed\/comments|comments\/?\?/i;
 
 function push(list, url) {
   if (!url) return;
+  if (BLOCKED_EMBED_RE.test(url)) return;
   if (!list.includes(url)) list.push(url);
 }
 
