@@ -112,12 +112,30 @@ export default function Remote() {
     };
   }, [pairedCode]);
 
-  const send = useCallback((command: RemoteCommand) => {
-    const channel = channelRef.current;
-    if (!channel) return;
-    channel.send({ type: 'broadcast', event: 'cmd', payload: command });
-    if (navigator.vibrate && !command.action.startsWith('pointer')) navigator.vibrate(12);
-  }, []);
+  const [vibrateOn, setVibrateOn] = useState(
+    () => localStorage.getItem('rynex-remote-vibrate') === 'true',
+  );
+  const lastVibrate = useRef(0);
+
+  const send = useCallback(
+    (command: RemoteCommand) => {
+      const channel = channelRef.current;
+      if (!channel) return;
+      channel.send({ type: 'broadcast', event: 'cmd', payload: command });
+      const now = Date.now();
+      if (
+        vibrateOn &&
+        navigator.vibrate &&
+        !command.action.startsWith('pointerMove') &&
+        !command.action.startsWith('pointerScroll') &&
+        now - lastVibrate.current > 400
+      ) {
+        lastVibrate.current = now;
+        navigator.vibrate(8);
+      }
+    },
+    [vibrateOn],
+  );
 
   // Pointer moves/scrolls are batched: Realtime broadcast is rate limited, so
   // sending one message per touchmove would be dropped and the cursor freezes.
