@@ -17,9 +17,14 @@
     if (!u || typeof u !== 'string') return false;
     if (u.indexOf('blob:') === 0) return false;
     if (u.indexOf('/seg-') !== -1) return false;
+    if (isEmbed(u)) return true;
     return /\.m3u8(\?|$)/i.test(u) || /\.mp4(\?|$)/i.test(u) || /\.mpd(\?|$)/i.test(u);
   }
+  function isEmbed(u) {
+    return /server\.php\?/i.test(u) || /RCServer/i.test(u) || /\/player\d*\//i.test(u);
+  }
   function typeOf(u) {
+    if (isEmbed(u)) return 'EMBED';
     if (/\.m3u8/i.test(u)) return 'HLS';
     if (/\.mpd/i.test(u)) return 'DASH';
     return 'MP4';
@@ -50,9 +55,17 @@
 
   setInterval(function () {
     document.querySelectorAll('video, source').forEach(function (el) { add(el.src || el.getAttribute('src')); });
+    document.querySelectorAll('iframe').forEach(function (el) { add(el.src || el.getAttribute('src')); });
+    document.querySelectorAll('textarea, input').forEach(function (el) {
+      var v = el.value || '';
+      var mm = v.match(/(?:https?:)?\/\/[^"'\s]+server\.php\?[^"'\s]*/i);
+      if (mm) add(mm[0].indexOf('//') === 0 ? location.protocol + mm[0] : mm[0]);
+    });
     var html = document.documentElement.innerHTML;
     var re = /https?:\/\/[^"'\s\\]+\.(?:m3u8|mp4|mpd)[^"'\s\\]*/gi, m;
     while ((m = re.exec(html))) add(m[0]);
+    var re2 = /(?:https?:)?\/\/[^"'\s\\<>]+server\.php\?[^"'\s\\<>]*/gi, m2;
+    while ((m2 = re2.exec(html))) add(m2[0].indexOf('//') === 0 ? location.protocol + m2[0] : m2[0]);
   }, 1500);
 
   function meta(sel, attr) {
