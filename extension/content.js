@@ -13,6 +13,26 @@
   const ASSET_RE = /\.(?:js|mjs|css|png|jpe?g|gif|webp|svg|ico|woff2?|ttf|eot|map|json|xml|txt|vtt|srt|ts)(?:$|[?#])/i;
 
   const uniq = (a) => [...new Set(a.filter(Boolean))];
+  // O botão EMBED é um link: /player3/redirect.api?r=/player3/embed.api?embed=<base64 do server.php...>
+  const EMBED_API_RE = /embed\.api\?embed=([A-Za-z0-9+/=_-]+)/gi;
+  function decodeEmbedApi(b64) {
+    try {
+      const s = atob(b64.replace(/-/g, "+").replace(/_/g, "/"));
+      if (!/server\.php|player\d/i.test(s)) return "";
+      return new URL(s.replace(/^\/+/, ""), location.origin + "/").href;
+    } catch (e) {
+      return "";
+    }
+  }
+  function collectEmbedApi(html, out) {
+    EMBED_API_RE.lastIndex = 0;
+    let m;
+    while ((m = EMBED_API_RE.exec(html))) {
+      const u = decodeEmbedApi(m[1]);
+      if (u) out.push(u);
+    }
+    EMBED_API_RE.lastIndex = 0;
+  }
   const isBlockedEmbed = (url) => !url || BLOCKED_EMBED_RE.test(url) || ASSET_RE.test(url);
   const isEmbedUrl = (url) => {
     if (!url || isBlockedEmbed(url)) return false;
@@ -23,6 +43,11 @@
     const embeds = [];
     const streams = [];
     const html = document.documentElement ? document.documentElement.innerHTML : "";
+    collectEmbedApi(html, embeds);
+    document.querySelectorAll("a[href]").forEach((a) => {
+      const h = a.getAttribute("href") || "";
+      collectEmbedApi(h, embeds);
+    });
     (html.match(EMBED_RE) || []).forEach((u) => {
       if (isEmbedUrl(u)) embeds.push(u);
     });
