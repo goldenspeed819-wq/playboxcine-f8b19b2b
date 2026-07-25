@@ -200,8 +200,15 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
       target.dispatchEvent(new MouseEvent('click', base));
       if (kind === 'double') target.dispatchEvent(new MouseEvent('dblclick', base));
 
-      // Native click too (covers React handlers on buttons/links reliably)
-      if (typeof target.click === 'function' && kind === 'tap') target.focus?.();
+      // Native click on the nearest interactive ancestor — covers overlays/buttons
+      // whose handlers ignore synthetic mouse events.
+      const clickable = target.closest(
+        'button, a, [role="button"], input, select, textarea, [tabindex], summary',
+      ) as HTMLElement | null;
+      if (clickable) {
+        clickable.focus?.();
+        if (kind === 'tap' || kind === 'double') clickable.click();
+      }
     },
     [flashPress, showCursor],
   );
