@@ -26,7 +26,7 @@ function isValidPublicHttpUrl(input: string): boolean {
     if (host === 'localhost' || host.endsWith('.localhost')) return false;
 
     const labels = host.split('.');
-    const tld = labels.at(-1) || '';
+    const tld = labels[labels.length - 1] || '';
     if (labels.some((label) => !label)) return false;
     if (tld.length < 2 || !/^[a-z][a-z0-9-]*$/i.test(tld)) return false;
     if (/^(127|10|0)\./.test(host)) return false;

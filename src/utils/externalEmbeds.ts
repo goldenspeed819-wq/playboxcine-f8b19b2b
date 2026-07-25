@@ -13,7 +13,7 @@ export function isResolvableHttpUrl(value: string): boolean {
     const { protocol, hostname } = new URL(normalizeHttpUrl(value));
     const host = hostname.toLowerCase();
     const labels = host.split('.');
-    const tld = labels.at(-1) || '';
+    const tld = labels[labels.length - 1] || '';
 
     return (
       (protocol === 'http:' || protocol === 'https:') &&
