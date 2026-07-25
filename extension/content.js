@@ -81,115 +81,10 @@
     return { embeds: uniq(embeds), streams: uniq(streams) };
   }
 
-  // Entra nas páginas do player (mesmo domínio) e procura o embed dentro delas
-  async function deepScan(depth) {
-    const base = scanFrame();
-    const out = { embeds: [...base.embeds], streams: [...base.streams] };
-    if (depth <= 0) return out;
-
-    const apiLinks = [...document.querySelectorAll("a[href]")]
-      .map((a) => a.getAttribute("href") || "")
-      .filter((h) => /redirect\.api\?|embed\.api\?embed=/i.test(h))
-      .map((h) => {
-        try {
-          return new URL(h, location.href).href;
-        } catch (e) {
-          return "";
-        }
-      });
-
-    // segue o link do botão EMBED (a URL final é gerada em tempo real no servidor)
-    for (const link of uniq(apiLinks).slice(0, 3)) {
-      try {
-        const res = await fetch(link, { credentials: "include", redirect: "follow" });
-        if (isEmbedUrl(res.url)) out.embeds.push(res.url);
-        const h = await res.text();
-        collectEmbedApi(h, out.embeds);
-        (h.match(EMBED_RE) || []).forEach((u) => {
-          if (isEmbedUrl(u)) out.embeds.push(u);
-        });
-        EMBED_RE.lastIndex = 0;
-        let mm;
-        REL_EMBED_RE.lastIndex = 0;
-        while ((mm = REL_EMBED_RE.exec(h))) {
-          try {
-            const a2 = new URL(mm[1], res.url || link).href;
-            if (isEmbedUrl(a2)) out.embeds.push(a2);
-          } catch (e) {}
-        }
-        REL_EMBED_RE.lastIndex = 0;
-      } catch (e) {}
-    }
-
-    const pages = uniq([
-      ...[...document.querySelectorAll("iframe[src]")].map((f) => f.src),
-      ...apiLinks,
-      ...out.embeds,
-    ]).filter((u) => {
-      try {
-        return new URL(u, location.href).origin === location.origin && u !== location.href;
-      } catch (e) {
-        return false;
-      }
-    });
-
-    for (const p of pages.slice(0, 6)) {
-      let html = "";
-      try {
-        const res = await fetch(p, { credentials: "include", headers: { Accept: "text/html,*/*" } });
-        html = await res.text();
-      } catch (e) {
-        continue;
-      }
-      collectEmbedApi(html, out.embeds);
-      (html.match(EMBED_RE) || []).forEach((u) => {
-        if (isEmbedUrl(u)) out.embeds.push(u);
-      });
-      EMBED_RE.lastIndex = 0;
-      REL_EMBED_RE.lastIndex = 0;
-      let m;
-      while ((m = REL_EMBED_RE.exec(html))) {
-        try {
-          const abs = new URL(m[1], p).href;
-          if (isEmbedUrl(abs)) out.embeds.push(abs);
-        } catch (e) {}
-      }
-      REL_EMBED_RE.lastIndex = 0;
-      // iframes dentro dessa página (nível seguinte)
-      const inner = [...html.matchAll(/<iframe[^>]+src=["']([^"']+)["']/gi)].map((x) => x[1]);
-      for (const src of inner.slice(0, 3)) {
-        let abs;
-        try {
-          abs = new URL(src, p).href;
-        } catch (e) {
-          continue;
-        }
-        if (isEmbedUrl(abs)) out.embeds.push(abs);
-        if (depth > 1 && new URL(abs).origin === location.origin) {
-          try {
-            const r2 = await fetch(abs, { credentials: "include" });
-            const h2 = await r2.text();
-            collectEmbedApi(h2, out.embeds);
-            (h2.match(EMBED_RE) || []).forEach((u) => {
-              if (isEmbedUrl(u)) out.embeds.push(u);
-            });
-            EMBED_RE.lastIndex = 0;
-            let m2;
-            REL_EMBED_RE.lastIndex = 0;
-            while ((m2 = REL_EMBED_RE.exec(h2))) {
-              try {
-                const a2 = new URL(m2[1], abs).href;
-                if (isEmbedUrl(a2)) out.embeds.push(a2);
-              } catch (e) {}
-            }
-            REL_EMBED_RE.lastIndex = 0;
-          } catch (e) {}
-        }
-      }
-    }
-    out.embeds = uniq(out.embeds);
-    out.streams = uniq(out.streams);
-    return out;
+  // NOTA: nada de fetch em massa aqui — o Cloudflare bane por excesso de requisições.
+  // A captura acontece via clique real no botão EMBED + sniffing de rede no background.
+  async function deepScan() {
+    return scanFrame();
   }
 
   function candidateText(el) {
@@ -281,7 +176,7 @@
         report();
         let deep = scanFrame();
         try {
-          deep = await deepScan(2);
+          deep = await deepScan();
         } catch (e) {}
         try {
           chrome.runtime.sendMessage({ type: "FOUND", ...deep });
@@ -297,9 +192,9 @@
     return false;
   });
 
-  setTimeout(report, 1500);
+  setTimeout(report, 2500);
   new MutationObserver(() => {
     clearTimeout(window.__rynexT);
-    window.__rynexT = setTimeout(report, 800);
+    window.__rynexT = setTimeout(report, 3000);
   }).observe(document.documentElement, { childList: true, subtree: true });
 })();
