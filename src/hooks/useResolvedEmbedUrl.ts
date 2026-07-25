@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { normalizeHttpUrl, shouldResolveRemotely, toEmbedUrl } from '@/utils/externalEmbeds';
+import { isResolvableHttpUrl, normalizeHttpUrl, shouldResolveRemotely, toEmbedUrl } from '@/utils/externalEmbeds';
 
 type State = {
   url: string | null;
@@ -8,16 +8,6 @@ type State = {
   isLoading: boolean;
   error: string | null;
 };
-
-// Guards against resolving half-typed URLs (e.g. "https://h//site.com/...")
-function isResolvableUrl(value: string): boolean {
-  try {
-    const { hostname } = new URL(value);
-    return hostname.includes('.') && !/\s/.test(hostname);
-  } catch {
-    return false;
-  }
-}
 
 export function useResolvedEmbedUrl(rawUrl: string | null | undefined): State {
   const cacheRef = useRef<Map<string, string>>(new Map());
@@ -36,7 +26,7 @@ export function useResolvedEmbedUrl(rawUrl: string | null | undefined): State {
     abortRef.current = null;
 
     const input = rawUrl ? normalizeHttpUrl(rawUrl) : '';
-    if (!input || !isResolvableUrl(input)) {
+    if (!input || !isResolvableHttpUrl(input)) {
       setState({ url: null, streamUrl: null, isLoading: false, error: null });
       return;
     }
