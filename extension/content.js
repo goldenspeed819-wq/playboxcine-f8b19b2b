@@ -5,6 +5,8 @@
 
   const EMBED_RE =
     /https?:\/\/[^"'\s<>\\]*(?:server\.php\?[^"'\s<>\\]*|RCServer[^"'\s<>\\]*|\/player\d*\/[^"'\s<>\\]+)/gi;
+  // Também aceita caminhos relativos (/player3/xxx.php?...) que aparecem no HTML bruto
+  const REL_EMBED_RE = /["'\s(]((?:\/[\w.-]*)*\/(?:player\d*\/[^"'\s<>\\)]*|[^"'\s<>\\)]*server\.php\?[^"'\s<>\\)]*))/gi;
   const STREAM_RE = /https?:\/\/[^"'\s<>\\]+\.(?:m3u8|mp4)(?:\?[^"'\s<>\\]*)?/gi;
   const BLOCKED_EMBED_RE = /disqus\.com|\/embed\/comments|comments\/?\?/i;
   // Assets (js/css/imagens/fontes) nunca são embed
@@ -39,7 +41,93 @@
     });
     if (isEmbedUrl(location.href)) embeds.push(location.href);
     EMBED_RE.lastIndex = 0;
+    REL_EMBED_RE.lastIndex = 0;
+    let rm;
+    while ((rm = REL_EMBED_RE.exec(html))) {
+      let abs;
+      try {
+        abs = new URL(rm[1], location.href).href;
+      } catch (e) {
+        continue;
+      }
+      if (isEmbedUrl(abs)) embeds.push(abs);
+    }
+    REL_EMBED_RE.lastIndex = 0;
     return { embeds: uniq(embeds), streams: uniq(streams) };
+  }
+
+  // Entra nas páginas do player (mesmo domínio) e procura o embed dentro delas
+  async function deepScan(depth) {
+    const base = scanFrame();
+    const out = { embeds: [...base.embeds], streams: [...base.streams] };
+    if (depth <= 0) return out;
+
+    const pages = uniq([
+      ...[...document.querySelectorAll("iframe[src]")].map((f) => f.src),
+      ...out.embeds,
+    ]).filter((u) => {
+      try {
+        return new URL(u, location.href).origin === location.origin && u !== location.href;
+      } catch (e) {
+        return false;
+      }
+    });
+
+    for (const p of pages.slice(0, 6)) {
+      let html = "";
+      try {
+        const res = await fetch(p, { credentials: "include", headers: { Accept: "text/html,*/*" } });
+        html = await res.text();
+      } catch (e) {
+        continue;
+      }
+      (html.match(EMBED_RE) || []).forEach((u) => {
+        if (isEmbedUrl(u)) out.embeds.push(u);
+      });
+      EMBED_RE.lastIndex = 0;
+      REL_EMBED_RE.lastIndex = 0;
+      let m;
+      while ((m = REL_EMBED_RE.exec(html))) {
+        try {
+          const abs = new URL(m[1], p).href;
+          if (isEmbedUrl(abs)) out.embeds.push(abs);
+        } catch (e) {}
+      }
+      REL_EMBED_RE.lastIndex = 0;
+      // iframes dentro dessa página (nível seguinte)
+      const inner = [...html.matchAll(/<iframe[^>]+src=["']([^"']+)["']/gi)].map((x) => x[1]);
+      for (const src of inner.slice(0, 3)) {
+        let abs;
+        try {
+          abs = new URL(src, p).href;
+        } catch (e) {
+          continue;
+        }
+        if (isEmbedUrl(abs)) out.embeds.push(abs);
+        if (depth > 1 && new URL(abs).origin === location.origin) {
+          try {
+            const r2 = await fetch(abs, { credentials: "include" });
+            const h2 = await r2.text();
+            (h2.match(EMBED_RE) || []).forEach((u) => {
+              if (isEmbedUrl(u)) out.embeds.push(u);
+            });
+            EMBED_RE.lastIndex = 0;
+            let m2;
+            REL_EMBED_RE.lastIndex = 0;
+            while ((m2 = REL_EMBED_RE.exec(h2))) {
+              try {
+                const a2 = new URL(m2[1], abs).href;
+                if (isEmbedUrl(a2)) out.embeds.push(a2);
+              } catch (e) {}
+            }
+            REL_EMBED_RE.lastIndex = 0;
+          } catch (e) {}
+        }
+      }
+    }
+    out.embeds = uniq(out.embeds);
+    out.streams = uniq(out.streams);
+    return out;
   }
 
   function candidateText(el) {
@@ -116,9 +204,16 @@
   chrome.runtime.onMessage.addListener((msg, s, sendResponse) => {
     if (msg.type === "SCAN") {
       clickEmbed();
-      setTimeout(() => {
+      setTimeout(async () => {
         report();
-        sendResponse({ ...scanFrame(), meta: window.top === window ? meta() : null });
+        let deep = scanFrame();
+        try {
+          deep = await deepScan(2);
+        } catch (e) {}
+        try {
+          chrome.runtime.sendMessage({ type: "FOUND", ...deep });
+        } catch (e) {}
+        sendResponse({ ...deep, meta: window.top === window ? meta() : null });
       }, 700);
       return true;
     }
