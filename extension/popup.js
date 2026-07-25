@@ -3,9 +3,60 @@ let tabId = null;
 let meta = {};
 
 function pickBest(found) {
-  const all = [...(found.embeds || []), ...(found.streams || [])];
-  const master = all.find((u) => u.includes("master.m3u8"));
-  return master || all[0] || "";
+  const embeds = (found.embeds || []).filter(
+    (u) => !/disqus\.com|\/embed\/comments|comments\/?\?/i.test(u)
+  );
+  const rc = embeds.find((u) => /RCServer|server\.php\?/i.test(u));
+  return rc || embeds[0] || "";
+}
+
+async function clickEmbedInAllFrames() {
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId, allFrames: true },
+      func: () => {
+        const textOf = (el) =>
+          (
+            (el.textContent || "") +
+            " " +
+            ((el.className || "") &&
+              (el.className.baseVal !== undefined ? el.className.baseVal : el.className)) +
+            " " +
+            (el.id || "") +
+            " " +
+            (["aria-label", "alt", "title", "data-title", "data-tooltip", "onclick"]
+              .map((a) => (el.getAttribute && el.getAttribute(a)) || "")
+              .join(" "))
+          ).toLowerCase();
+        const fire = (el) => {
+          ["pointerover", "mouseover", "pointerdown", "mousedown", "pointerup", "mouseup", "click"].forEach((t) => {
+            try {
+              el.dispatchEvent(new MouseEvent(t, { bubbles: true, cancelable: true, view: window }));
+            } catch (e) {}
+          });
+          try {
+            el.click();
+          } catch (e) {}
+        };
+        const nodes = [
+          ...document.querySelectorAll(
+            'a,button,div,span,li,td,img,[role="button"],[onclick],[class*="embed" i],[id*="embed" i],[aria-label*="embed" i],[title*="embed" i]'
+          ),
+        ];
+        let clicks = 0;
+        nodes.forEach((el) => {
+          const txt = textOf(el).trim();
+          const rect = el.getBoundingClientRect();
+          const isEmbed = txt === "embed" || /^embed\b/.test(txt) || txt.includes(" embed") || txt.includes("embed ");
+          if (!isEmbed || rect.width <= 0 || rect.height <= 0 || rect.width > 500 || rect.height > 220) return;
+          if (el.children && el.children.length > 5) return;
+          fire(el);
+          clicks += 1;
+        });
+        return clicks;
+      },
+    });
+  } catch (e) {}
 }
 
 async function getQueue() {
@@ -37,17 +88,18 @@ function render(q) {
 
 async function scan() {
   $("#found").textContent = "Procurando...";
+  await clickEmbedInAllFrames();
   try {
     await chrome.tabs.sendMessage(tabId, { type: "SCAN" });
   } catch (e) {}
-  await new Promise((r) => setTimeout(r, 1200));
+  await new Promise((r) => setTimeout(r, 1800));
   const found = await chrome.runtime.sendMessage({ type: "GET", tabId });
   const m = await chrome.tabs.sendMessage(tabId, { type: "META" }).catch(() => ({}));
   meta = m || {};
   if (!$("#title").value) $("#title").value = meta.title || "";
   const best = pickBest(found);
   if (best) $("#url").value = best;
-  $("#found").textContent = `${(found.embeds || []).length} embed(s) · ${(found.streams || []).length} stream(s)`;
+  $("#found").textContent = `${(found.embeds || []).length} embed(s) válido(s)`;
 }
 
 async function add() {
@@ -68,7 +120,7 @@ async function add() {
     type: $("#tipo").value,
     thumb: meta.thumb || "",
     description: meta.description || "",
-    videos: [{ url, type: /\.m3u8/i.test(url) ? "HLS" : /\.mp4/i.test(url) ? "MP4" : "EMBED" }],
+    videos: [{ url, type: "EMBED" }],
   });
   await setQueue(q);
   $("#url").value = "";

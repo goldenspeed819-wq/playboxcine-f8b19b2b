@@ -4,30 +4,56 @@
   window.__rynexScraper = true;
 
   const EMBED_RE =
-    /https?:\/\/[^"'\s<>\\]*(?:server\.php\?[^"'\s<>\\]*|RCServer[^"'\s<>\\]*|\/embed\/[^"'\s<>\\]+|\/player\/[^"'\s<>\\]+)/gi;
+    /https?:\/\/[^"'\s<>\\]*(?:server\.php\?[^"'\s<>\\]*|RCServer[^"'\s<>\\]*|\/player\d*\/[^"'\s<>\\]+)/gi;
   const STREAM_RE = /https?:\/\/[^"'\s<>\\]+\.(?:m3u8|mp4)(?:\?[^"'\s<>\\]*)?/gi;
+  const BLOCKED_EMBED_RE = /disqus\.com|\/embed\/comments|comments\/?\?/i;
 
   const uniq = (a) => [...new Set(a.filter(Boolean))];
+  const isBlockedEmbed = (url) => !url || BLOCKED_EMBED_RE.test(url);
+  const isEmbedUrl = (url) => {
+    if (!url || isBlockedEmbed(url)) return false;
+    return /server\.php\?/i.test(url) || /RCServer/i.test(url) || /\/player\d*\//i.test(url);
+  };
 
   function scanFrame() {
     const embeds = [];
     const streams = [];
     const html = document.documentElement ? document.documentElement.innerHTML : "";
-    (html.match(EMBED_RE) || []).forEach((u) => embeds.push(u));
+    (html.match(EMBED_RE) || []).forEach((u) => {
+      if (isEmbedUrl(u)) embeds.push(u);
+    });
     (html.match(STREAM_RE) || []).forEach((u) => {
       if (!/\.ts(\?|$)/i.test(u)) streams.push(u);
     });
     document.querySelectorAll("iframe[src]").forEach((f) => {
-      if (EMBED_RE.test(f.src)) embeds.push(f.src);
+      if (isEmbedUrl(f.src)) embeds.push(f.src);
       EMBED_RE.lastIndex = 0;
     });
     document.querySelectorAll("textarea, input[type=text]").forEach((el) => {
       const v = el.value || "";
-      (v.match(EMBED_RE) || []).forEach((u) => embeds.push(u));
+      (v.match(EMBED_RE) || []).forEach((u) => {
+        if (isEmbedUrl(u)) embeds.push(u);
+      });
     });
-    if (EMBED_RE.test(location.href)) embeds.push(location.href);
+    if (isEmbedUrl(location.href)) embeds.push(location.href);
     EMBED_RE.lastIndex = 0;
     return { embeds: uniq(embeds), streams: uniq(streams) };
+  }
+
+  function candidateText(el) {
+    return (
+      (el.textContent || "") +
+      " " +
+      ((el.className || "") && (el.className.baseVal !== undefined ? el.className.baseVal : el.className)) +
+      " " +
+      (el.id || "") +
+      " " +
+      ((el.getAttribute &&
+        ["aria-label", "alt", "title", "data-title", "data-tooltip", "onclick"]
+          .map((a) => el.getAttribute(a) || "")
+          .join(" ")) ||
+        "")
+    ).toLowerCase();
   }
 
   function fire(el) {
@@ -39,14 +65,19 @@
   }
 
   function clickEmbed() {
-    const els = [...document.querySelectorAll("a,button,div,span,li,td")];
+    const els = [
+      ...document.querySelectorAll(
+        'a,button,div,span,li,td,img,[role="button"],[onclick],[class*="embed" i],[id*="embed" i],[aria-label*="embed" i],[title*="embed" i]'
+      ),
+    ];
     const target = els.find((el) => {
-      const txt = (el.textContent || "").trim().toLowerCase();
-      const id = ((el.id || "") + " " + (el.className || "")).toString().toLowerCase();
+      const txt = candidateText(el).trim();
       return (
-        (txt === "embed" || /^embed\b/.test(txt) || id.includes("embed")) &&
+        (txt === "embed" || /^embed\b/.test(txt) || txt.includes(" embed") || txt.includes("embed ")) &&
         el.offsetWidth > 0 &&
-        el.offsetWidth < 400
+        el.offsetHeight > 0 &&
+        el.offsetWidth < 500 &&
+        el.offsetHeight < 220
       );
     });
     if (target) {
