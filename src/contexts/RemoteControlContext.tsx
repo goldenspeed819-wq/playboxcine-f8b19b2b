@@ -324,9 +324,6 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
       window.dispatchEvent(new CustomEvent('rynex:embed-play'));
       dispatchMedia('play');
       window.setTimeout(() => dispatchMedia('play'), 1500);
-      dispatchHardwareInput({ input: 'embedPlay', x, y });
-      window.setTimeout(() => dispatchHardwareInput({ input: 'embedPlay', x, y }), 900);
-      window.setTimeout(() => dispatchHardwareInput({ input: 'embedPlay', x, y }), 2200);
       return;
     }
     const iframe = document.querySelector('[data-rc-frame] iframe') as HTMLIFrameElement | null;
@@ -342,7 +339,7 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
       return;
     }
     playerRef.current?.togglePlay();
-  }, [dispatchHardwareInput, dispatchMedia, flashPress, showCursor]);
+  }, [dispatchMedia, flashPress, showCursor]);
 
   const scrollPointer = useCallback(
     (dy: number) => {
