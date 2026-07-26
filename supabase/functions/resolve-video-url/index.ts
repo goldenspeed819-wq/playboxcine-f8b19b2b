@@ -163,6 +163,51 @@ function proxyUrl(stream: string, referer: string): string {
   return `${base}/functions/v1/stream-proxy?url=${encodeURIComponent(stream)}&referer=${encodeURIComponent(referer)}`;
 }
 
+/**
+ * Resolvedor externo (tools/rynex-resolver): abre a página num navegador real,
+ * passa pelo Cloudflare e devolve o stream direto. Mesma lógica da extensão,
+ * porém fora do navegador do usuário.
+ */
+async function resolveViaExternalResolver(
+  pageUrl: string,
+): Promise<{ stream: string; referer: string } | null> {
+  const endpoint = (Deno.env.get('RESOLVER_URL') || '').trim();
+  if (!endpoint) return null;
+
+  const token = (Deno.env.get('RESOLVER_TOKEN') || '').trim();
+  const base = endpoint.replace(/\/+$/, '');
+  const url = /\/resolve$/.test(base) ? base : `${base}/resolve`;
+
+  try {
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { 'x-resolver-token': token } : {}),
+      },
+      body: JSON.stringify({ url: pageUrl }),
+      signal: AbortSignal.timeout(60_000),
+    });
+
+    if (!resp.ok) return null;
+    const data = await resp.json().catch(() => null);
+    if (!data?.success || !data?.stream) return null;
+
+    let referer = data.referer as string | undefined;
+    if (!referer) {
+      try {
+        referer = new URL(pageUrl).origin + '/';
+      } catch {
+        referer = '';
+      }
+    }
+
+    return { stream: String(data.stream), referer: referer || '' };
+  } catch {
+    return null;
+  }
+}
+
 /** RedeCanais mirrors bounce through google.com/url?...&q=<encoded real url> */
 function unwrapGoogleRedirect(url: string): string | null {
   try {
@@ -291,7 +336,7 @@ serve(async (req) => {
       );
     }
 
-    const direct = await findDirectStream(input);
+    const direct = (await resolveViaExternalResolver(input)) ?? (await findDirectStream(input));
     if (direct) {
       return new Response(
         JSON.stringify({
