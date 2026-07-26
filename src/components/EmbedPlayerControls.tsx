@@ -96,7 +96,7 @@ export default function EmbedPlayerControls({ active, title, passthrough = false
       className={cn(
         'absolute inset-x-0 bottom-0 z-40 px-3 pb-3 sm:px-4',
         passthrough
-          ? 'pointer-events-none bg-background/95 pt-3 shadow-2xl'
+          ? 'pointer-events-none min-h-20 bg-background pt-4 shadow-2xl'
           : 'bg-gradient-to-t from-background/95 via-background/80 to-transparent pt-10',
       )}
     >
@@ -118,7 +118,7 @@ export default function EmbedPlayerControls({ active, title, passthrough = false
         aria-label="Progresso do vídeo"
       />
 
-      <div className="mt-2 flex items-center gap-2 sm:gap-3">
+      <div className={cn('mt-2 flex items-center', passthrough ? 'gap-4 sm:gap-5' : 'gap-2 sm:gap-3')}>
         <Button
           type="button"
           aria-label={isPlaying ? 'Pausar' : 'Reproduzir'}
@@ -172,7 +172,7 @@ export default function EmbedPlayerControls({ active, title, passthrough = false
               if (!passthrough) send('volume', v / 100);
             }}
             disabled={passthrough}
-            className="hidden w-24 cursor-pointer sm:flex"
+            className={cn('hidden cursor-pointer sm:flex', passthrough ? 'w-16' : 'w-24')}
             aria-label="Volume"
           />
         </div>
@@ -181,7 +181,7 @@ export default function EmbedPlayerControls({ active, title, passthrough = false
           {passthrough ? 'Rynex' : canReadState ? `${formatTime(current)} ${duration > 0 ? `/ ${formatTime(duration)}` : ''}` : 'Embed'}
         </span>
 
-        <div className="ml-auto flex items-center gap-2 sm:gap-3">
+        <div className={cn('ml-auto flex items-center', passthrough ? 'gap-5 sm:gap-6' : 'gap-2 sm:gap-3')}>
           <Button
             type="button"
             variant="ghost"
