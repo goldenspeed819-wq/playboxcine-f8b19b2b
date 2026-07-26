@@ -183,6 +183,8 @@ async function resolveViaExternalResolver(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'bypass-tunnel-reminder': '1',
+        'User-Agent': 'RynexResolver/1.0',
         ...(token ? { 'x-resolver-token': token } : {}),
       },
       body: JSON.stringify({ url: pageUrl }),
