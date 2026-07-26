@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ExternalLink, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import EmbedPlayerControls from '@/components/EmbedPlayerControls';
 
 type Props = {
   src: string;
@@ -77,6 +78,8 @@ export default function IframePlayer({ src, originalUrl, poster, title }: Props)
           </div>
         </button>
       )}
+
+      {started && <EmbedPlayerControls active={started} title={title} />}
 
       {started && showFallback && !loaded && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/70 p-4">

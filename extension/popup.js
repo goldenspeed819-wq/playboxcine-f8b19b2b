@@ -249,5 +249,5 @@ $("#vol").addEventListener("change", applyVolume);
     const host = new URL(tab.url || "about:blank").hostname;
     $("#tab").textContent = host ? `— ${host}` : "";
   } catch (e) {}
-  say("v1.0.7 pronta — tela cheia alterna com o vídeo na moldura.");
+  say("v1.0.8 pronta — controles do Rynex sobre o embed.");
 })();

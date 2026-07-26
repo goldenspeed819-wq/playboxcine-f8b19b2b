@@ -9,7 +9,7 @@ import scraperSource from '@/lib/scraper/rynex-scraper.js?raw';
 const BrowserScraper = () => {
   const { toast } = useToast();
   const [copied, setCopied] = useState<string | null>(null);
-  const extensionFile = 'rynex-helper-v107.zip';
+  const extensionFile = 'rynex-helper-v108.zip';
 
   const bookmarklet = useMemo(() => {
     const origin = window.location.origin;
@@ -70,13 +70,13 @@ const BrowserScraper = () => {
           <Chrome className="h-4 w-4 text-primary" /> Extensão do Chrome (recomendado)
         </div>
         <p className="text-sm text-muted-foreground">
-          Agora ela é o <b>Rynex Controle v1.0.7</b>: ela roda dentro do iframe do RedeCanais e comanda o{' '}
+          Agora ela é o <b>Rynex Controle v1.0.8</b>: a barra de controles do Rynex aparece sobre o embed e comanda o{' '}
           <b>vídeo direto</b> (play/pausa, avançar, volume, velocidade e tela cheia) — sem depender de clique
           simulado. O controle remoto no celular usa a mesma ponte. A captura de embed ficou opcional no fim do
           painel.
         </p>
         <Button onClick={downloadExtension}>
-          <Download className="h-4 w-4 mr-2" /> Baixar extensão v1.0.7 (.zip)
+          <Download className="h-4 w-4 mr-2" /> Baixar extensão v1.0.8 (.zip)
         </Button>
         <ol className="text-sm text-muted-foreground list-decimal ml-5 space-y-1">
           <li>Apague downloads antigos (<b>rynex-extension</b> / <b>rynex-helper-v104</b>).</li>
