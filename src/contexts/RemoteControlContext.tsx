@@ -12,6 +12,7 @@ import type { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import RemoteCursor from '@/components/RemoteCursor';
+import { dispatchEmbedCommand, focusEmbedIframe, type EmbedCommandAction } from '@/utils/embedCommands';
 
 export type RemoteAction =
   | 'hello'
@@ -194,15 +195,12 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
     [],
   );
 
-  /**
-   * Controla o vídeo dentro do embed (RedeCanais/Video.js) pela extensão:
-   * o script roda dentro do iframe e mexe direto no elemento <video>.
-   */
   const dispatchMedia = useCallback(
     (action: string, value?: number) => {
-      dispatchHardwareInput({ input: 'media', action, value });
+      dispatchEmbedCommand(action as EmbedCommandAction, value);
+      if (action === 'play' || action === 'toggle') window.dispatchEvent(new CustomEvent('rynex:embed-play'));
     },
-    [dispatchHardwareInput],
+    [],
   );
 
   const applySiteAudio = useCallback(
@@ -340,12 +338,7 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
       flashPress();
       iframe.focus();
       dispatchMedia('play');
-      dispatchHardwareInput({ input: 'click', x, y });
-      dispatchHardwareInput({ input: 'embedPlay', x, y });
-      toast({
-        title: 'Clique enviado para o embed',
-        description: 'Para clicar dentro de players externos, use a extensão Rynex atualizada no PC.',
-      });
+      focusEmbedIframe();
       return;
     }
     playerRef.current?.togglePlay();

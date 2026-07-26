@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ExternalLink, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import EmbedPlayerControls from '@/components/EmbedPlayerControls';
+import { focusEmbedIframe, postEmbedCommand, type EmbedCommandAction } from '@/utils/embedCommands';
 
 type Props = {
   src: string;
@@ -11,15 +12,36 @@ type Props = {
 };
 
 export default function IframePlayer({ src, originalUrl, poster, title }: Props) {
+  const frameRef = useRef<HTMLDivElement>(null);
   const [loaded, setLoaded] = useState(false);
   const [showFallback, setShowFallback] = useState(false);
   const [started, setStarted] = useState(false);
+  const [iframeKey, setIframeKey] = useState(0);
 
   useEffect(() => {
     setLoaded(false);
     setShowFallback(false);
     setStarted(false);
+    setIframeKey((key) => key + 1);
+    document.body.classList.remove('rc-cinema');
   }, [src]);
+
+  const toggleFrameFullscreen = useCallback(async () => {
+    const frame = frameRef.current;
+    if (!frame) return;
+
+    if (document.fullscreenElement) {
+      await document.exitFullscreen?.();
+      document.body.classList.remove('rc-cinema');
+      return;
+    }
+
+    try {
+      await frame.requestFullscreen?.();
+    } catch {
+      document.body.classList.toggle('rc-cinema');
+    }
+  }, []);
 
   useEffect(() => {
     if (!started) return;
@@ -34,21 +56,66 @@ export default function IframePlayer({ src, originalUrl, poster, title }: Props)
   }, [src, started]);
 
   useEffect(() => {
-    const startFromRemote = () => setStarted(true);
+    const startFromRemote = () => {
+      setStarted(true);
+      window.setTimeout(() => {
+        focusEmbedIframe();
+        postEmbedCommand('play');
+      }, 350);
+    };
     window.addEventListener('rynex:embed-play', startFromRemote);
     return () => window.removeEventListener('rynex:embed-play', startFromRemote);
   }, []);
 
+  useEffect(() => {
+    const handleCommand = (event: Event) => {
+      const detail = (event as CustomEvent<{ action?: EmbedCommandAction; value?: number }>).detail;
+      const action = detail?.action;
+      if (!action) return;
+
+      if (action === 'fullscreen') {
+        void toggleFrameFullscreen();
+        return;
+      }
+
+      if (action === 'reload') {
+        setStarted(true);
+        setLoaded(false);
+        setShowFallback(false);
+        setIframeKey((key) => key + 1);
+        return;
+      }
+
+      if (!started && (action === 'play' || action === 'toggle')) {
+        setStarted(true);
+        window.setTimeout(() => postEmbedCommand(action, detail.value), 350);
+        return;
+      }
+
+      focusEmbedIframe();
+      postEmbedCommand(action, detail.value);
+    };
+
+    window.addEventListener('rynex:embed-command', handleCommand);
+    window.addEventListener('rynex:embed-focus', focusEmbedIframe);
+    return () => {
+      window.removeEventListener('rynex:embed-command', handleCommand);
+      window.removeEventListener('rynex:embed-focus', focusEmbedIframe);
+      document.body.classList.remove('rc-cinema');
+    };
+  }, [started, toggleFrameFullscreen]);
+
   const openUrl = originalUrl || src;
 
   return (
-    <div data-rc-frame className="relative w-full aspect-video bg-black rounded-xl overflow-hidden">
+    <div ref={frameRef} data-rc-frame className="relative w-full aspect-video bg-black rounded-xl overflow-hidden">
       {started ? (
         <iframe
+          key={iframeKey}
           src={src}
           className="absolute inset-0 w-full h-full"
           frameBorder="0"
-          allow="autoplay; fullscreen; picture-in-picture"
+          allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
           allowFullScreen
           onLoad={() => setLoaded(true)}
         />
