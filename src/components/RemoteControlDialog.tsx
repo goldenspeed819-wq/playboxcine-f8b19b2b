@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Smartphone, RefreshCw, Copy, Check, Puzzle } from 'lucide-react';
+import { Smartphone, RefreshCw, Copy, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -84,23 +84,6 @@ export function RemoteControlDialog() {
               </p>
             </div>
             <Switch checked={remote.enabled} onCheckedChange={remote.setEnabled} />
-          </div>
-
-          <div className="flex items-center justify-between rounded-lg border border-border p-3">
-            <div className="flex items-start gap-2">
-              <Puzzle className={remote.extensionStatus.detected ? 'mt-0.5 h-4 w-4 text-primary' : 'mt-0.5 h-4 w-4 text-muted-foreground'} />
-              <div>
-                <Label className="text-sm">Extensão no PC</Label>
-                <p className="text-xs text-muted-foreground">
-                  {remote.extensionStatus.detected
-                    ? `Ativa${remote.extensionStatus.version ? ` · v${remote.extensionStatus.version}` : ''}`
-                    : 'Não detectada nesta aba'}
-                </p>
-                {remote.extensionStatus.lastError && (
-                  <p className="text-xs text-destructive mt-1">{remote.extensionStatus.lastError}</p>
-                )}
-              </div>
-            </div>
           </div>
 
           <Button variant="outline" className="w-full" onClick={remote.regenerateCode}>
