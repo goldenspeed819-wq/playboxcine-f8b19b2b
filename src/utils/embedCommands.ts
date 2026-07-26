@@ -13,6 +13,17 @@ export type EmbedCommandAction =
 
 const isBrowser = () => typeof window !== 'undefined' && typeof document !== 'undefined';
 
+export const supportsEmbedPostMessage = (src?: string | null) => {
+  if (!src) return false;
+  try {
+    const url = new URL(src, window.location.href);
+    const host = url.hostname.toLowerCase();
+    return host.includes('youtube.com') || host.includes('youtu.be') || host.includes('vimeo.com');
+  } catch {
+    return false;
+  }
+};
+
 export const getEmbedIframe = () => {
   if (!isBrowser()) return null;
   return document.querySelector('[data-rc-frame] iframe') as HTMLIFrameElement | null;
@@ -33,7 +44,36 @@ const safePost = (target: Window, message: unknown) => {
   }
 };
 
+const controlSameOriginVideo = (action: EmbedCommandAction, value?: number) => {
+  const iframe = getEmbedIframe();
+  if (!iframe) return false;
+
+  try {
+    const doc = iframe.contentDocument;
+    const video = doc?.querySelector('video') as HTMLVideoElement | null;
+    if (!video) return false;
+
+    if (action === 'play') void video.play();
+    else if (action === 'pause') video.pause();
+    else if (action === 'toggle') video.paused ? void video.play() : video.pause();
+    else if (action === 'seek') video.currentTime = Math.max(0, video.currentTime + (value ?? 0));
+    else if (action === 'seekTo') video.currentTime = Math.max(0, value ?? 0);
+    else if (action === 'volume') {
+      video.volume = Math.min(1, Math.max(0, value ?? video.volume));
+      video.muted = false;
+    } else if (action === 'mute') video.muted = !video.muted;
+    else if (action === 'rate') video.playbackRate = value ?? 1;
+    else return false;
+
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 export function postEmbedCommand(action: EmbedCommandAction, value?: number) {
+  if (controlSameOriginVideo(action, value)) return true;
+
   const iframe = getEmbedIframe();
   const target = iframe?.contentWindow;
   if (!target) return false;
