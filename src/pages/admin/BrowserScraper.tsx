@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import scraperSource from '@/lib/scraper/rynex-scraper.js?raw';
+import { ResolverStatus } from '@/components/admin/ResolverStatus';
 
 const BrowserScraper = () => {
   const { toast } = useToast();
@@ -84,12 +85,12 @@ const BrowserScraper = () => {
           <li>Instale o <b>Node.js</b> (nodejs.org) se ainda não tiver.</li>
           <li>Baixe e descompacte <b>rynex-resolver.zip</b> em qualquer pasta.</li>
           <li>Dê dois cliques em <b>INICIAR.bat</b> e espere (a primeira vez demora, baixa o navegador).</li>
-          <li>Abrem duas janelas pretas: uma diz <b>Rynex Resolver em http://localhost:8791</b>, a outra{' '}
-            <b>your url is: https://algo.loca.lt</b>.</li>
-          <li>Copie essa URL <b>.loca.lt</b> e me mande no chat — eu cadastro no site.</li>
-          <li>Deixe as duas janelas abertas enquanto assiste.</li>
+          <li>Espere aparecer <b>Rynex Resolver em http://localhost:8791</b> e deixe essa janela aberta.</li>
+          <li>Não precisa de túnel nem de cadastrar URL — o site fala direto com o seu PC.</li>
         </ol>
       </div>
+
+      <ResolverStatus />
 
       <div className="premium-card p-5 space-y-4">
         <div className="flex items-center gap-2 font-semibold">
