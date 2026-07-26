@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Copy, Check, Bookmark, ArrowRight, PlayCircle, Download, Chrome } from 'lucide-react';
+import { Copy, Check, Bookmark, Terminal, ArrowRight, PlayCircle, Download, Chrome } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
