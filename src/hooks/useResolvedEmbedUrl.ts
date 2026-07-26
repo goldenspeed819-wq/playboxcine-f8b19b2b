@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { isResolvableHttpUrl, normalizeHttpUrl, shouldResolveRemotely, toEmbedUrl } from '@/utils/externalEmbeds';
+import { resolveWithLocalResolver } from '@/utils/localResolver';
 
 type State = {
   url: string | null;
@@ -60,6 +61,16 @@ export function useResolvedEmbedUrl(rawUrl: string | null | undefined): State {
 
     const timer = setTimeout(() => void (async () => {
       try {
+        // 1) Resolvedor local (http://localhost:8791) — sem túnel, roda no PC do usuário
+        const local = await resolveWithLocalResolver(input, controller.signal);
+        if (controller.signal.aborted) return;
+        if (local?.stream) {
+          streamCacheRef.current.set(input, local.stream);
+          setState({ url: cacheRef.current.get(input) ?? localEmbed, streamUrl: local.stream, isLoading: false, error: null });
+          return;
+        }
+
+        // 2) Fallback: resolver no backend
         const { data, error } = await supabase.functions.invoke('resolve-video-url', {
           body: { url: input },
         });
