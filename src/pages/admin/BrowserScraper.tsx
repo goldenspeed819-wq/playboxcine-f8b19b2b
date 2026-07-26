@@ -30,8 +30,8 @@ const BrowserScraper = () => {
     toast({ title: 'Copiado!' });
   };
 
-  const downloadExtension = () => {
-    fetch(`/${extensionFile}?v=${Date.now()}`, { cache: 'no-store' })
+  const downloadFile = (file: string, minSize = 10000) => {
+    fetch(`/${file}?v=${Date.now()}`, { cache: 'no-store' })
       .then((res) => {
         if (!res.ok) throw new Error(`Falha no download: ${res.status}`);
         return res.blob();
@@ -39,7 +39,7 @@ const BrowserScraper = () => {
       .then(async (blob) => {
         const header = new Uint8Array(await blob.slice(0, 4).arrayBuffer());
         const isZip = header[0] === 0x50 && header[1] === 0x4b;
-        if (!isZip || blob.size < 10000) {
+        if (!isZip || blob.size < minSize) {
           throw new Error('Download incompleto. Recarregue a página e baixe novamente.');
         }
         return blob;
@@ -47,12 +47,15 @@ const BrowserScraper = () => {
       .then((blob) => {
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
-        a.download = extensionFile;
+        a.download = file;
         a.click();
         URL.revokeObjectURL(a.href);
       })
       .catch((err) => toast({ title: err.message, variant: 'destructive' }));
   };
+
+  const downloadExtension = () => downloadFile(extensionFile);
+  const downloadResolver = () => downloadFile('rynex-resolver.zip', 1000);
 
   return (
     <div className="space-y-6 max-w-4xl">
