@@ -461,6 +461,10 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
           navigate(-1);
           break;
         case 'reload':
+          if (document.querySelector('[data-rc-frame] iframe')) {
+            dispatchMedia('reload');
+            break;
+          }
           window.location.reload();
           break;
         case 'quickImport': {
