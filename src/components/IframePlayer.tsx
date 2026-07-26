@@ -93,7 +93,6 @@ export default function IframePlayer({ src, originalUrl, poster, title }: Props)
       }
 
       focusEmbedIframe();
-      postEmbedCommand(action, detail.value);
     };
 
     window.addEventListener('rynex:embed-command', handleCommand);
