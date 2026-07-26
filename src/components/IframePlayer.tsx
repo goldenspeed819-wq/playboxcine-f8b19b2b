@@ -113,7 +113,7 @@ export default function IframePlayer({ src, originalUrl, poster, title }: Props)
   const passthroughControls = !supportsEmbedPostMessage(src);
 
   return (
-    <div ref={frameRef} data-rc-frame className="relative w-full aspect-video bg-black rounded-xl overflow-hidden">
+    <div ref={frameRef} data-rc-frame className="relative w-full aspect-video bg-background rounded-xl overflow-hidden">
       {started ? (
         <iframe
           key={iframeKey}
@@ -154,9 +154,9 @@ export default function IframePlayer({ src, originalUrl, poster, title }: Props)
       {started && <EmbedPlayerControls active={started} title={title} passthrough={passthroughControls} />}
 
       {started && showFallback && !loaded && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/70 p-4">
+        <div className="absolute inset-0 flex items-center justify-center bg-background/80 p-4">
           <div className="max-w-md w-full text-center space-y-3">
-            <p className="text-sm text-white/80">
+            <p className="text-sm text-foreground/80">
               Este provedor bloqueou reprodução incorporada neste site.
             </p>
             <div className="flex flex-wrap items-center justify-center gap-2">
@@ -181,7 +181,7 @@ export default function IframePlayer({ src, originalUrl, poster, title }: Props)
                 Tentar novamente
               </Button>
             </div>
-            <p className="text-xs text-white/50">
+            <p className="text-xs text-muted-foreground">
               Dica: use um link <strong>embed</strong> (ex.: /e/...) quando disponível.
             </p>
           </div>
