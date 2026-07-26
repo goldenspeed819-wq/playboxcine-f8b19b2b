@@ -12,6 +12,7 @@ import type { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import RemoteCursor from '@/components/RemoteCursor';
+import { dispatchEmbedCommand, focusEmbedIframe, type EmbedCommandAction } from '@/utils/embedCommands';
 
 export type RemoteAction =
   | 'hello'
@@ -84,20 +85,12 @@ export interface RemotePlayerApi {
   getState: () => RemotePlayerState;
 }
 
-export interface RemoteExtensionStatus {
-  detected: boolean;
-  version?: string;
-  lastAck?: string;
-  lastError?: string;
-}
-
 interface RemoteControlContextValue {
   code: string;
   enabled: boolean;
   setEnabled: (value: boolean) => void;
   regenerateCode: () => void;
   isHostConnected: boolean;
-  extensionStatus: RemoteExtensionStatus;
   registerPlayer: (api: RemotePlayerApi) => () => void;
 }
 
@@ -127,9 +120,6 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
   });
   const [enabled, setEnabledState] = useState(() => localStorage.getItem(ENABLED_KEY) !== 'false');
   const [isHostConnected, setIsHostConnected] = useState(false);
-  const [extensionStatus, setExtensionStatus] = useState<RemoteExtensionStatus>({ detected: false });
-  const extensionStatusRef = useRef<RemoteExtensionStatus>({ detected: false });
-  const extensionSeenAt = useRef(0);
 
   const [cursor, setCursor] = useState({ x: 0, y: 0, visible: false, pressed: false });
   const cursorRef = useRef({ x: 0, y: 0 });
@@ -170,43 +160,16 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
     );
   }, []);
 
-  const dispatchHardwareInput = useCallback(
-    (payload: {
-      input: 'move' | 'click' | 'doubleClick' | 'rightClick' | 'scroll' | 'embedPlay' | 'volume' | 'media';
-      action?: string;
-      x?: number;
-      y?: number;
-      dy?: number;
-      value?: number;
-      muted?: boolean;
-    }) => {
-      const requestId = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-      window.postMessage(
-        {
-          source: 'rynex-cine',
-          type: 'RYNEX_REMOTE_INPUT',
-          requestId,
-          ...payload,
-        },
-        window.location.origin,
-      );
+  const dispatchMedia = useCallback(
+    (action: string, value?: number) => {
+      dispatchEmbedCommand(action as EmbedCommandAction, value);
+      if (action === 'play' || action === 'toggle') window.dispatchEvent(new CustomEvent('rynex:embed-play'));
     },
     [],
   );
 
-  /**
-   * Controla o vídeo dentro do embed (RedeCanais/Video.js) pela extensão:
-   * o script roda dentro do iframe e mexe direto no elemento <video>.
-   */
-  const dispatchMedia = useCallback(
-    (action: string, value?: number) => {
-      dispatchHardwareInput({ input: 'media', action, value });
-    },
-    [dispatchHardwareInput],
-  );
-
   const applySiteAudio = useCallback(
-    (volume: number, muted = siteMutedRef.current, notifyExtension = true) => {
+    (volume: number, muted = siteMutedRef.current) => {
       const nextVolume = clamp(Number.isFinite(volume) ? volume : 1);
       const nextMuted = Boolean(muted);
       siteVolumeRef.current = nextVolume;
@@ -219,10 +182,8 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
         el.volume = nextVolume;
         el.muted = nextMuted;
       });
-
-      if (notifyExtension) dispatchHardwareInput({ input: 'volume', value: nextVolume, muted: nextMuted });
     },
-    [dispatchHardwareInput],
+    [],
   );
 
   const movePointer = useCallback(
@@ -238,9 +199,8 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
         target.dispatchEvent(new MouseEvent('mousemove', opts));
         target.dispatchEvent(new PointerEvent('pointermove', { ...opts, pointerType: 'mouse' }));
       }
-      dispatchHardwareInput({ input: 'move', x: nextX, y: nextY });
     },
-    [dispatchHardwareInput, showCursor],
+    [showCursor],
   );
 
   const flashPress = useCallback(() => {
@@ -266,14 +226,10 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
       const target = stack[0];
       if (!target) return;
 
-      const isIframeHit = stack.some((el) => el.tagName === 'IFRAME');
-      const isFrameAreaHit = stack.some((el) => Boolean(el.closest('[data-rc-frame]')));
-
       const base = { bubbles: true, cancelable: true, clientX: px, clientY: py, view: window };
 
       if (kind === 'right') {
         target.dispatchEvent(new MouseEvent('contextmenu', { ...base, button: 2 }));
-        if (isIframeHit || isFrameAreaHit) dispatchHardwareInput({ input: 'rightClick', x: px, y: py });
         return;
       }
 
@@ -295,11 +251,8 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
         if (kind === 'tap' || kind === 'double') clickable.click();
       }
 
-      if (isIframeHit || isFrameAreaHit) {
-        dispatchHardwareInput({ input: kind === 'double' ? 'doubleClick' : 'click', x: px, y: py });
-      }
     },
-    [dispatchHardwareInput, flashPress, showCursor],
+    [flashPress, showCursor],
   );
 
   /** Clicks the Rynex play overlay of the current player (works for embeds too). */
@@ -326,9 +279,6 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
       window.dispatchEvent(new CustomEvent('rynex:embed-play'));
       dispatchMedia('play');
       window.setTimeout(() => dispatchMedia('play'), 1500);
-      dispatchHardwareInput({ input: 'embedPlay', x, y });
-      window.setTimeout(() => dispatchHardwareInput({ input: 'embedPlay', x, y }), 900);
-      window.setTimeout(() => dispatchHardwareInput({ input: 'embedPlay', x, y }), 2200);
       return;
     }
     const iframe = document.querySelector('[data-rc-frame] iframe') as HTMLIFrameElement | null;
@@ -340,16 +290,11 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
       flashPress();
       iframe.focus();
       dispatchMedia('play');
-      dispatchHardwareInput({ input: 'click', x, y });
-      dispatchHardwareInput({ input: 'embedPlay', x, y });
-      toast({
-        title: 'Clique enviado para o embed',
-        description: 'Para clicar dentro de players externos, use a extensão Rynex atualizada no PC.',
-      });
+      focusEmbedIframe();
       return;
     }
     playerRef.current?.togglePlay();
-  }, [dispatchHardwareInput, dispatchMedia, flashPress, showCursor]);
+  }, [dispatchMedia, flashPress, showCursor]);
 
   const scrollPointer = useCallback(
     (dy: number) => {
@@ -360,11 +305,9 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
       target?.dispatchEvent(
         new WheelEvent('wheel', { bubbles: true, cancelable: true, clientX: px, clientY: py, deltaY: dy }),
       );
-      const isFrameAreaHit = target instanceof HTMLElement && Boolean(target.closest('[data-rc-frame]'));
-      if (isFrameAreaHit || target?.tagName === 'IFRAME') dispatchHardwareInput({ input: 'scroll', x: px, y: py, dy });
       window.scrollBy({ top: dy, behavior: 'auto' });
     },
-    [dispatchHardwareInput],
+    [],
   );
 
   const sendKey = useCallback((key: string) => {
@@ -389,7 +332,6 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
     const channel = channelRef.current;
     if (!channel) return;
     const player = playerRef.current;
-    const currentExtensionStatus = extensionStatusRef.current;
     channel.send({
       type: 'broadcast',
       event: 'state',
@@ -397,63 +339,8 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
         page: window.location.pathname,
         hasPlayer: !!player,
         player: player ? player.getState() : null,
-        extension: {
-          ...currentExtensionStatus,
-          detected: currentExtensionStatus.detected && Date.now() - extensionSeenAt.current < 12000,
-        },
       },
     });
-  }, []);
-
-  useEffect(() => {
-    const handleExtensionMessage = (event: MessageEvent) => {
-      if (event.source !== window) return;
-      const data = event.data || {};
-      if (data.source !== 'rynex-extension') return;
-      extensionSeenAt.current = Date.now();
-      if (data.type === 'RYNEX_EXTENSION_STATUS') {
-        setExtensionStatus((prev) => {
-          const next = {
-            ...prev,
-            detected: true,
-            version: typeof data.version === 'string' ? data.version : prev.version,
-          };
-          extensionStatusRef.current = next;
-          return next;
-        });
-      }
-      if (data.type === 'RYNEX_REMOTE_ACK') {
-        setExtensionStatus((prev) => {
-          const next = {
-            ...prev,
-            detected: true,
-            lastAck: data.ok ? `${data.input || 'comando'}: ${data.method || 'ok'}` : prev.lastAck,
-            lastError: data.ok ? undefined : data.error || 'Comando bloqueado pelo Chrome',
-          };
-          extensionStatusRef.current = next;
-          return next;
-        });
-      }
-    };
-
-    window.addEventListener('message', handleExtensionMessage);
-    const ping = window.setInterval(() => {
-      window.postMessage(
-        { source: 'rynex-cine', type: 'RYNEX_EXTENSION_PING', requestId: `${Date.now()}` },
-        window.location.origin,
-      );
-      if (extensionSeenAt.current && Date.now() - extensionSeenAt.current > 12000) {
-        setExtensionStatus((prev) => {
-          const next = { ...prev, detected: false };
-          extensionStatusRef.current = next;
-          return next;
-        });
-      }
-    }, 3000);
-    return () => {
-      window.removeEventListener('message', handleExtensionMessage);
-      window.clearInterval(ping);
-    };
   }, []);
 
   const handleCommand = useCallback(
@@ -471,6 +358,10 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
           navigate(-1);
           break;
         case 'reload':
+          if (document.querySelector('[data-rc-frame] iframe')) {
+            dispatchMedia('reload');
+            break;
+          }
           window.location.reload();
           break;
         case 'quickImport': {
@@ -612,14 +503,14 @@ export function RemoteControlProvider({ children }: { children: React.ReactNode 
 
   useEffect(() => {
     applySiteAudio(siteVolumeRef.current, siteMutedRef.current);
-    const observer = new MutationObserver(() => applySiteAudio(siteVolumeRef.current, siteMutedRef.current, false));
+    const observer = new MutationObserver(() => applySiteAudio(siteVolumeRef.current, siteMutedRef.current));
     observer.observe(document.body, { childList: true, subtree: true });
     return () => observer.disconnect();
   }, [applySiteAudio]);
 
   const value = useMemo(
-    () => ({ code, enabled, setEnabled, regenerateCode, isHostConnected, extensionStatus, registerPlayer }),
-    [code, enabled, setEnabled, regenerateCode, isHostConnected, extensionStatus, registerPlayer],
+    () => ({ code, enabled, setEnabled, regenerateCode, isHostConnected, registerPlayer }),
+    [code, enabled, setEnabled, regenerateCode, isHostConnected, registerPlayer],
   );
 
   return (

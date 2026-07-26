@@ -32,7 +32,6 @@ import {
   ArrowLeft,
   CornerDownLeft,
   ArrowRight,
-  Puzzle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -56,12 +55,6 @@ interface HostState {
   page: string;
   hasPlayer: boolean;
   player: RemotePlayerState | null;
-  extension?: {
-    detected: boolean;
-    version?: string;
-    lastAck?: string;
-    lastError?: string;
-  };
 }
 
 interface ContentItem {
@@ -278,7 +271,7 @@ export default function Remote() {
         </TabsContent>
 
         <TabsContent value="mouse" className="pt-5">
-          <TouchpadPad send={sendPointer} extension={hostState?.extension} />
+          <TouchpadPad send={sendPointer} />
         </TabsContent>
 
         <TabsContent value="content" className="pt-5">
@@ -628,10 +621,8 @@ function QuickImportRemote({ send }: { send: (command: RemoteCommand) => void })
 /** Touchpad mode: turns the phone into a virtual mouse for the PC screen. */
 function TouchpadPad({
   send,
-  extension,
 }: {
   send: (command: RemoteCommand) => void;
-  extension?: HostState['extension'];
 }) {
   const last = useRef<{ x: number; y: number } | null>(null);
   const moved = useRef(false);
@@ -795,21 +786,6 @@ function TouchpadPad({
           <span className="text-xs text-muted-foreground">{speed.toFixed(1)}x</span>
         </div>
         <Slider value={[speed]} min={0.6} max={3.5} step={0.1} onValueChange={(v) => setSpeed(v[0])} />
-      </div>
-
-      {/* Iframe helpers */}
-      <div className="premium-card p-4 space-y-2">
-        <div className="flex items-center justify-between gap-3 text-sm">
-          <span className="flex items-center gap-2">
-            <Puzzle className={extension?.detected ? 'w-4 h-4 text-primary' : 'w-4 h-4 text-muted-foreground'} />
-            Extensão no PC
-          </span>
-          <span className={cn('text-xs', extension?.detected ? 'text-primary' : 'text-muted-foreground')}>
-            {extension?.detected ? `Ativa${extension.version ? ` · v${extension.version}` : ''}` : 'Não detectada'}
-          </span>
-        </div>
-        {extension?.lastError ? <p className="text-xs text-destructive">{extension.lastError}</p> : null}
-        {extension?.lastAck ? <p className="text-xs text-muted-foreground">Último comando: {extension.lastAck}</p> : null}
       </div>
 
       <div className="grid grid-cols-2 gap-3">

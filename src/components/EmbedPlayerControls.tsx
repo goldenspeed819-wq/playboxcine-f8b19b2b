@@ -10,7 +10,9 @@ import {
 } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 import { useEmbedMediaBridge } from '@/hooks/useEmbedMediaBridge';
+import { useOptionalRemoteControl } from '@/contexts/RemoteControlContext';
 
 const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
 
@@ -27,18 +29,61 @@ const formatTime = (value: number) => {
 
 type Props = { active: boolean; title?: string };
 
-/** Barra de controle do Rynex que comanda o vídeo do embed externo via extensão. */
 export default function EmbedPlayerControls({ active, title }: Props) {
-  const { available, state, send } = useEmbedMediaBridge(active);
+  const { canReadState, state, send } = useEmbedMediaBridge(active);
+  const remote = useOptionalRemoteControl();
   const [speed, setSpeed] = useState(1);
   const [seeking, setSeeking] = useState<number | null>(null);
   const speedRef = useRef(1);
+  const stateRef = useRef(state);
 
   useEffect(() => {
     speedRef.current = speed;
   }, [speed]);
 
-  if (!active || !available) return null;
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
+
+  useEffect(() => {
+    if (!active || !remote) return;
+    return remote.registerPlayer({
+      togglePlay: () => send('toggle'),
+      play: () => send('play'),
+      pause: () => send('pause'),
+      seek: (seconds) => send('seek', seconds),
+      seekTo: (seconds) => send('seekTo', seconds),
+      setVolume: (volume) => send('volume', volume),
+      volumeDelta: (delta) => {
+        const next = Math.min(1, Math.max(0, stateRef.current.volume + delta));
+        send('volume', next);
+      },
+      toggleMute: () => send('mute'),
+      toggleFullscreen: () => send('fullscreen'),
+      togglePiP: () => send('fullscreen'),
+      setSpeed: (nextSpeed) => {
+        speedRef.current = nextSpeed;
+        setSpeed(nextSpeed);
+        send('rate', nextSpeed);
+      },
+      skipIntro: () => send('seek', 85),
+      next: () => {},
+      getState: () => ({
+        title,
+        isPlaying: stateRef.current.paused === false,
+        currentTime: stateRef.current.currentTime,
+        duration: stateRef.current.duration,
+        volume: stateRef.current.volume,
+        isMuted: stateRef.current.muted,
+        isFullscreen: !!document.fullscreenElement || document.body.classList.contains('rc-cinema'),
+        speed: speedRef.current,
+        hasNext: false,
+        hasIntro: false,
+      }),
+    });
+  }, [active, remote, send, title]);
+
+  if (!active) return null;
 
   const isPlaying = state.paused === false;
   const duration = state.duration || 0;
@@ -65,41 +110,47 @@ export default function EmbedPlayerControls({ active, title }: Props) {
       />
 
       <div className="mt-2 flex items-center gap-2 sm:gap-3">
-        <button
+        <Button
           type="button"
           aria-label={isPlaying ? 'Pausar' : 'Reproduzir'}
           onClick={() => send('toggle')}
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground transition hover:scale-105"
+          className="flex h-10 w-10 rounded-full p-0 transition hover:scale-105"
         >
           {isPlaying ? <Pause className="h-5 w-5 fill-current" /> : <Play className="ml-0.5 h-5 w-5 fill-current" />}
-        </button>
+        </Button>
 
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="icon"
           aria-label="Voltar 10 segundos"
           onClick={() => send('seek', -10)}
-          className="text-white/80 transition hover:text-primary"
+          className="h-9 w-9 rounded-full text-white/80 transition hover:text-primary"
         >
           <RotateCcw className="h-5 w-5" />
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
+          variant="ghost"
+          size="icon"
           aria-label="Avançar 10 segundos"
           onClick={() => send('seek', 10)}
-          className="text-white/80 transition hover:text-primary"
+          className="h-9 w-9 rounded-full text-white/80 transition hover:text-primary"
         >
           <RotateCw className="h-5 w-5" />
-        </button>
+        </Button>
 
         <div className="flex items-center gap-2">
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="icon"
             aria-label={state.muted ? 'Ativar som' : 'Silenciar'}
             onClick={() => send('mute')}
-            className="text-white/80 transition hover:text-primary"
+            className="h-9 w-9 rounded-full text-white/80 transition hover:text-primary"
           >
             {state.muted || state.volume === 0 ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
-          </button>
+          </Button>
           <Slider
             value={[state.muted ? 0 : Math.round((state.volume ?? 1) * 100)]}
             max={100}
@@ -111,12 +162,13 @@ export default function EmbedPlayerControls({ active, title }: Props) {
         </div>
 
         <span className="ml-1 whitespace-nowrap text-xs text-white/70">
-          {formatTime(current)} {duration > 0 && `/ ${formatTime(duration)}`}
+          {canReadState ? `${formatTime(current)} ${duration > 0 ? `/ ${formatTime(duration)}` : ''}` : 'Embed'}
         </span>
 
         <div className="ml-auto flex items-center gap-2 sm:gap-3">
-          <button
+          <Button
             type="button"
+            variant="ghost"
             aria-label="Velocidade de reprodução"
             onClick={() => {
               const next = SPEEDS[(SPEEDS.indexOf(speedRef.current) + 1) % SPEEDS.length];
@@ -129,15 +181,17 @@ export default function EmbedPlayerControls({ active, title }: Props) {
             )}
           >
             {speed}x
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
+            variant="ghost"
+            size="icon"
             aria-label="Tela cheia"
             onClick={() => send('fullscreen')}
-            className="text-white/80 transition hover:text-primary"
+            className="h-9 w-9 rounded-full text-white/80 transition hover:text-primary"
           >
             <Maximize className="h-5 w-5" />
-          </button>
+          </Button>
         </div>
       </div>
 
