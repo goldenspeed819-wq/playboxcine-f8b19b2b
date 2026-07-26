@@ -30,8 +30,8 @@ const BrowserScraper = () => {
     toast({ title: 'Copiado!' });
   };
 
-  const downloadExtension = () => {
-    fetch(`/${extensionFile}?v=${Date.now()}`, { cache: 'no-store' })
+  const downloadFile = (file: string, minSize = 10000) => {
+    fetch(`/${file}?v=${Date.now()}`, { cache: 'no-store' })
       .then((res) => {
         if (!res.ok) throw new Error(`Falha no download: ${res.status}`);
         return res.blob();
@@ -39,7 +39,7 @@ const BrowserScraper = () => {
       .then(async (blob) => {
         const header = new Uint8Array(await blob.slice(0, 4).arrayBuffer());
         const isZip = header[0] === 0x50 && header[1] === 0x4b;
-        if (!isZip || blob.size < 10000) {
+        if (!isZip || blob.size < minSize) {
           throw new Error('Download incompleto. Recarregue a página e baixe novamente.');
         }
         return blob;
@@ -47,12 +47,15 @@ const BrowserScraper = () => {
       .then((blob) => {
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
-        a.download = extensionFile;
+        a.download = file;
         a.click();
         URL.revokeObjectURL(a.href);
       })
       .catch((err) => toast({ title: err.message, variant: 'destructive' }));
   };
+
+  const downloadExtension = () => downloadFile(extensionFile);
+  const downloadResolver = () => downloadFile('rynex-resolver.zip', 1000);
 
   return (
     <div className="space-y-6 max-w-4xl">
@@ -67,7 +70,30 @@ const BrowserScraper = () => {
 
       <div className="premium-card p-5 space-y-4 border-primary/40">
         <div className="flex items-center gap-2 font-semibold">
-          <Chrome className="h-4 w-4 text-primary" /> Extensão do Chrome (recomendado)
+          <Terminal className="h-4 w-4 text-primary" /> Resolvedor Rynex (sem extensão)
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Um programinha que roda no seu PC: ele abre a página do provedor num navegador real, passa o
+          Cloudflare e descobre o <b>link direto do vídeo</b>. Com ele ligado, o RedeCanais toca no{' '}
+          <b>player nativo do Rynex</b>, sem iframe e sem extensão.
+        </p>
+        <Button onClick={downloadResolver}>
+          <Download className="h-4 w-4 mr-2" /> Baixar resolvedor (.zip)
+        </Button>
+        <ol className="text-sm text-muted-foreground list-decimal ml-5 space-y-1">
+          <li>Instale o <b>Node.js</b> (nodejs.org) se ainda não tiver.</li>
+          <li>Baixe e descompacte <b>rynex-resolver.zip</b> em qualquer pasta.</li>
+          <li>Dê dois cliques em <b>INICIAR.bat</b> e espere (a primeira vez demora, baixa o navegador).</li>
+          <li>Abrem duas janelas pretas: uma diz <b>Rynex Resolver em http://localhost:8791</b>, a outra{' '}
+            <b>your url is: https://algo.loca.lt</b>.</li>
+          <li>Copie essa URL <b>.loca.lt</b> e me mande no chat — eu cadastro no site.</li>
+          <li>Deixe as duas janelas abertas enquanto assiste.</li>
+        </ol>
+      </div>
+
+      <div className="premium-card p-5 space-y-4">
+        <div className="flex items-center gap-2 font-semibold">
+          <Chrome className="h-4 w-4 text-primary" /> Extensão do Chrome (alternativa)
         </div>
         <p className="text-sm text-muted-foreground">
           Agora ela é o <b>Rynex Controle v1.0.8</b>: a barra de controles do Rynex aparece sobre o embed e comanda o{' '}
