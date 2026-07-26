@@ -55,12 +55,6 @@ interface HostState {
   page: string;
   hasPlayer: boolean;
   player: RemotePlayerState | null;
-  extension?: {
-    detected: boolean;
-    version?: string;
-    lastAck?: string;
-    lastError?: string;
-  };
 }
 
 interface ContentItem {
