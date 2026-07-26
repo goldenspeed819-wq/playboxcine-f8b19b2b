@@ -2,7 +2,7 @@
 (function () {
   if (window.__rynexScraper) return;
   window.__rynexScraper = true;
-  const VERSION = "1.0.6";
+  const VERSION = "1.0.8";
 
   const EMBED_RE =
     /https?:\/\/[^"'\s<>\\]*(?:server\.php\?[^"'\s<>\\]*|RCServer[^"'\s<>\\]*|\/player\d*\/[^"'\s<>\\]+)/gi;
@@ -208,6 +208,7 @@
             input: data.input,
             ok: response?.ok !== false,
             method: response?.method || "unknown",
+            state: response?.state || null,
             error: response?.error || "",
           },
           "*"
