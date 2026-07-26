@@ -119,32 +119,38 @@ export default function EmbedPlayerControls({ active, title }: Props) {
           {isPlaying ? <Pause className="h-5 w-5 fill-current" /> : <Play className="ml-0.5 h-5 w-5 fill-current" />}
         </Button>
 
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="icon"
           aria-label="Voltar 10 segundos"
           onClick={() => send('seek', -10)}
-          className="text-white/80 transition hover:text-primary"
+          className="h-9 w-9 rounded-full text-white/80 transition hover:text-primary"
         >
           <RotateCcw className="h-5 w-5" />
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
+          variant="ghost"
+          size="icon"
           aria-label="Avançar 10 segundos"
           onClick={() => send('seek', 10)}
-          className="text-white/80 transition hover:text-primary"
+          className="h-9 w-9 rounded-full text-white/80 transition hover:text-primary"
         >
           <RotateCw className="h-5 w-5" />
-        </button>
+        </Button>
 
         <div className="flex items-center gap-2">
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="icon"
             aria-label={state.muted ? 'Ativar som' : 'Silenciar'}
             onClick={() => send('mute')}
-            className="text-white/80 transition hover:text-primary"
+            className="h-9 w-9 rounded-full text-white/80 transition hover:text-primary"
           >
             {state.muted || state.volume === 0 ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
-          </button>
+          </Button>
           <Slider
             value={[state.muted ? 0 : Math.round((state.volume ?? 1) * 100)]}
             max={100}
@@ -160,8 +166,9 @@ export default function EmbedPlayerControls({ active, title }: Props) {
         </span>
 
         <div className="ml-auto flex items-center gap-2 sm:gap-3">
-          <button
+          <Button
             type="button"
+            variant="ghost"
             aria-label="Velocidade de reprodução"
             onClick={() => {
               const next = SPEEDS[(SPEEDS.indexOf(speedRef.current) + 1) % SPEEDS.length];
@@ -174,15 +181,17 @@ export default function EmbedPlayerControls({ active, title }: Props) {
             )}
           >
             {speed}x
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
+            variant="ghost"
+            size="icon"
             aria-label="Tela cheia"
             onClick={() => send('fullscreen')}
-            className="text-white/80 transition hover:text-primary"
+            className="h-9 w-9 rounded-full text-white/80 transition hover:text-primary"
           >
             <Maximize className="h-5 w-5" />
-          </button>
+          </Button>
         </div>
       </div>
 
