@@ -35,12 +35,6 @@ export function useResolvedEmbedUrl(rawUrl: string | null | undefined): State {
     const needsRemote = shouldResolveRemotely(input);
     const localEmbed = toEmbedUrl(input) ?? input;
 
-    if (!needsRemote) {
-      cacheRef.current.set(input, localEmbed);
-      setState({ url: localEmbed, streamUrl: null, isLoading: false, error: null });
-      return;
-    }
-
     // Cached results
     const cachedStream = streamCacheRef.current.get(input);
     if (cachedStream) {
@@ -48,14 +42,23 @@ export function useResolvedEmbedUrl(rawUrl: string | null | undefined): State {
       return;
     }
 
-    const cached = cacheRef.current.get(input);
-    if (cached && !needsRemote) {
-      setState({ url: cached, streamUrl: null, isLoading: false, error: null });
-      return;
-    }
-
     const controller = new AbortController();
     abortRef.current = controller;
+
+    if (!needsRemote) {
+      // Player já embutível: mostra o embed na hora e tenta o resolvedor local em segundo plano
+      cacheRef.current.set(input, localEmbed);
+      setState({ url: localEmbed, streamUrl: null, isLoading: false, error: null });
+
+      void (async () => {
+        const local = await resolveWithLocalResolver(input, controller.signal);
+        if (controller.signal.aborted || !local?.stream) return;
+        streamCacheRef.current.set(input, local.stream);
+        setState({ url: localEmbed, streamUrl: local.stream, isLoading: false, error: null });
+      })();
+
+      return () => controller.abort();
+    }
 
     setState({ url: null, streamUrl: null, isLoading: true, error: null });
 
