@@ -12,6 +12,7 @@ import { FavoriteButton } from '@/components/FavoriteButton';
 import { RatingStars } from '@/components/RatingStars';
 import { ShareButtons } from '@/components/ShareButtons';
 import { FollowSeriesButton } from '@/components/FollowSeriesButton';
+import { PendingContentNotice } from '@/components/PendingContentNotice';
 import { AutoplayOverlay, EpisodePanel } from '@/components/AutoplayOverlay';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';

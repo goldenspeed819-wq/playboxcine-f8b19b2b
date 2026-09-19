@@ -11,6 +11,7 @@ import { ContinueWatchingDialog } from '@/components/ContinueWatchingDialog';
 import { FavoriteButton } from '@/components/FavoriteButton';
 import { RatingStars } from '@/components/RatingStars';
 import { ShareButtons } from '@/components/ShareButtons';
+import { PendingContentNotice } from '@/components/PendingContentNotice';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { Movie } from '@/types/database';
