@@ -191,6 +191,42 @@ export type Database = {
           },
         ]
       }
+      content_requests: {
+        Row: {
+          content_id: string | null
+          content_type: string
+          created_at: string
+          id: string
+          query: string
+          requested_by: string | null
+          status: string
+          title: string
+          tmdb_id: number | null
+        }
+        Insert: {
+          content_id?: string | null
+          content_type: string
+          created_at?: string
+          id?: string
+          query: string
+          requested_by?: string | null
+          status?: string
+          title: string
+          tmdb_id?: number | null
+        }
+        Update: {
+          content_id?: string | null
+          content_type?: string
+          created_at?: string
+          id?: string
+          query?: string
+          requested_by?: string | null
+          status?: string
+          title?: string
+          tmdb_id?: number | null
+        }
+        Relationships: []
+      }
       dismissed_notifications: {
         Row: {
           dismissed_at: string
@@ -450,10 +486,12 @@ export type Database = {
           id: string
           is_featured: boolean | null
           is_release: boolean | null
+          pending_content: boolean
           rating: string | null
           release_year: number | null
           thumbnail: string | null
           title: string
+          tmdb_id: number | null
           video_url: string | null
           video_url_part2: string | null
         }
@@ -466,10 +504,12 @@ export type Database = {
           id?: string
           is_featured?: boolean | null
           is_release?: boolean | null
+          pending_content?: boolean
           rating?: string | null
           release_year?: number | null
           thumbnail?: string | null
           title: string
+          tmdb_id?: number | null
           video_url?: string | null
           video_url_part2?: string | null
         }
@@ -482,10 +522,12 @@ export type Database = {
           id?: string
           is_featured?: boolean | null
           is_release?: boolean | null
+          pending_content?: boolean
           rating?: string | null
           release_year?: number | null
           thumbnail?: string | null
           title?: string
+          tmdb_id?: number | null
           video_url?: string | null
           video_url_part2?: string | null
         }
@@ -574,6 +616,7 @@ export type Database = {
           id: string
           is_featured: boolean | null
           is_release: boolean | null
+          pending_content: boolean
           rating: string | null
           release_year: number | null
           thumbnail: string | null
@@ -587,6 +630,7 @@ export type Database = {
           id?: string
           is_featured?: boolean | null
           is_release?: boolean | null
+          pending_content?: boolean
           rating?: string | null
           release_year?: number | null
           thumbnail?: string | null
@@ -600,6 +644,7 @@ export type Database = {
           id?: string
           is_featured?: boolean | null
           is_release?: boolean | null
+          pending_content?: boolean
           rating?: string | null
           release_year?: number | null
           thumbnail?: string | null
