@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.resolve-video-url]
 verify_jwt = false
+
+[functions.content-autoadd]
+verify_jwt = false

@@ -35,11 +35,13 @@ interface LiveChannel {
 const Search = () => {
   const [searchParams] = useSearchParams();
   const searchQuery = searchParams.get('q') || '';
-  
+
   const [movies, setMovies] = useState<Movie[]>([]);
   const [series, setSeries] = useState<Series[]>([]);
   const [channels, setChannels] = useState<LiveChannel[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAutoAdding, setIsAutoAdding] = useState(false);
+  const [autoAddMessage, setAutoAddMessage] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'all' | 'movies' | 'series' | 'live'>('all');
 
   useEffect(() => {
@@ -52,11 +54,12 @@ const Search = () => {
 
   const fetchResults = async () => {
     setIsLoading(true);
+    setAutoAddMessage(null);
     const query = searchQuery.toLowerCase();
 
     const [moviesRes, seriesRes, channelsRes] = await Promise.all([
-      supabase.from('movies').select('id, title, thumbnail, category, description'),
-      supabase.from('series').select('id, title, thumbnail, category, description'),
+      supabase.from('movies').select('id, title, thumbnail, category, description, pending_content'),
+      supabase.from('series').select('id, title, thumbnail, category, description, pending_content'),
       supabase.from('live_channels').select('id, title, thumbnail, category, description, is_live').eq('is_live', true)
     ]);
 
@@ -83,7 +86,52 @@ const Search = () => {
     setSeries(filteredSeries);
     setChannels(filteredChannels);
     setIsLoading(false);
+
+    const nothingFound =
+      filteredMovies.length === 0 && filteredSeries.length === 0 && filteredChannels.length === 0;
+
+    if (nothingFound && searchQuery.trim().length >= 2) {
+      autoAddFromTmdb();
+    }
   };
+
+  const autoAddFromTmdb = async () => {
+    setIsAutoAdding(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const { data, error } = await supabase.functions.invoke('content-autoadd', {
+        body: { query: searchQuery, userId: sessionData.session?.user?.id ?? null },
+      });
+
+      if (error) throw error;
+
+      const added = (data?.added || []) as { id: string; title: string; type: string }[];
+      if (added.length === 0) {
+        setAutoAddMessage('Não encontramos esse título nem no catálogo global. Tente outro nome.');
+        return;
+      }
+
+      setAutoAddMessage(
+        `Adicionamos ${added.length === 1 ? 'o título' : `${added.length} títulos`} ao catálogo. O conteúdo fica disponível assim que um administrador enviar o vídeo.`,
+      );
+
+      const [moviesRes, seriesRes] = await Promise.all([
+        supabase.from('movies').select('id, title, thumbnail, category, description, pending_content')
+          .in('id', added.filter(a => a.type === 'movie').map(a => a.id).length ? added.filter(a => a.type === 'movie').map(a => a.id) : ['00000000-0000-0000-0000-000000000000']),
+        supabase.from('series').select('id, title, thumbnail, category, description, pending_content')
+          .in('id', added.filter(a => a.type === 'series').map(a => a.id).length ? added.filter(a => a.type === 'series').map(a => a.id) : ['00000000-0000-0000-0000-000000000000']),
+      ]);
+
+      setMovies(moviesRes.data || []);
+      setSeries(seriesRes.data || []);
+    } catch (err) {
+      console.error('Auto add error:', err);
+      setAutoAddMessage('Não conseguimos buscar esse título agora. Tente novamente em instantes.');
+    } finally {
+      setIsAutoAdding(false);
+    }
+  };
+
 
   const totalResults = movies.length + series.length + channels.length;
 

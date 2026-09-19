@@ -11,6 +11,7 @@ import { ContinueWatchingDialog } from '@/components/ContinueWatchingDialog';
 import { FavoriteButton } from '@/components/FavoriteButton';
 import { RatingStars } from '@/components/RatingStars';
 import { ShareButtons } from '@/components/ShareButtons';
+import { PendingContentNotice } from '@/components/PendingContentNotice';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { Movie } from '@/types/database';
@@ -221,7 +222,9 @@ const MovieDetail = () => {
               )}
 
               {/* Video Player */}
-              {currentVideoUrl && getSourceType(currentVideoUrl) === 'iframe' && !resolvedStreamUrl ? (
+              {!movie.video_url ? (
+                <PendingContentNotice title={movie.title} type="movie" poster={movie.thumbnail} />
+              ) : currentVideoUrl && getSourceType(currentVideoUrl) === 'iframe' && !resolvedStreamUrl ? (
                 iframeSrc ? (
                   <IframePlayer
                     src={iframeSrc}
