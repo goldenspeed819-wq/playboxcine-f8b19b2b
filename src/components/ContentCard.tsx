@@ -55,6 +55,15 @@ export function ContentCard({ item, type, index = 0 }: ContentCardProps) {
           </div>
         </div>
 
+        {/* Pending badge */}
+        {(item as { pending_content?: boolean }).pending_content && (
+          <div className="absolute top-2 left-2 sm:top-3 sm:left-3">
+            <span className="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[9px] sm:text-[10px] font-semibold uppercase tracking-wider bg-background/80 text-foreground backdrop-blur-sm border border-border">
+              Em breve
+            </span>
+          </div>
+        )}
+
         {/* Type badge */}
         <div className="absolute top-2 right-2 sm:top-3 sm:right-3">
           <span className={cn(

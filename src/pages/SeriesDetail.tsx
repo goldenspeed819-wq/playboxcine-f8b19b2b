@@ -410,6 +410,11 @@ const SeriesDetail = () => {
                 />
               )}
 
+              {episodes.length === 0 && (
+                <PendingContentNotice title={series.title} type="series" poster={series.thumbnail} />
+              )}
+
+
               {/* Series Info */}
               <div>
                 <h1 className="font-display text-3xl md:text-4xl font-bold mb-4">

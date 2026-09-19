@@ -221,7 +221,9 @@ const MovieDetail = () => {
               )}
 
               {/* Video Player */}
-              {currentVideoUrl && getSourceType(currentVideoUrl) === 'iframe' && !resolvedStreamUrl ? (
+              {!movie.video_url ? (
+                <PendingContentNotice title={movie.title} type="movie" poster={movie.thumbnail} />
+              ) : currentVideoUrl && getSourceType(currentVideoUrl) === 'iframe' && !resolvedStreamUrl ? (
                 iframeSrc ? (
                   <IframePlayer
                     src={iframeSrc}
