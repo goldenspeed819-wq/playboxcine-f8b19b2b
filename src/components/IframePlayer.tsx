@@ -1,11 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ExternalLink, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import EmbedPlayerControls from '@/components/EmbedPlayerControls';
 import {
   focusEmbedIframe,
   postEmbedCommand,
-  supportsEmbedPostMessage,
   type EmbedCommandAction,
 } from '@/utils/embedCommands';
 
@@ -23,6 +21,7 @@ export default function IframePlayer({ src, originalUrl, poster, title }: Props)
   const [started, setStarted] = useState(false);
   const [iframeKey, setIframeKey] = useState(0);
 
+  // Reinicia os estados quando a URL de origem muda
   useEffect(() => {
     setLoaded(false);
     setShowFallback(false);
@@ -31,6 +30,7 @@ export default function IframePlayer({ src, originalUrl, poster, title }: Props)
     document.body.classList.remove('rc-cinema');
   }, [src]);
 
+  // Alterna fullscreen do navegador ou ativa a classe fallback .rc-cinema
   const toggleFrameFullscreen = useCallback(async () => {
     const frame = frameRef.current;
     if (!frame) return;
@@ -48,18 +48,32 @@ export default function IframePlayer({ src, originalUrl, poster, title }: Props)
     }
   }, []);
 
+  // Garante a limpeza da classe .rc-cinema ao sair do fullscreen nativo (ex: tecla ESC)
   useEffect(() => {
-    if (!started) return;
+    const handleFullscreenChange = () => {
+      if (!document.fullscreenElement) {
+        document.body.classList.remove('rc-cinema');
+      }
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
+  // Timer para exibir mensagem de erro caso o iframe demore ou seja bloqueado
+  useEffect(() => {
+    if (!started || loaded) return;
 
     const t = window.setTimeout(() => {
-      // Many hosts block embedding (X-Frame-Options/CSP). We can't force it,
-      // but we can give the user a safe fallback.
       setShowFallback(true);
     }, 6000);
 
     return () => window.clearTimeout(t);
-  }, [src, started]);
+  }, [src, started, loaded]);
 
+  // Evento remoto para iniciar a reprodução
   useEffect(() => {
     const startFromRemote = () => {
       setStarted(true);
@@ -68,10 +82,12 @@ export default function IframePlayer({ src, originalUrl, poster, title }: Props)
         postEmbedCommand('play');
       }, 350);
     };
+
     window.addEventListener('rynex:embed-play', startFromRemote);
     return () => window.removeEventListener('rynex:embed-play', startFromRemote);
   }, []);
 
+  // Gerenciamento dos comandos remotos do player
   useEffect(() => {
     const handleCommand = (event: Event) => {
       const detail = (event as CustomEvent<{ action?: EmbedCommandAction; value?: number }>).detail;
@@ -102,15 +118,14 @@ export default function IframePlayer({ src, originalUrl, poster, title }: Props)
 
     window.addEventListener('rynex:embed-command', handleCommand);
     window.addEventListener('rynex:embed-focus', focusEmbedIframe);
+
     return () => {
       window.removeEventListener('rynex:embed-command', handleCommand);
       window.removeEventListener('rynex:embed-focus', focusEmbedIframe);
-      document.body.classList.remove('rc-cinema');
     };
   }, [started, toggleFrameFullscreen]);
 
   const openUrl = originalUrl || src;
-  const passthroughControls = !supportsEmbedPostMessage(src);
 
   return (
     <div ref={frameRef} data-rc-frame className="relative w-full aspect-video bg-background rounded-xl overflow-hidden">
@@ -118,8 +133,8 @@ export default function IframePlayer({ src, originalUrl, poster, title }: Props)
         <iframe
           key={iframeKey}
           src={src}
-          className="absolute inset-0 w-full h-full"
-          frameBorder="0"
+          title={title || 'Player de vídeo incorporado'}
+          className="absolute inset-0 w-full h-full border-0"
           allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
           allowFullScreen
           onLoad={() => setLoaded(true)}
@@ -129,8 +144,8 @@ export default function IframePlayer({ src, originalUrl, poster, title }: Props)
           data-rc-play
           type="button"
           onClick={() => setStarted(true)}
-          aria-label="Reproduzir"
-          className="group absolute inset-0 w-full h-full"
+          aria-label={title ? `Reproduzir ${title}` : 'Reproduzir vídeo'}
+          className="group absolute inset-0 w-full h-full text-left"
         >
           {poster && (
             <img
@@ -151,13 +166,11 @@ export default function IframePlayer({ src, originalUrl, poster, title }: Props)
         </button>
       )}
 
-      {started && <EmbedPlayerControls active={started} title={title} passthrough={passthroughControls} />}
-
       {started && showFallback && !loaded && (
-        <div className="absolute inset-0 flex items-center justify-center bg-background/80 p-4">
+        <div className="absolute inset-0 flex items-center justify-center bg-background/80 p-4 z-10">
           <div className="max-w-md w-full text-center space-y-3">
             <p className="text-sm text-foreground/80">
-              Este provedor bloqueou reprodução incorporada neste site.
+              Este provedor bloqueou a reprodução incorporada neste site.
             </p>
             <div className="flex flex-wrap items-center justify-center gap-2">
               <Button
