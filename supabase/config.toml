@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.content-autoadd]
 verify_jwt = false
+
+[functions.scraper-ingest]
+verify_jwt = false
