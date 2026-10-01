@@ -6,6 +6,11 @@ export function getSourceType(url: string) {
     return 'video';
   }
 
+  // 1b️⃣ streams diretos sem extensão (ex.: brflix dynamic-proxy /stream/ID?hash=)
+  if (/\/dynamic-proxy\//i.test(url) || /\/stream\/\d+(\?|$)/i.test(url)) {
+    return 'video';
+  }
+
   // 2️⃣ Supabase storage URLs are always direct video
   if (url.includes('supabase') && url.includes('/storage/')) {
     return 'video';

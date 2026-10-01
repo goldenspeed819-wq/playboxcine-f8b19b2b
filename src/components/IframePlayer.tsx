@@ -1,11 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ExternalLink, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import EmbedPlayerControls from '@/components/EmbedPlayerControls';
 import {
   focusEmbedIframe,
   postEmbedCommand,
-  supportsEmbedPostMessage,
   type EmbedCommandAction,
 } from '@/utils/embedCommands';
 
@@ -110,7 +108,6 @@ export default function IframePlayer({ src, originalUrl, poster, title }: Props)
   }, [started, toggleFrameFullscreen]);
 
   const openUrl = originalUrl || src;
-  const passthroughControls = !supportsEmbedPostMessage(src);
 
   return (
     <div ref={frameRef} data-rc-frame className="relative w-full aspect-video bg-background rounded-xl overflow-hidden">
@@ -151,7 +148,6 @@ export default function IframePlayer({ src, originalUrl, poster, title }: Props)
         </button>
       )}
 
-      {started && <EmbedPlayerControls active={started} title={title} passthrough={passthroughControls} />}
 
       {started && showFallback && !loaded && (
         <div className="absolute inset-0 flex items-center justify-center bg-background/80 p-4">

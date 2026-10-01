@@ -585,7 +585,8 @@ export function VideoPlayer({ src, poster, title, subtitles = [], nextLabel, onN
         )}
         onClick={togglePlay}
         playsInline
-        crossOrigin="anonymous"
+        autoPlay
+        crossOrigin={subtitles.length > 0 ? "anonymous" : undefined}
       >
         {subtitles.map((sub) => (
           <track
