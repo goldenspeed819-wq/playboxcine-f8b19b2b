@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ExternalLink, Play } from 'lucide-react';
+import { ExternalLink, Play, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   focusEmbedIframe,
@@ -21,7 +21,13 @@ export default function IframePlayer({ src, originalUrl, poster, title }: Props)
   const [started, setStarted] = useState(false);
   const [iframeKey, setIframeKey] = useState(0);
 
-  // Reinicia os estados quando a URL de origem muda
+  // Verifica se a URL é um fluxo de vídeo direto ou proxy MP4/HLS
+  const isDirectVideo =
+    src?.includes('/api/stream') ||
+    src?.includes('.mp4') ||
+    src?.includes('.m3u8') ||
+    src?.includes('.mkv');
+
   useEffect(() => {
     setLoaded(false);
     setShowFallback(false);
@@ -30,7 +36,6 @@ export default function IframePlayer({ src, originalUrl, poster, title }: Props)
     document.body.classList.remove('rc-cinema');
   }, [src]);
 
-  // Alterna fullscreen do navegador ou ativa a classe fallback .rc-cinema
   const toggleFrameFullscreen = useCallback(async () => {
     const frame = frameRef.current;
     if (!frame) return;
@@ -48,46 +53,17 @@ export default function IframePlayer({ src, originalUrl, poster, title }: Props)
     }
   }, []);
 
-  // Garante a limpeza da classe .rc-cinema ao sair do fullscreen nativo (ex: tecla ESC)
-  useEffect(() => {
-    const handleFullscreenChange = () => {
-      if (!document.fullscreenElement) {
-        document.body.classList.remove('rc-cinema');
-      }
-    };
-
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    return () => {
-      document.removeEventListener('fullscreenchange', handleFullscreenChange);
-    };
-  }, []);
-
-  // Timer para exibir mensagem de erro caso o iframe demore ou seja bloqueado
+  // Timer de Fallback estendido para 12 segundos para evitar falsos bloqueios
   useEffect(() => {
     if (!started || loaded) return;
 
     const t = window.setTimeout(() => {
       setShowFallback(true);
-    }, 6000);
+    }, 12000); // 12 segundos
 
     return () => window.clearTimeout(t);
   }, [src, started, loaded]);
 
-  // Evento remoto para iniciar a reprodução
-  useEffect(() => {
-    const startFromRemote = () => {
-      setStarted(true);
-      window.setTimeout(() => {
-        focusEmbedIframe();
-        postEmbedCommand('play');
-      }, 350);
-    };
-
-    window.addEventListener('rynex:embed-play', startFromRemote);
-    return () => window.removeEventListener('rynex:embed-play', startFromRemote);
-  }, []);
-
-  // Gerenciamento dos comandos remotos do player
   useEffect(() => {
     const handleCommand = (event: Event) => {
       const detail = (event as CustomEvent<{ action?: EmbedCommandAction; value?: number }>).detail;
@@ -118,7 +94,6 @@ export default function IframePlayer({ src, originalUrl, poster, title }: Props)
 
     window.addEventListener('rynex:embed-command', handleCommand);
     window.addEventListener('rynex:embed-focus', focusEmbedIframe);
-
     return () => {
       window.removeEventListener('rynex:embed-command', handleCommand);
       window.removeEventListener('rynex:embed-focus', focusEmbedIframe);
@@ -130,16 +105,32 @@ export default function IframePlayer({ src, originalUrl, poster, title }: Props)
   return (
     <div ref={frameRef} data-rc-frame className="relative w-full aspect-video bg-background rounded-xl overflow-hidden">
       {started ? (
-        <iframe
-          key={iframeKey}
-          src={src}
-          title={title || 'Player de vídeo incorporado'}
-          className="absolute inset-0 w-full h-full border-0"
-          allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
-          allowFullScreen
-          onLoad={() => setLoaded(true)}
-        />
+        isDirectVideo ? (
+          /* Renderiza Tag de Vídeo Nativa se for Proxy / MP4 */
+          <video
+            key={iframeKey}
+            src={src}
+            controls
+            autoPlay
+            playsInline
+            className="w-full h-full object-contain"
+            onLoadedData={() => setLoaded(true)}
+            onCanPlay={() => setLoaded(true)}
+          />
+        ) : (
+          /* Renderiza Iframe para Players Externos / Embeds */
+          <iframe
+            key={iframeKey}
+            src={src}
+            title={title || 'Player de vídeo'}
+            className="absolute inset-0 w-full h-full border-0"
+            allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
+            allowFullScreen
+            onLoad={() => setLoaded(true)}
+          />
+        )
       ) : (
+        /* Capa / Botão de Play Inicial */
         <button
           data-rc-play
           type="button"
@@ -166,11 +157,12 @@ export default function IframePlayer({ src, originalUrl, poster, title }: Props)
         </button>
       )}
 
+      {/* Overlay de Fallback (Aviso de Bloqueio) com opção de Fechar */}
       {started && showFallback && !loaded && (
-        <div className="absolute inset-0 flex items-center justify-center bg-background/80 p-4 z-10">
-          <div className="max-w-md w-full text-center space-y-3">
+        <div className="absolute inset-0 flex items-center justify-center bg-background/90 p-4 z-20">
+          <div className="max-w-md w-full text-center space-y-3 relative">
             <p className="text-sm text-foreground/80">
-              Este provedor bloqueou a reprodução incorporada neste site.
+              O provedor está demorando para responder ou bloqueou a execução incorporada.
             </p>
             <div className="flex flex-wrap items-center justify-center gap-2">
               <Button
@@ -185,18 +177,25 @@ export default function IframePlayer({ src, originalUrl, poster, title }: Props)
                 variant="outline"
                 className="gap-2"
                 onClick={() => {
-                  setStarted(false);
+                  setStarted(true);
                   setShowFallback(false);
                   setLoaded(false);
+                  setIframeKey((k) => k + 1);
                 }}
               >
                 <Play className="w-4 h-4" />
                 Tentar novamente
               </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-1 text-xs text-muted-foreground"
+                onClick={() => setShowFallback(false)}
+              >
+                <X className="w-3 h-3" />
+                Fechar aviso e aguardar
+              </Button>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Dica: use um link <strong>embed</strong> (ex.: /e/...) quando disponível.
-            </p>
           </div>
         </div>
       )}
