@@ -151,7 +151,6 @@ export default function IframePlayer({ src, originalUrl, poster, title }: Props)
         </button>
       )}
 
-      {started && <EmbedPlayerControls active={started} title={title} passthrough={passthroughControls} />}
 
       {started && showFallback && !loaded && (
         <div className="absolute inset-0 flex items-center justify-center bg-background/80 p-4">
