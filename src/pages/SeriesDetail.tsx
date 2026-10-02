@@ -120,6 +120,22 @@ const SeriesDetail = () => {
       setEpisodes(episodesRes.data || []);
       if (episodesRes.data && episodesRes.data.length > 0) {
         setSelectedEpisode(episodesRes.data[0]);
+        // Auto-fill missing episode thumbnails from TMDB, then refresh once
+        if (seriesRes.data?.tmdb_id && episodesRes.data.some((e) => !e.thumbnail)) {
+          supabase.functions
+            .invoke('episode-thumbs', { body: { series_id: id } })
+            .then(async ({ data }) => {
+              if (!data?.updated) return;
+              const { data: fresh } = await supabase
+                .from('episodes').select('*').eq('series_id', id)
+                .order('season', { ascending: true }).order('episode', { ascending: true });
+              if (fresh) {
+                setEpisodes(fresh);
+                setSelectedEpisode((cur) => fresh.find((e) => e.id === cur?.id) || fresh[0]);
+              }
+            })
+            .catch(() => {});
+        }
       }
     }
 
