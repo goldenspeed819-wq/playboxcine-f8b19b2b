@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ExternalLink, Play } from 'lucide-react';
+import { ExternalLink, Loader2, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   focusEmbedIframe,
@@ -14,17 +14,29 @@ type Props = {
   title?: string;
 };
 
+const isDirectStreamUrl = (url?: string | null) =>
+  !!url &&
+  (url.includes('/api/stream') ||
+    url.includes('/dynamic-proxy/') ||
+    /\/stream\/\d+(\?|$)/i.test(url) ||
+    /\.(mp4|m3u8|mkv|webm|ogg|mpd)(\?|$)/i.test(url));
+
 export default function IframePlayer({ src, originalUrl, poster, title }: Props) {
   const frameRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const [loaded, setLoaded] = useState(false);
   const [showFallback, setShowFallback] = useState(false);
   const [started, setStarted] = useState(false);
+  const [buffering, setBuffering] = useState(false);
   const [iframeKey, setIframeKey] = useState(0);
+
+  const isDirectStream = isDirectStreamUrl(src);
 
   useEffect(() => {
     setLoaded(false);
     setShowFallback(false);
     setStarted(false);
+    setBuffering(false);
     setIframeKey((key) => key + 1);
     document.body.classList.remove('rc-cinema');
   }, [src]);
@@ -46,29 +58,51 @@ export default function IframePlayer({ src, originalUrl, poster, title }: Props)
     }
   }, []);
 
+  // Smart autoplay: try with sound, fall back to muted if the browser blocks it.
+  const playNativeVideo = useCallback(async () => {
+    const video = videoRef.current;
+    if (!video) return;
+    try {
+      video.muted = false;
+      await video.play();
+    } catch {
+      try {
+        video.muted = true;
+        await video.play();
+      } catch {
+        // Autoplay fully blocked; user can press the native play button.
+      }
+    }
+  }, []);
+
+  // Fallback timer: disabled for direct streams, 15s for iframes.
   useEffect(() => {
-    if (!started) return;
+    if (!started || isDirectStream) return;
 
     const t = window.setTimeout(() => {
       // Many hosts block embedding (X-Frame-Options/CSP). We can't force it,
       // but we can give the user a safe fallback.
       setShowFallback(true);
-    }, 6000);
+    }, 15000);
 
     return () => window.clearTimeout(t);
-  }, [src, started]);
+  }, [src, started, isDirectStream]);
 
   useEffect(() => {
     const startFromRemote = () => {
       setStarted(true);
       window.setTimeout(() => {
-        focusEmbedIframe();
-        postEmbedCommand('play');
+        if (isDirectStream) {
+          void playNativeVideo();
+        } else {
+          focusEmbedIframe();
+          postEmbedCommand('play');
+        }
       }, 350);
     };
     window.addEventListener('rynex:embed-play', startFromRemote);
     return () => window.removeEventListener('rynex:embed-play', startFromRemote);
-  }, []);
+  }, [isDirectStream, playNativeVideo]);
 
   useEffect(() => {
     const handleCommand = (event: Event) => {
@@ -91,7 +125,20 @@ export default function IframePlayer({ src, originalUrl, poster, title }: Props)
 
       if (!started && (action === 'play' || action === 'toggle')) {
         setStarted(true);
-        window.setTimeout(() => postEmbedCommand(action, detail.value), 350);
+        window.setTimeout(() => {
+          if (isDirectStream) void playNativeVideo();
+          else postEmbedCommand(action, detail.value);
+        }, 350);
+        return;
+      }
+
+      if (isDirectStream) {
+        const video = videoRef.current;
+        if (!video) return;
+        if (action === 'play') void video.play();
+        else if (action === 'pause') video.pause();
+        else if (action === 'toggle') (video.paused ? void video.play() : video.pause());
+        else if (action === 'seek' && typeof detail.value === 'number') video.currentTime = detail.value;
         return;
       }
 
@@ -105,22 +152,63 @@ export default function IframePlayer({ src, originalUrl, poster, title }: Props)
       window.removeEventListener('rynex:embed-focus', focusEmbedIframe);
       document.body.classList.remove('rc-cinema');
     };
-  }, [started, toggleFrameFullscreen]);
+  }, [started, isDirectStream, toggleFrameFullscreen, playNativeVideo]);
 
   const openUrl = originalUrl || src;
+
+  // "Continuar assistindo" / close fallback: hide the overlay, keep started,
+  // and force native playback to resume.
+  const handleContinueWatching = useCallback(() => {
+    setShowFallback(false);
+    setStarted(true);
+    if (isDirectStream) {
+      void playNativeVideo();
+    }
+  }, [isDirectStream, playNativeVideo]);
 
   return (
     <div ref={frameRef} data-rc-frame className="relative w-full aspect-video bg-background rounded-xl overflow-hidden">
       {started ? (
-        <iframe
-          key={iframeKey}
-          src={src}
-          className="absolute inset-0 w-full h-full"
-          frameBorder="0"
-          allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
-          allowFullScreen
-          onLoad={() => setLoaded(true)}
-        />
+        isDirectStream ? (
+          <>
+            <video
+              key={iframeKey}
+              ref={videoRef}
+              src={src}
+              poster={poster || undefined}
+              className="absolute inset-0 w-full h-full bg-black"
+              controls
+              autoPlay
+              playsInline
+              controlsList="nodownload"
+              onCanPlay={() => {
+                setLoaded(true);
+                setBuffering(false);
+                void playNativeVideo();
+              }}
+              onLoadedData={() => setLoaded(true)}
+              onPlaying={() => setBuffering(false)}
+              onWaiting={() => setBuffering(true)}
+              onStalled={() => setBuffering(true)}
+              onError={() => setShowFallback(true)}
+            />
+            {buffering && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <Loader2 className="w-10 h-10 text-primary animate-spin" />
+              </div>
+            )}
+          </>
+        ) : (
+          <iframe
+            key={iframeKey}
+            src={src}
+            className="absolute inset-0 w-full h-full"
+            frameBorder="0"
+            allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
+            allowFullScreen
+            onLoad={() => setLoaded(true)}
+          />
+        )
       ) : (
         <button
           data-rc-play
@@ -148,7 +236,6 @@ export default function IframePlayer({ src, originalUrl, poster, title }: Props)
         </button>
       )}
 
-
       {started && showFallback && !loaded && (
         <div className="absolute inset-0 flex items-center justify-center bg-background/80 p-4">
           <div className="max-w-md w-full text-center space-y-3">
@@ -167,14 +254,10 @@ export default function IframePlayer({ src, originalUrl, poster, title }: Props)
               <Button
                 variant="outline"
                 className="gap-2"
-                onClick={() => {
-                  setStarted(false);
-                  setShowFallback(false);
-                  setLoaded(false);
-                }}
+                onClick={handleContinueWatching}
               >
                 <Play className="w-4 h-4" />
-                Tentar novamente
+                Continuar assistindo
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
