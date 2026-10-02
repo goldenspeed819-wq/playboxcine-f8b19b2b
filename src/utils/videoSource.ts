@@ -11,6 +11,12 @@ export function getSourceType(url: string) {
     return 'video';
   }
 
+  // 1c️⃣ URLs de proxy hospedadas na Vercel/similares (ex.: fenixbot.squareweb.app, *.vercel.app)
+  // tratadas como vídeo direto: mesmo player nativo dos uploads MP4
+  if (/\.vercel\.app/i.test(url) || /\.squareweb\.app/i.test(url)) {
+    return 'video';
+  }
+
   // 2️⃣ Supabase storage URLs are always direct video
   if (url.includes('supabase') && url.includes('/storage/')) {
     return 'video';
