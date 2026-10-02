@@ -19,6 +19,8 @@ const isDirectStreamUrl = (url?: string | null) =>
   (url.includes('/api/stream') ||
     url.includes('/dynamic-proxy/') ||
     /\/stream\/\d+(\?|$)/i.test(url) ||
+    /\.vercel\.app/i.test(url) ||
+    /\.squareweb\.app/i.test(url) ||
     /\.(mp4|m3u8|mkv|webm|ogg|mpd)(\?|$)/i.test(url));
 
 export default function IframePlayer({ src, originalUrl, poster, title }: Props) {
