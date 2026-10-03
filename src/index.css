@@ -321,3 +321,8 @@ body.rc-cinema [data-rc-frame] {
   border-radius: 0;
   background: #000;
 }
+
+@layer base {
+  html, body { overflow-x: hidden; max-width: 100%; }
+  video { object-fit: contain; }
+}
