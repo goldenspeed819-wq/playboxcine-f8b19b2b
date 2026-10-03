@@ -5,6 +5,8 @@ import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { VideoPlayer } from '@/components/VideoPlayer';
 import IframePlayer from '@/components/IframePlayer';
+import ServerBar from '@/components/ServerBar';
+import { useStreamServers, buildServerUrl } from '@/hooks/useStreamServers';
 import { CommentSection } from '@/components/CommentSection';
 import { PageLoader } from '@/components/LoadingSpinner';
 import { ContinueWatchingDialog } from '@/components/ContinueWatchingDialog';
@@ -128,6 +130,20 @@ const MovieDetail = () => {
   const iframeNeedsRemoteResolve = !!currentVideoUrl && shouldResolveRemotely(currentVideoUrl);
   const iframeSrc = iframeNeedsRemoteResolve ? resolvedIframeUrl : (resolvedIframeUrl || currentVideoUrl);
 
+  const { servers, imdbId } = useStreamServers((movie as any)?.tmdb_id ?? null, 'movie');
+  const serverOptions = servers.map((sv) => {
+    const url = buildServerUrl(sv.movie, { imdb: imdbId, tmdb: (movie as any)?.tmdb_id });
+    return { name: sv.name, url, available: !!url };
+  });
+  const [activeServer, setActiveServer] = useState<number | null>(null);
+  const firstAvailable = serverOptions.findIndex((o) => o.available);
+  const effectiveServer = activeServer ?? (movie?.video_url ? -1 : firstAvailable);
+  const serverUrl = effectiveServer >= 0 ? serverOptions[effectiveServer]?.url : null;
+  const switchToNextServer = () => {
+    const next = serverOptions.findIndex((o, i) => o.available && i > effectiveServer);
+    if (next >= 0) setActiveServer(next);
+  };
+
   const handleNextPart = () => {
     if (currentPart === 1 && hasPart2) {
       setCurrentPart(2);
@@ -222,7 +238,9 @@ const MovieDetail = () => {
               )}
 
               {/* Video Player */}
-              {!movie.video_url ? (
+              {serverUrl ? (
+                <IframePlayer key={serverUrl} src={serverUrl} originalUrl={serverUrl} poster={movie.thumbnail} title={movie.title} onSwitchServer={switchToNextServer} />
+              ) : !movie.video_url ? (
                 <PendingContentNotice title={movie.title} type="movie" poster={movie.thumbnail} />
               ) : currentVideoUrl && getSourceType(currentVideoUrl) === 'iframe' && !resolvedStreamUrl ? (
                 iframeSrc ? (
@@ -258,6 +276,13 @@ const MovieDetail = () => {
                   initialTime={initialTime}
                 />
               )}
+
+              <ServerBar
+                options={serverOptions}
+                active={effectiveServer}
+                hasOriginal={!!movie.video_url}
+                onSelect={setActiveServer}
+              />
 
               {/* Movie Info */}
               <div>
