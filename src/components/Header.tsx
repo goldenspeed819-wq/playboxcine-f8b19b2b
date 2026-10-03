@@ -10,7 +10,6 @@ import { EpisodeNotifications } from '@/components/EpisodeNotifications';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { RemoteControlDialog } from '@/components/RemoteControlDialog';
 import logo from '@/assets/logo.png';
-import { supabase } from '@/integrations/supabase/client';
 
 export function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -26,31 +25,6 @@ export function Header() {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
-
-  const [suggestions, setSuggestions] = useState<{ id: string; title: string; thumbnail: string | null; type: 'movie' | 'series'; year: number | null }[]>([]);
-  useEffect(() => {
-    const q = searchQuery.trim();
-    if (q.length < 2) { setSuggestions([]); return; }
-    const t = setTimeout(async () => {
-      const pat = `%${q.replace(/[%_]/g, '')}%`;
-      const [m, s] = await Promise.all([
-        supabase.from('movies').select('id,title,thumbnail,release_year').ilike('title', pat).limit(5),
-        supabase.from('series').select('id,title,thumbnail,release_year').ilike('title', pat).limit(5),
-      ]);
-      setSuggestions([
-        ...(m.data || []).map((x) => ({ id: x.id, title: x.title, thumbnail: x.thumbnail, year: x.release_year, type: 'movie' as const })),
-        ...(s.data || []).map((x) => ({ id: x.id, title: x.title, thumbnail: x.thumbnail, year: x.release_year, type: 'series' as const })),
-      ].slice(0, 8));
-    }, 250);
-    return () => clearTimeout(t);
-  }, [searchQuery]);
-
-  const pickSuggestion = (sg: { id: string; type: 'movie' | 'series' }) => {
-    navigate(sg.type === 'movie' ? `/movie/${sg.id}` : `/series/${sg.id}`);
-    setSearchOpen(false);
-    setSearchQuery('');
-    setSuggestions([]);
-  };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -126,21 +100,7 @@ export function Header() {
           {/* Actions */}
           <div className="flex items-center gap-1">
             {/* Search */}
-            <div className="flex items-center relative">
-              {searchOpen && suggestions.length > 0 && (
-                <div className="fixed sm:absolute left-2 right-2 sm:left-auto sm:right-0 top-14 sm:top-10 sm:w-80 z-50 rounded-xl border border-border bg-card shadow-xl overflow-hidden">
-                  {suggestions.map((sg) => (
-                    <button key={sg.type + sg.id} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => pickSuggestion(sg)}
-                      className="w-full flex items-center gap-3 p-2 min-h-[52px] text-left hover:bg-secondary touch-manipulation">
-                      {sg.thumbnail ? <img src={sg.thumbnail} alt="" className="w-9 h-12 object-cover rounded" /> : <div className="w-9 h-12 rounded bg-secondary" />}
-                      <div className="min-w-0">
-                        <p className="text-sm text-foreground truncate">{sg.title}</p>
-                        <p className="text-xs text-muted-foreground">{sg.type === 'movie' ? 'Filme' : 'Série'}{sg.year ? ` · ${sg.year}` : ''}</p>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
+            <div className="flex items-center">
               <form onSubmit={handleSearch} className={cn(
                 'transition-all duration-300 overflow-hidden',
                 searchOpen ? 'w-36 sm:w-48 md:w-56' : 'w-0'

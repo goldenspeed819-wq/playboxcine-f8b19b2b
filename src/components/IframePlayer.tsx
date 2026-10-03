@@ -12,7 +12,6 @@ type Props = {
   originalUrl?: string;
   poster?: string | null;
   title?: string;
-  onSwitchServer?: () => void;
 };
 
 const isDirectStreamUrl = (url?: string | null) =>
@@ -24,7 +23,7 @@ const isDirectStreamUrl = (url?: string | null) =>
     /\.squareweb\.app/i.test(url) ||
     /\.(mp4|m3u8|mkv|webm|ogg|mpd)(\?|$)/i.test(url));
 
-export default function IframePlayer({ src, originalUrl, poster, title, onSwitchServer }: Props) {
+export default function IframePlayer({ src, originalUrl, poster, title }: Props) {
   const frameRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [loaded, setLoaded] = useState(false);
@@ -32,7 +31,6 @@ export default function IframePlayer({ src, originalUrl, poster, title, onSwitch
   const [started, setStarted] = useState(false);
   const [buffering, setBuffering] = useState(false);
   const [iframeKey, setIframeKey] = useState(0);
-  const [formatError, setFormatError] = useState(false);
 
   const isDirectStream = isDirectStreamUrl(src);
 
@@ -41,7 +39,6 @@ export default function IframePlayer({ src, originalUrl, poster, title, onSwitch
     setShowFallback(false);
     setStarted(false);
     setBuffering(false);
-    setFormatError(false);
     setIframeKey((key) => key + 1);
     document.body.classList.remove('rc-cinema');
   }, [src]);
@@ -92,13 +89,6 @@ export default function IframePlayer({ src, originalUrl, poster, title, onSwitch
 
     return () => window.clearTimeout(t);
   }, [src, started, isDirectStream]);
-
-  // Carregamento infinito em stream direto: após 20s travado, oferece troca.
-  useEffect(() => {
-    if (!started || !isDirectStream || !(buffering || !loaded) || formatError) return;
-    const t = window.setTimeout(() => { setFormatError(true); }, 20000);
-    return () => window.clearTimeout(t);
-  }, [started, isDirectStream, buffering, loaded, formatError]);
 
   useEffect(() => {
     const startFromRemote = () => {
@@ -172,7 +162,6 @@ export default function IframePlayer({ src, originalUrl, poster, title, onSwitch
   // and force native playback to resume.
   const handleContinueWatching = useCallback(() => {
     setShowFallback(false);
-    setFormatError(false);
     setStarted(true);
     if (isDirectStream) {
       void playNativeVideo();
@@ -180,7 +169,7 @@ export default function IframePlayer({ src, originalUrl, poster, title, onSwitch
   }, [isDirectStream, playNativeVideo]);
 
   return (
-    <div ref={frameRef} data-rc-frame className="relative w-full max-w-full aspect-video bg-background rounded-xl overflow-hidden touch-manipulation">
+    <div ref={frameRef} data-rc-frame className="relative w-full aspect-video bg-background rounded-xl overflow-hidden">
       {started ? (
         isDirectStream ? (
           <>
@@ -189,7 +178,7 @@ export default function IframePlayer({ src, originalUrl, poster, title, onSwitch
               ref={videoRef}
               src={src}
               poster={poster || undefined}
-              className="absolute inset-0 w-full h-full bg-background object-contain"
+              className="absolute inset-0 w-full h-full bg-black"
               controls
               autoPlay
               playsInline
@@ -203,7 +192,7 @@ export default function IframePlayer({ src, originalUrl, poster, title, onSwitch
               onPlaying={() => setBuffering(false)}
               onWaiting={() => setBuffering(true)}
               onStalled={() => setBuffering(true)}
-              onError={() => { setFormatError(true); setBuffering(false); }}
+              onError={() => setShowFallback(true)}
             />
             {buffering && (
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -249,22 +238,6 @@ export default function IframePlayer({ src, originalUrl, poster, title, onSwitch
         </button>
       )}
 
-      {started && formatError && (
-        <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/90 p-4">
-          <div className="max-w-sm w-full text-center space-y-3">
-            <p className="text-sm text-foreground">Este servidor não conseguiu reproduzir o vídeo (formato incompatível ou carregamento travado).</p>
-            <div className="flex flex-wrap justify-center gap-2">
-              {onSwitchServer && (
-                <Button className="min-h-[44px]" onClick={onSwitchServer}>Trocar servidor</Button>
-              )}
-              <Button variant="outline" className="min-h-[44px]" onClick={() => { setFormatError(false); setLoaded(false); setIframeKey((k) => k + 1); }}>
-                Tentar de novo
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {started && showFallback && !loaded && (
         <div className="absolute inset-0 flex items-center justify-center bg-background/80 p-4">
           <div className="max-w-md w-full text-center space-y-3">
@@ -280,9 +253,6 @@ export default function IframePlayer({ src, originalUrl, poster, title, onSwitch
                 <ExternalLink className="w-4 h-4" />
                 Abrir no provedor
               </Button>
-              {onSwitchServer && (
-                <Button className="gap-2" onClick={onSwitchServer}>Trocar servidor</Button>
-              )}
               <Button
                 variant="outline"
                 className="gap-2"

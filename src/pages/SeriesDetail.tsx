@@ -5,8 +5,6 @@ import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { VideoPlayer } from '@/components/VideoPlayer';
 import IframePlayer from '@/components/IframePlayer';
-import ServerBar from '@/components/ServerBar';
-import { useStreamServers, buildServerUrl } from '@/hooks/useStreamServers';
 import { CommentSection } from '@/components/CommentSection';
 import { PageLoader } from '@/components/LoadingSpinner';
 import { ContinueWatchingDialog } from '@/components/ContinueWatchingDialog';
@@ -58,23 +56,6 @@ const SeriesDetail = () => {
 
   const normalizedEpisodeUrl = normalizeRedeCanaisUrl(selectedEpisode?.video_url);
   const { url: resolvedEpisodeIframeUrl, streamUrl: resolvedEpisodeStreamUrl } = useResolvedEmbedUrl(normalizedEpisodeUrl);
-
-  const [manualSE, setManualSE] = useState({ season: 1, episode: 1 });
-  const seNow = selectedEpisode ? { season: selectedEpisode.season, episode: selectedEpisode.episode } : manualSE;
-  const seriesTmdb = (series as any)?.tmdb_id ?? null;
-  const { servers, imdbId } = useStreamServers(seriesTmdb, 'tv');
-  const serverOptions = servers.map((sv) => {
-    const url = buildServerUrl(sv.tv, { imdb: imdbId, tmdb: seriesTmdb, ...seNow });
-    return { name: sv.name, url, available: !!url };
-  });
-  const [activeServer, setActiveServer] = useState<number | null>(null);
-  const hasOriginalEpisode = !!selectedEpisode?.video_url;
-  const effectiveServer = activeServer ?? (hasOriginalEpisode ? -1 : serverOptions.findIndex((o) => o.available));
-  const serverUrl = effectiveServer >= 0 ? serverOptions[effectiveServer]?.url : null;
-  const switchToNextServer = () => {
-    const next = serverOptions.findIndex((o, i) => o.available && i > effectiveServer);
-    if (next >= 0) setActiveServer(next);
-  };
 
   useEffect(() => {
     if (id) {
@@ -415,16 +396,7 @@ const SeriesDetail = () => {
             {/* Main Content */}
             <div className="lg:col-span-2 space-y-8">
               {/* Video Player */}
-              {serverUrl ? (
-                <IframePlayer
-                  key={serverUrl}
-                  src={serverUrl}
-                  originalUrl={serverUrl}
-                  poster={selectedEpisode?.thumbnail || series.thumbnail}
-                  title={`${series.title} - T${seNow.season}E${seNow.episode}`}
-                  onSwitchServer={switchToNextServer}
-                />
-              ) : normalizedEpisodeUrl && getSourceType(normalizedEpisodeUrl) === 'iframe' && !resolvedEpisodeStreamUrl ? (
+              {normalizedEpisodeUrl && getSourceType(normalizedEpisodeUrl) === 'iframe' && !resolvedEpisodeStreamUrl ? (
                 <IframePlayer
                   src={resolvedEpisodeIframeUrl || normalizedEpisodeUrl}
                   originalUrl={normalizedEpisodeUrl}
@@ -453,16 +425,6 @@ const SeriesDetail = () => {
                   initialTime={initialTime}
                   onEnded={handleVideoEnded}
                 />
-              )}
-
-              <ServerBar options={serverOptions} active={effectiveServer} hasOriginal={hasOriginalEpisode} onSelect={setActiveServer} />
-              {episodes.length === 0 && serverOptions.length > 0 && (
-                <div className="flex items-center gap-2 text-sm">
-                  <span className="text-muted-foreground">Temporada</span>
-                  <input type="number" min={1} value={manualSE.season} onChange={(e) => setManualSE((v) => ({ ...v, season: Math.max(1, +e.target.value || 1) }))} className="w-16 h-10 rounded-md border border-border bg-secondary px-2" />
-                  <span className="text-muted-foreground">Episódio</span>
-                  <input type="number" min={1} value={manualSE.episode} onChange={(e) => setManualSE((v) => ({ ...v, episode: Math.max(1, +e.target.value || 1) }))} className="w-16 h-10 rounded-md border border-border bg-secondary px-2" />
-                </div>
               )}
 
               {episodes.length === 0 && (
