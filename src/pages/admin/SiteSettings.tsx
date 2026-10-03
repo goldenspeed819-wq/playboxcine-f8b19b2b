@@ -9,6 +9,7 @@ import { toast } from '@/hooks/use-toast';
 import { Upload, Link, Trash2, Save, Image } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 import { SubtitleSettings } from '@/components/admin/SubtitleSettings';
+import { StreamServersSettings } from '@/components/admin/StreamServersSettings';
 
 const SiteSettings = () => {
   const [backgroundUrl, setBackgroundUrl] = useState('');
@@ -316,6 +317,7 @@ const SiteSettings = () => {
       </Card>
 
       {/* Subtitle Settings */}
+      <StreamServersSettings />
       <SubtitleSettings />
     </div>
   );
