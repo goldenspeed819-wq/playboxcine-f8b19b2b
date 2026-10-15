@@ -5,46 +5,78 @@ const cors = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-api-key',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
 };
-
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } });
 
-function timingSafeEqual(a: string, b: string) {
+const EXTERNAL_URL = 'https://dnaarxjsqkaybwntdbcx.supabase.co';
+const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36';
+
+function safeEq(a: string, b: string) {
   if (a.length !== b.length) return false;
   let r = 0;
   for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i);
   return r === 0;
 }
 
-type Server = Record<string, unknown>;
-
-function buildServers(url: string | null | undefined, idx: number, label: string): Server[] {
-  if (!url) return [];
-  const u = url.trim();
-  if (/redecanais|rcserver|server\.php/i.test(u)) {
-    let videoId = '', serverName = '', category = 'ondemand';
-    try {
-      const p = new URL(u.startsWith('//') ? `https:${u}` : u);
-      videoId = p.searchParams.get('vid') || '';
-      serverName = p.searchParams.get('server') || '';
-      category = p.searchParams.get('subfolder') || category;
-    } catch { /* keep defaults */ }
-    return [{ id: `redecanais-server-${idx}`, name: `RedeCanais ${label}`, type: 'redecanais_bridge', embedUrl: u, videoId, serverName, category }];
+// Pega qualquer coluna do registro que contenha uma URL
+function collectUrls(row: Record<string, unknown>): string[] {
+  const out: string[] = [];
+  for (const v of Object.values(row)) {
+    if (typeof v === 'string' && /^https?:\/\//i.test(v.trim()) && !/\.(jpe?g|png|webp|gif|svg)(\?|$)/i.test(v) && !/image\.tmdb/i.test(v)) out.push(v.trim());
+    else if (Array.isArray(v)) for (const x of v) {
+      if (typeof x === 'string' && /^https?:\/\//i.test(x)) out.push(x);
+      else if (x && typeof x === 'object' && typeof (x as any).url === 'string') out.push((x as any).url);
+    }
   }
-  const isEmbed = /youtube|youtu\.be|vimeo|\/embed|\/e\/|\.php(\?|$)|\.html?(\?|$)/i.test(u);
-  if (isEmbed) return [{ id: `embed-${idx}`, name: `Embed ${label}`, type: 'embed', embedUrl: u }];
-  return [{ id: `stream-direct-${idx}`, name: `Servidor ${label}`, type: 'direct', url: u, format: /\.m3u8/i.test(u) ? 'hls' : /\.mpd/i.test(u) ? 'dash' : 'mp4' }];
+  return [...new Set(out)];
+}
+
+const pickTitle = (row: Record<string, unknown>) =>
+  (row.titulo ?? row.title ?? row.nome ?? row.name ?? null) as string | null;
+
+// Lê a página do RedeCanais e extrai os iframes/embeds reais
+async function resolveRedeCanaisPage(pageUrl: string): Promise<string[]> {
+  try {
+    const r = await fetch(pageUrl, { headers: { 'User-Agent': UA, Referer: new URL(pageUrl).origin + '/' }, signal: AbortSignal.timeout(10000) });
+    if (!r.ok) return [];
+    const html = await r.text();
+    const found = new Set<string>();
+    for (const m of html.matchAll(/<iframe[^>]+src=["']([^"']+)["']/gi)) found.add(m[1]);
+    for (const m of html.matchAll(/["']((?:https?:)?\/\/[^"'\s]*(?:server\.php|player|embed|rcserver)[^"'\s]*)["']/gi)) found.add(m[1]);
+    for (const m of html.matchAll(/["'](\/[^"'\s]*(?:server\.php|player3?\/)[^"'\s]*)["']/gi)) found.add(m[1]);
+    const origin = new URL(pageUrl).origin;
+    return [...found]
+      .map((u) => (u.startsWith('//') ? `https:${u}` : u.startsWith('/') ? origin + u : u))
+      .filter((u) => !/facebook|google|twitter|ads|analytics/i.test(u));
+  } catch {
+    return [];
+  }
+}
+
+type Server = Record<string, unknown>;
+function classify(u: string, idx: number, extra: Record<string, unknown> = {}): Server {
+  if (/\.(m3u8|mpd|mp4)(\?|$)/i.test(u) || /\/stream\/|dynamic-proxy/i.test(u))
+    return { id: `direct-${idx}`, name: `Servidor ${idx}`, type: 'direct', url: u, format: /\.m3u8/i.test(u) ? 'hls' : /\.mpd/i.test(u) ? 'dash' : 'mp4', ...extra };
+  let videoId = '', serverName = '';
+  try { const p = new URL(u); videoId = p.searchParams.get('vid') || ''; serverName = p.searchParams.get('server') || ''; } catch { /* */ }
+  return {
+    id: `redecanais-${idx}`, name: `RedeCanais ${serverName || idx}`, type: 'redecanais_bridge', embedUrl: u, videoId, serverName,
+    // O navegador do usuário abre esse embed (com o IP dele) e o player Rynex controla o vídeo
+    externalControls: true, ...extra,
+  };
 }
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
 
   const apiKey = Deno.env.get('EXTRACT_API_KEY');
-  if (!apiKey) return json({ success: false, error: 'API key não configurada no servidor' }, 500);
+  const extKey = Deno.env.get('SECRET_SAPI');
+  if (!apiKey) return json({ success: false, error: 'API key não configurada' }, 500);
+  if (!extKey) return json({ success: false, error: 'SECRET_SAPI não configurada' }, 500);
 
   const url = new URL(req.url);
   const provided = req.headers.get('x-api-key') || url.searchParams.get('key') || '';
-  if (!provided || !timingSafeEqual(provided, apiKey)) return json({ success: false, error: 'Unauthorized' }, 401);
+  if (!provided || !safeEq(provided, apiKey)) return json({ success: false, error: 'Unauthorized' }, 401);
 
   let input: Record<string, unknown> = Object.fromEntries(url.searchParams);
   if (req.method === 'POST') {
@@ -53,52 +85,48 @@ Deno.serve(async (req) => {
 
   const tmdbId = input.tmdbId ? Number(input.tmdbId) : null;
   const imdbId = typeof input.imdbId === 'string' ? input.imdbId.trim() : '';
-  const type = input.type === 'tv' ? 'tv' : input.type === 'movie' ? 'movie' : null;
-  const season = input.season ? Number(input.season) : 1;
-  const episode = input.episode ? Number(input.episode) : 1;
+  const title = typeof input.title === 'string' ? input.title.trim().slice(0, 200) : '';
+  const directPage = typeof input.url === 'string' ? input.url.trim() : '';
 
-  if (!type) return json({ success: false, error: "type deve ser 'movie' ou 'tv'" }, 400);
   if (tmdbId !== null && (!Number.isInteger(tmdbId) || tmdbId <= 0)) return json({ success: false, error: 'tmdbId inválido' }, 400);
   if (imdbId && !/^tt\d{5,10}$/.test(imdbId)) return json({ success: false, error: 'imdbId inválido' }, 400);
-  if (!Number.isInteger(season) || !Number.isInteger(episode) || season < 0 || episode < 0) return json({ success: false, error: 'season/episode inválidos' }, 400);
+  if (directPage && !/^https:\/\/(www\.)?redecanais\.[a-z]{2,}\//i.test(directPage)) return json({ success: false, error: 'url deve ser uma página do RedeCanais' }, 400);
+  if (!tmdbId && !imdbId && !title && !directPage) return json({ success: false, error: 'Informe tmdbId, imdbId, title ou url' }, 400);
 
-  let resolvedTmdb = tmdbId;
-  if (!resolvedTmdb && imdbId) {
-    const tmdbKey = Deno.env.get('TMDB_API_KEY');
-    if (!tmdbKey) return json({ success: false, error: 'Conversão IMDb indisponível; envie tmdbId' }, 400);
-    try {
-      const r = await fetch(`https://api.themoviedb.org/3/find/${imdbId}?api_key=${tmdbKey}&external_source=imdb_id`, { signal: AbortSignal.timeout(8000) });
-      const d = await r.json();
-      resolvedTmdb = (type === 'movie' ? d.movie_results : d.tv_results)?.[0]?.id ?? null;
-    } catch {
-      return json({ success: false, error: 'TMDB não respondeu' }, 504);
+  let row: Record<string, unknown> | null = null;
+  let pages: string[] = [];
+
+  if (directPage) {
+    pages = [directPage];
+  } else {
+    const ext = createClient(EXTERNAL_URL, extKey, { auth: { persistSession: false } });
+    const tries: Array<[string, string | number]> = [];
+    if (tmdbId) tries.push(['tmdb_id', tmdbId], ['tmdb', tmdbId], ['id_tmdb', tmdbId]);
+    if (imdbId) tries.push(['imdb_id', imdbId], ['imdb', imdbId]);
+    for (const [col, val] of tries) {
+      const { data, error } = await ext.from('filmes').select('*').eq(col, val).limit(1);
+      if (!error && data?.length) { row = data[0]; break; }
     }
-  }
-  if (!resolvedTmdb) return json({ success: false, error: 'Informe tmdbId ou imdbId' }, 400);
-
-  const db = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
-
-  try {
-    if (type === 'movie') {
-      const { data, error } = await db.from('movies').select('title, video_url, video_url_part2').eq('tmdb_id', resolvedTmdb).maybeSingle();
-      if (error) throw error;
-      if (!data) return json({ success: false, error: 'Filme não encontrado no catálogo' }, 404);
-      const servers = [...buildServers(data.video_url, 1, 'Principal'), ...buildServers(data.video_url_part2, 2, 'Parte 2')];
-      if (!servers.length) return json({ success: false, title: data.title, error: 'Conteúdo ainda sem vídeo', servers: [] }, 404);
-      return json({ success: true, title: data.title, tmdbId: resolvedTmdb, type, servers });
+    if (!row && title) {
+      for (const col of ['titulo', 'title', 'nome']) {
+        const { data, error } = await ext.from('filmes').select('*').ilike(col, `%${title}%`).limit(1);
+        if (!error && data?.length) { row = data[0]; break; }
+      }
     }
-
-    const { data: s, error: se } = await db.from('series').select('id, title').eq('tmdb_id', resolvedTmdb).maybeSingle();
-    if (se) throw se;
-    if (!s) return json({ success: false, error: 'Série não encontrada no catálogo' }, 404);
-    const { data: ep, error: ee } = await db.from('episodes').select('title, video_url').eq('series_id', s.id).eq('season', season).eq('episode', episode).maybeSingle();
-    if (ee) throw ee;
-    if (!ep) return json({ success: false, title: s.title, error: `T${season}E${episode} não encontrado` }, 404);
-    const servers = buildServers(ep.video_url, 1, 'Principal');
-    if (!servers.length) return json({ success: false, title: s.title, error: 'Episódio sem vídeo', servers: [] }, 404);
-    return json({ success: true, title: s.title, episodeTitle: ep.title, tmdbId: resolvedTmdb, type, season, episode, servers });
-  } catch (e) {
-    console.error('extract-streams error', e);
-    return json({ success: false, error: 'Erro ao consultar o catálogo' }, 500);
+    if (!row) return json({ success: false, error: 'Filme não encontrado na tabela filmes' }, 404);
+    pages = collectUrls(row);
   }
+
+  const servers: Server[] = [];
+  let i = 1;
+  for (const u of pages) {
+    if (/redecanais\.[a-z]+\/.*\.html/i.test(u)) {
+      const embeds = await resolveRedeCanaisPage(u);
+      if (embeds.length) for (const e of embeds) servers.push(classify(e, i++, { sourcePage: u }));
+      else servers.push({ id: `redecanais-page-${i++}`, name: 'RedeCanais (página)', type: 'redecanais_bridge', embedUrl: u, sourcePage: u, externalControls: true });
+    } else servers.push(classify(u, i++));
+  }
+
+  if (!servers.length) return json({ success: false, title: row ? pickTitle(row) : null, error: 'Nenhuma URL de vídeo encontrada', servers: [] }, 404);
+  return json({ success: true, title: row ? pickTitle(row) : null, tmdbId, type: 'movie', servers });
 });
